@@ -18,3 +18,9 @@ id = "-xOL2Q5yrZ_pUSuZl49bn"
 uri = "file://artifacts/estimatorx/public/blueprints.png"
 type = "image"
 title = "Blueprints and tools"
+
+[[generated]]
+id = "90ysedL9n1YX-IhWjs86f"
+uri = "file://artifacts/estimatorx/public/hero-residential.png"
+type = "image"
+title = "generated_image"
