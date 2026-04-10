@@ -216,7 +216,7 @@ export default function Home() {
 
               <div className="mt-12 p-6 border-l-4 border-[#E85D26] bg-white shadow-sm">
                 <h4 className="text-[#E85D26] font-bold uppercase tracking-wider text-sm mb-2">Corporate Leadership Background</h4>
-                <p className="text-[#3A3530]">Former CEO of Unified Communications Corporation (2005–2015). Managed capital projects and infrastructure builds across a dozen+ US facilities — bringing corporate-grade financial rigor to residential construction estimating.</p>
+                <p className="text-[#3A3530]">Former CEO of Unified Communications Corporation (2005–2015). Managed capital projects and infrastructure builds across a dozen+ US Data Center facilities — bringing corporate-grade financial rigor to residential construction estimating.</p>
               </div>
             </div>
           </div>
