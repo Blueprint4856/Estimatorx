@@ -24,17 +24,42 @@ export default function Home() {
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setFormData({ name: "", email: "", message: "" });
-      toast({
-        title: "Inquiry Sent",
-        description: "We'll be in touch shortly to discuss your estimating needs.",
+    try {
+      const response = await fetch("https://api.web3forms.com/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          access_key: "7dd5e3a9-8b16-4249-9e25-b3157759e919",
+          subject: "New Estimate Inquiry — EstimatorX.pro",
+          name: formData.name,
+          email: formData.email,
+          message: formData.message,
+        }),
       });
-    }, 1000);
+      const result = await response.json();
+      if (result.success) {
+        setFormData({ name: "", email: "", message: "" });
+        toast({
+          title: "Inquiry Sent",
+          description: "We'll be in touch shortly to discuss your estimating needs.",
+        });
+      } else {
+        toast({
+          title: "Something went wrong",
+          description: "Please try again or email directly.",
+        });
+      }
+    } catch {
+      toast({
+        title: "Something went wrong",
+        description: "Please check your connection and try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
