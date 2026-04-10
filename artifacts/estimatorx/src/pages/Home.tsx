@@ -95,7 +95,7 @@ export default function Home() {
             >
               <motion.div variants={fadeIn} className="flex items-center gap-3 mb-6">
                 <div className="w-12 h-[2px] bg-[#E85D26]"></div>
-                <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">Leslie Fogg • Sheridan, WY</span>
+                <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">Leslie Fogg</span>
               </motion.div>
               <motion.h1 variants={fadeIn} className="text-5xl md:text-7xl lg:text-8xl font-serif font-black leading-[1.05] mb-8 uppercase text-[#1A1A1A]">
                 PRECISION<br />ESTIMATING.<br /><span className="text-[#E85D26]">ZERO FLUFF.</span>
