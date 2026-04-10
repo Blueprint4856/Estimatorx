@@ -252,7 +252,7 @@ export default function Home() {
           <div className="container mx-auto px-4">
             <div className="text-center max-w-3xl mx-auto mb-16">
               <h2 className="text-4xl md:text-5xl font-black font-serif uppercase mb-6">Flexible <span className="text-[#E85D26]">Arrangements</span></h2>
-              <p className="text-xl text-gray-600">Operating out of Sheridan, WY, serving builders and developers nationwide. Available for remote work with travel as needed.</p>
+              <p className="text-xl text-gray-600">Serving residential builders, developers, and construction firms nationwide. Available for remote work with travel as needed.</p>
             </div>
 
             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
