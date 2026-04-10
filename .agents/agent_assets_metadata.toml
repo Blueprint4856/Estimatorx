@@ -1,0 +1,20 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "4GwOvwr-u0zC8-J27paag"
+uri = "file://artifacts/estimatorx/public/hero-bg.png"
+type = "image"
+title = "Construction hero background"
+
+[[generated]]
+id = "mmmdkDUnsb43hVBY396V0"
+uri = "file://artifacts/estimatorx/public/subdivision.png"
+type = "image"
+title = "Subdivision aerial view"
+
+[[generated]]
+id = "-xOL2Q5yrZ_pUSuZl49bn"
+uri = "file://artifacts/estimatorx/public/blueprints.png"
+type = "image"
+title = "Blueprints and tools"
