@@ -68,7 +68,9 @@ export default function Home() {
       <header className="sticky top-0 z-50 w-full border-b border-[#E0DAD3] bg-white shadow-sm">
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/logo.png" alt="EstimatorX.pro Logo" className="h-16 object-contain" />
+            <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+              <img src="/logo.png" alt="EstimatorX.pro Logo" className="h-16 object-contain" />
+            </a>
           </div>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium tracking-wide">
