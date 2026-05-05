@@ -74,7 +74,11 @@ function Stepper({ label, value, onChange, min = 0, max = 10, note }: { label: s
 
 function CheckCard({ checked, onChange, label, description }: { checked: boolean; onChange: (v: boolean) => void; label: string; description?: string }) {
   return (
-    <label className={`flex items-start gap-3 p-4 border-2 cursor-pointer transition-all select-none ${checked ? "border-[#E85D26] bg-[#FFF8F5]" : "border-[#DDD8D0] bg-white hover:border-[#E85D26]/40"}`}>
+    <label
+      className={`flex items-start gap-3 p-4 border-2 cursor-pointer transition-all select-none ${checked ? "border-[#E85D26] bg-[#FFF8F5]" : "border-[#DDD8D0] bg-white hover:border-[#E85D26]/40"}`}
+      onClick={() => onChange(!checked)}
+    >
+      <input type="checkbox" checked={checked} onChange={() => {}} className="sr-only" />
       <div className={`mt-0.5 w-5 h-5 flex-shrink-0 flex items-center justify-center border-2 transition-colors ${checked ? "bg-[#E85D26] border-[#E85D26]" : "border-[#CCC]"}`}>
         {checked && (
           <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
