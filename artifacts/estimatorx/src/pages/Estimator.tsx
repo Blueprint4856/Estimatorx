@@ -1028,6 +1028,7 @@ export default function Estimator() {
   const [upgradeFeature, setUpgradeFeature] = useState<GatedFeature | null>(null);
 
   const shareAccess = useFeatureAccess("share");
+  const printAccess = useFeatureAccess("print");
 
   const handleCopyLink = useCallback(() => {
     if (!shareAccess.allowed) { setUpgradeFeature("share"); return; }
@@ -1122,7 +1123,9 @@ export default function Estimator() {
                   <Trash2 size={15} />
                   <span className="hidden sm:inline">Clear</span>
                 </button>
-                <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-3 text-sm text-[#888] hover:text-[#1A1A1A] transition-colors whitespace-nowrap">
+                <button
+                  onClick={() => { if (!printAccess.allowed) { setUpgradeFeature("print"); return; } window.print(); }}
+                  className="flex items-center gap-2 px-4 py-3 text-sm text-[#888] hover:text-[#1A1A1A] transition-colors whitespace-nowrap">
                   <Printer size={16} />
                   <span className="hidden sm:inline">Print</span>
                 </button>
