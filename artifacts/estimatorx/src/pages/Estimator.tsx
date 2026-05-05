@@ -1,6 +1,6 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { Link } from "wouter";
-import { ChevronRight, Printer, RotateCcw } from "lucide-react";
+import { ChevronRight, Printer, RotateCcw, Link2, Trash2, Check } from "lucide-react";
 
 type Tab = "wall" | "floor" | "roof" | "plumbing" | "electrical" | "hvac";
 const WASTE = 1.10;
@@ -20,6 +20,111 @@ function defaultRates(items: LaborItem[]): LaborRates {
   return Object.fromEntries(items.map(i => [i.label, String(i.nationalAvg)]));
 }
 function fmt(n: number) { return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+
+/* ─────────────────────────────────────────────
+   PERSISTENCE & FEATURE GATE
+───────────────────────────────────────────── */
+
+// localStorage key registry — one slot per tab (inputs + rates)
+const SK = {
+  wall: "ex.wall", wallRates: "ex.wall.rates",
+  floor: "ex.floor", floorRates: "ex.floor.rates",
+  roof: "ex.roof", roofRates: "ex.roof.rates",
+  plumbing: "ex.plumbing", plumbingRates: "ex.plumbing.rates",
+  electrical: "ex.electrical", electricalRates: "ex.electrical.rates",
+  hvac: "ex.hvac", hvacRates: "ex.hvac.rates",
+} as const;
+
+// Auto-save hook: reads localStorage on init, writes on every setState call.
+function useLocalStorage<T>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
+  const [value, setValueInternal] = useState<T>(() => {
+    try {
+      const stored = localStorage.getItem(key);
+      if (stored !== null) return JSON.parse(stored) as T;
+    } catch {}
+    return defaultValue;
+  });
+  const setValue = useCallback((action: React.SetStateAction<T>) => {
+    setValueInternal(prev => {
+      const next = typeof action === "function" ? (action as (p: T) => T)(prev) : action;
+      try { localStorage.setItem(key, JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }, [key]);
+  return [value, setValue];
+}
+
+// ── Feature gate — paywall integration point ──────────────────────────────
+// Currently permits all features. When a paywall is added, replace this hook's
+// body with auth + subscription checks. All gated UI calls this hook first.
+type GatedFeature = "share" | "print" | "export";
+function useFeatureAccess(_feature: GatedFeature): { allowed: boolean } {
+  // TODO: check auth state + subscription tier here when paywall is implemented
+  return { allowed: true };
+}
+
+// Shown when a gated feature is blocked — ready to wire to a real upgrade flow
+function UpgradeModal({ feature, onClose }: { feature: GatedFeature; onClose: () => void }) {
+  const label = feature === "share" ? "Shareable Links" : feature === "print" ? "Print / PDF Export" : "Export";
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+      <div className="bg-white max-w-sm w-full mx-4 p-8 text-center shadow-xl" onClick={e => e.stopPropagation()}>
+        <div className="w-14 h-14 bg-[#FFF0E8] rounded-full flex items-center justify-center mx-auto mb-4">
+          <span className="text-[#E85D26] text-2xl font-black">Pro</span>
+        </div>
+        <h2 className="text-xl font-black text-[#1A1A1A] mb-2">Upgrade to Unlock</h2>
+        <p className="text-sm text-[#666] mb-6">
+          <strong>{label}</strong> is available on the Pro plan. Upgrade to share estimates with clients, export PDFs, and more.
+        </p>
+        <button onClick={onClose} className="w-full bg-[#E85D26] text-white font-bold py-3 hover:bg-[#c94d1f] transition-colors">
+          Got it
+        </button>
+        <button onClick={onClose} className="mt-3 w-full text-sm text-[#999] hover:text-[#555] transition-colors">
+          Maybe later
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── URL state helpers ──────────────────────────────────────────────────────
+function readAllLocalStorage() {
+  const get = <T,>(key: string): T | undefined => {
+    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) as T : undefined; }
+    catch { return undefined; }
+  };
+  return {
+    wall: get(SK.wall), wallRates: get(SK.wallRates),
+    floor: get(SK.floor), floorRates: get(SK.floorRates),
+    roof: get(SK.roof), roofRates: get(SK.roofRates),
+    plumbing: get(SK.plumbing), plumbingRates: get(SK.plumbingRates),
+    electrical: get(SK.electrical), electricalRates: get(SK.electricalRates),
+    hvac: get(SK.hvac), hvacRates: get(SK.hvacRates),
+  };
+}
+
+type SnapshotState = ReturnType<typeof readAllLocalStorage>;
+
+function serializeState(state: SnapshotState): string {
+  try { return btoa(encodeURIComponent(JSON.stringify(state))); } catch { return ""; }
+}
+function deserializeState(encoded: string): SnapshotState | null {
+  try { return JSON.parse(decodeURIComponent(atob(encoded))) as SnapshotState; } catch { return null; }
+}
+function primeLocalStorageFromSnapshot(state: SnapshotState) {
+  const set = (key: string, val: unknown) => {
+    if (val != null) try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+  };
+  set(SK.wall, state.wall);             set(SK.wallRates, state.wallRates);
+  set(SK.floor, state.floor);           set(SK.floorRates, state.floorRates);
+  set(SK.roof, state.roof);             set(SK.roofRates, state.roofRates);
+  set(SK.plumbing, state.plumbing);     set(SK.plumbingRates, state.plumbingRates);
+  set(SK.electrical, state.electrical); set(SK.electricalRates, state.electricalRates);
+  set(SK.hvac, state.hvac);             set(SK.hvacRates, state.hvacRates);
+}
+function clearAllLocalStorage() {
+  Object.values(SK).forEach(k => { try { localStorage.removeItem(k); } catch {} });
+}
 
 /* ─────────────────────────────────────────────
    SHARED UI COMPONENTS
@@ -172,7 +277,8 @@ function LaborTable({ items, rates, onChange, onReset }: { items: LaborItem[]; r
         <tbody className="divide-y divide-[#F0EDE8]">
           {items.map((item, i) => {
             const rate = effectiveRate(item, rates);
-            const changed = rates[item.label] !== undefined && parseFloat(rates[item.label]) !== item.nationalAvg;
+            const saved = rates[item.label];
+            const changed = saved !== undefined && parseFloat(saved) !== item.nationalAvg;
             return (
               <tr key={i} className="hover:bg-[#FAF8F5]">
                 <td className="px-5 py-2 text-[#1A1A1A] font-medium">
@@ -239,6 +345,7 @@ function ResultNote() {
 ───────────────────────────────────────────── */
 interface WallInputs { linearFeet: string; ceilingHeight: string; exteriorSheathing: boolean; insulation: boolean; drywall: boolean; }
 const WALL_MAT_PRICES = { stud: 5.48, plate: 5.48, osb: 34.98, insulation: 0.55, drywall: 15.98 };
+const DEFAULT_WALL: WallInputs = { linearFeet: "", ceilingHeight: "9", exteriorSheathing: true, insulation: true, drywall: true };
 
 function getWallMatItems(inputs: WallInputs): MatItem[] {
   const lf = parseFloat(inputs.linearFeet) || 0;
@@ -269,11 +376,12 @@ function getWallLaborItems(inputs: WallInputs): LaborItem[] {
 }
 
 function WallTab() {
-  const [inputs, setInputs] = useState<WallInputs>({ linearFeet: "", ceilingHeight: "9", exteriorSheathing: true, insulation: true, drywall: true });
+  const [inputs, setInputs] = useLocalStorage<WallInputs>(SK.wall, DEFAULT_WALL);
   const laborItems = getWallLaborItems(inputs);
-  const [rates, setRates] = useState<LaborRates>(() => defaultRates(laborItems));
-  const handleRateChange = useCallback((label: string, val: string) => setRates(r => ({ ...r, [label]: val })), []);
-  const handleReset = useCallback(() => setRates(defaultRates(getWallLaborItems(inputs))), [inputs]);
+  const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.wallRates, {});
+  const rates: LaborRates = { ...defaultRates(laborItems), ...savedRates };
+  const handleRateChange = useCallback((label: string, val: string) => setSavedRates(r => ({ ...r, [label]: val })), [setSavedRates]);
+  const handleReset = useCallback(() => setSavedRates({}), [setSavedRates]);
 
   const matItems = getWallMatItems(inputs);
   const matTotal = matItems.reduce((s, r) => s + r.qty * r.price, 0);
@@ -317,6 +425,7 @@ interface FloorInputs { sqft: string; finish: string; includeSubfloor: boolean; 
 const FLOOR_MAT_PRICES: Record<string, number> = { lvp: 2.89, carpet: 2.49, hardwood: 5.98, tile: 3.49, none: 0 };
 const FLOOR_LABELS: Record<string, string> = { lvp: "LVP — Luxury Vinyl Plank", carpet: "Carpet", hardwood: "Hardwood", tile: "Ceramic / Porcelain Tile", none: "None" };
 const FLOOR_LABOR: Record<string, number> = { lvp: 2.15, carpet: 1.45, hardwood: 4.25, tile: 5.75, none: 0 };
+const DEFAULT_FLOOR: FloorInputs = { sqft: "", finish: "lvp", includeSubfloor: true };
 
 function getFloorMatItems(inputs: FloorInputs): MatItem[] {
   const sqft = parseFloat(inputs.sqft) || 0;
@@ -338,11 +447,12 @@ function getFloorLaborItems(inputs: FloorInputs): LaborItem[] {
 }
 
 function FloorTab() {
-  const [inputs, setInputs] = useState<FloorInputs>({ sqft: "", finish: "lvp", includeSubfloor: true });
+  const [inputs, setInputs] = useLocalStorage<FloorInputs>(SK.floor, DEFAULT_FLOOR);
   const laborItems = getFloorLaborItems(inputs);
-  const [rates, setRates] = useState<LaborRates>(() => defaultRates(laborItems));
-  const handleRateChange = useCallback((label: string, val: string) => setRates(r => ({ ...r, [label]: val })), []);
-  const handleReset = useCallback(() => setRates(defaultRates(getFloorLaborItems(inputs))), [inputs]);
+  const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.floorRates, {});
+  const rates: LaborRates = { ...defaultRates(laborItems), ...savedRates };
+  const handleRateChange = useCallback((label: string, val: string) => setSavedRates(r => ({ ...r, [label]: val })), [setSavedRates]);
+  const handleReset = useCallback(() => setSavedRates({}), [setSavedRates]);
 
   const matItems = getFloorMatItems(inputs);
   const matTotal = matItems.reduce((s, r) => s + r.qty * r.price, 0);
@@ -386,6 +496,7 @@ function FloorTab() {
 ───────────────────────────────────────────── */
 interface RoofInputs { footprintSqft: string; pitch: string; archShingles: boolean; iceWater: boolean; includeDecking: boolean; }
 const PITCH_FACTORS: Record<string, number> = { "4:12": 1.054, "5:12": 1.083, "6:12": 1.118, "7:12": 1.158, "8:12": 1.202, "9:12": 1.250, "10:12": 1.302, "12:12": 1.414 };
+const DEFAULT_ROOF: RoofInputs = { footprintSqft: "", pitch: "6:12", archShingles: true, iceWater: true, includeDecking: false };
 
 function getRoofMatItems(inputs: RoofInputs): MatItem[] {
   const fp = parseFloat(inputs.footprintSqft) || 0;
@@ -415,28 +526,30 @@ function getRoofLaborItems(inputs: RoofInputs): LaborItem[] {
 }
 
 function RoofTab() {
-  const [inputs, setInputs] = useState<RoofInputs>({ footprintSqft: "", pitch: "6:12", archShingles: true, iceWater: true, includeDecking: false });
+  const [inputs, setInputs] = useLocalStorage<RoofInputs>(SK.roof, DEFAULT_ROOF);
   const laborItems = getRoofLaborItems(inputs);
-  const [rates, setRates] = useState<LaborRates>(() => defaultRates(laborItems));
-  const handleRateChange = useCallback((label: string, val: string) => setRates(r => ({ ...r, [label]: val })), []);
-  const handleReset = useCallback(() => setRates(defaultRates(getRoofLaborItems(inputs))), [inputs]);
+  const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.roofRates, {});
+  const rates: LaborRates = { ...defaultRates(laborItems), ...savedRates };
+  const handleRateChange = useCallback((label: string, val: string) => setSavedRates(r => ({ ...r, [label]: val })), [setSavedRates]);
+  const handleReset = useCallback(() => setSavedRates({}), [setSavedRates]);
 
   const fp = parseFloat(inputs.footprintSqft) || 0;
-  const actualArea = fp * (PITCH_FACTORS[inputs.pitch] ?? 1.118);
+  const factor = PITCH_FACTORS[inputs.pitch] ?? 1.118;
+  const actualArea = fp * factor;
   const matItems = getRoofMatItems(inputs);
   const matTotal = matItems.reduce((s, r) => s + r.qty * r.price, 0);
   const laborTotal = laborItems.reduce((s, i) => s + i.qty * effectiveRate(i, rates), 0);
 
   return (
     <div>
-      <div className="grid md:grid-cols-2 gap-6">
-        <Field label="Roof Footprint Area (sq ft)" note="Exterior building footprint — not actual roof surface">
-          <NumberInput value={inputs.footprintSqft} onChange={v => setInputs(p => ({ ...p, footprintSqft: v }))} placeholder="e.g. 1800" />
+      <div className="grid md:grid-cols-2 gap-6 mb-6">
+        <Field label="Roof Footprint (sq ft)" note="Measure the floor plan area under the roof — not the actual roof surface">
+          <NumberInput value={inputs.footprintSqft} onChange={v => setInputs(p => ({ ...p, footprintSqft: v }))} placeholder="e.g. 1400" />
         </Field>
         <Field label="Roof Pitch">
           <select value={inputs.pitch} onChange={e => setInputs(p => ({ ...p, pitch: e.target.value }))}
             className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
-            {Object.keys(PITCH_FACTORS).map(p => <option key={p} value={p}>{p} pitch (×{PITCH_FACTORS[p].toFixed(3)})</option>)}
+            {Object.keys(PITCH_FACTORS).map(p => <option key={p} value={p}>{p}</option>)}
           </select>
         </Field>
         {fp > 0 && (
@@ -457,7 +570,7 @@ function RoofTab() {
           <GrandTotal matTotal={matTotal} laborTotal={laborTotal} />
           <ResultNote />
         </div>
-      ) : <EmptyState text="Enter roof footprint area above to see your estimate." />}
+      ) : <EmptyState text="Enter your roof footprint above to see your estimate." />}
     </div>
   );
 }
@@ -473,9 +586,8 @@ interface PlumbingInputs {
   hasLaundry: boolean;
   spigots: number;
 }
+const DEFAULT_PLUMBING: PlumbingInputs = { homeSqft: "", fullBaths: 1, halfBaths: 0, hasKitchen: true, hasLaundry: true, spigots: 2 };
 
-// Pipe run distance factor: larger homes have longer runs from fixtures to the main stack/service entry.
-// Based on sqrt(sqft/1000) — a 1,000 sqft home = 1.0x, 2,500 sqft = 1.58x, 4,000 sqft = 2.0x.
 function pipeFactor(sqft: number): number {
   if (sqft <= 0) return 1;
   return Math.max(1.0, parseFloat(Math.sqrt(sqft / 1000).toFixed(2)));
@@ -485,17 +597,13 @@ function getPlumbingMatItems(i: PlumbingInputs): MatItem[] {
   const sqft = parseFloat(i.homeSqft) || 0;
   const pf = pipeFactor(sqft);
 
-  // Branch runs to fixtures — scaled by distance factor
   const pex12Branch = (i.fullBaths * 45) + (i.halfBaths * 25) + (i.hasKitchen ? 20 : 0) + (i.hasLaundry ? 15 : 0);
   const pvc3Branch = (i.fullBaths * 30) + (i.halfBaths * 20);
   const pvc2Branch = (i.hasKitchen ? 15 : 0) + (i.hasLaundry ? 10 : 0);
 
-  // Main trunk lines — also scaled (longer house = longer mains)
   const hasFixtures = pex12Branch > 0;
   const pex34Trunk = hasFixtures ? Math.ceil(Math.sqrt(sqft) * 0.6) : 0;
   const pvc4Trunk = (i.fullBaths + i.halfBaths) > 0 ? Math.ceil(Math.sqrt(sqft) * 0.5) : 0;
-
-  // Outdoor supply runs from meter/well to house + spigot branches
   const pex34Outdoor = i.spigots * 25;
 
   const pex12 = Math.ceil(pex12Branch * pf * WASTE);
@@ -533,11 +641,12 @@ function getPlumbingLaborItems(i: PlumbingInputs): LaborItem[] {
 }
 
 function PlumbingTab() {
-  const [inputs, setInputs] = useState<PlumbingInputs>({ homeSqft: "", fullBaths: 1, halfBaths: 0, hasKitchen: true, hasLaundry: true, spigots: 2 });
+  const [inputs, setInputs] = useLocalStorage<PlumbingInputs>(SK.plumbing, DEFAULT_PLUMBING);
   const laborItems = getPlumbingLaborItems(inputs);
-  const [rates, setRates] = useState<LaborRates>(() => defaultRates(laborItems));
-  const handleRateChange = useCallback((label: string, val: string) => setRates(r => ({ ...r, [label]: val })), []);
-  const handleReset = useCallback(() => setRates(defaultRates(getPlumbingLaborItems(inputs))), [inputs]);
+  const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.plumbingRates, {});
+  const rates: LaborRates = { ...defaultRates(laborItems), ...savedRates };
+  const handleRateChange = useCallback((label: string, val: string) => setSavedRates(r => ({ ...r, [label]: val })), [setSavedRates]);
+  const handleReset = useCallback(() => setSavedRates({}), [setSavedRates]);
 
   const matItems = getPlumbingMatItems(inputs);
   const matTotal = matItems.reduce((s, r) => s + r.qty * r.price, 0);
@@ -553,9 +662,7 @@ function PlumbingTab() {
       <div className="mb-6">
         <Field label="Home Size (sq ft)" note="Used to estimate pipe run lengths from fixtures to main stack and service entry">
           <input
-            type="number"
-            min={0}
-            placeholder="e.g. 2000"
+            type="number" min={0} placeholder="e.g. 2000"
             value={inputs.homeSqft}
             onChange={e => setInputs(p => ({ ...p, homeSqft: e.target.value }))}
             className="w-full border border-[#DDD8D0] px-4 py-3 text-base focus:outline-none focus:border-[#E85D26]"
@@ -608,6 +715,10 @@ interface ElectricalInputs {
     hotTub: boolean;
   };
 }
+const DEFAULT_ELECTRICAL: ElectricalInputs = {
+  sqft: "", bedrooms: 3, bathrooms: 2,
+  appliances: { electricRange: false, electricDryer: false, dishwasher: true, evCharger: false, garage: false, hotTub: false },
+};
 
 function getElectricalMatItems(inp: ElectricalInputs): MatItem[] {
   const sqft = parseFloat(inp.sqft) || 0;
@@ -615,7 +726,7 @@ function getElectricalMatItems(inp: ElectricalInputs): MatItem[] {
 
   const lightingCircuits = Math.max(1, Math.ceil(sqft / 600));
   const outletCircuits = Math.max(1, Math.ceil(sqft / 400));
-  const kitchenCircuits = 3; // 2 small appliance + 1 fridge
+  const kitchenCircuits = 3;
   const bathroomCircuits = Math.max(1, bathrooms);
 
   const romex142 = Math.ceil(lightingCircuits * 150 * WASTE);
@@ -665,18 +776,15 @@ function getElectricalLaborItems(inp: ElectricalInputs): LaborItem[] {
 }
 
 function ElectricalTab() {
-  const [inputs, setInputs] = useState<ElectricalInputs>({
-    sqft: "", bedrooms: 3, bathrooms: 2,
-    appliances: { electricRange: false, electricDryer: false, dishwasher: true, evCharger: false, garage: false, hotTub: false },
-  });
-
-  const setApp = (key: keyof ElectricalInputs["appliances"], val: boolean) =>
-    setInputs(p => ({ ...p, appliances: { ...p.appliances, [key]: val } }));
+  const [inputs, setInputs] = useLocalStorage<ElectricalInputs>(SK.electrical, DEFAULT_ELECTRICAL);
+  const setApp = useCallback((key: keyof ElectricalInputs["appliances"], val: boolean) =>
+    setInputs(p => ({ ...p, appliances: { ...p.appliances, [key]: val } })), [setInputs]);
 
   const laborItems = getElectricalLaborItems(inputs);
-  const [rates, setRates] = useState<LaborRates>(() => defaultRates(laborItems));
-  const handleRateChange = useCallback((label: string, val: string) => setRates(r => ({ ...r, [label]: val })), []);
-  const handleReset = useCallback(() => setRates(defaultRates(getElectricalLaborItems(inputs))), [inputs]);
+  const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.electricalRates, {});
+  const rates: LaborRates = { ...defaultRates(laborItems), ...savedRates };
+  const handleRateChange = useCallback((label: string, val: string) => setSavedRates(r => ({ ...r, [label]: val })), [setSavedRates]);
+  const handleReset = useCallback(() => setSavedRates({}), [setSavedRates]);
 
   const sqft = parseFloat(inputs.sqft) || 0;
   const matItems = getElectricalMatItems(inputs);
@@ -729,6 +837,7 @@ function ElectricalTab() {
    HVAC TAB
 ───────────────────────────────────────────── */
 interface HvacInputs { sqft: string; stories: string; climate: string; system: string; }
+const DEFAULT_HVAC: HvacInputs = { sqft: "", stories: "1", climate: "mixed", system: "gas-central" };
 
 const HEATING_BTU: Record<string, number> = { cold: 45, mixed: 35, hot: 25 };
 const COOLING_BTU: Record<string, number> = { cold: 20, mixed: 25, hot: 35 };
@@ -819,11 +928,12 @@ function getHvacLaborItems(inp: HvacInputs): LaborItem[] {
 }
 
 function HvacTab() {
-  const [inputs, setInputs] = useState<HvacInputs>({ sqft: "", stories: "1", climate: "mixed", system: "gas-central" });
+  const [inputs, setInputs] = useLocalStorage<HvacInputs>(SK.hvac, DEFAULT_HVAC);
   const laborItems = getHvacLaborItems(inputs);
-  const [rates, setRates] = useState<LaborRates>(() => defaultRates(laborItems));
-  const handleRateChange = useCallback((label: string, val: string) => setRates(r => ({ ...r, [label]: val })), []);
-  const handleReset = useCallback(() => setRates(defaultRates(getHvacLaborItems(inputs))), [inputs]);
+  const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.hvacRates, {});
+  const rates: LaborRates = { ...defaultRates(laborItems), ...savedRates };
+  const handleRateChange = useCallback((label: string, val: string) => setSavedRates(r => ({ ...r, [label]: val })), [setSavedRates]);
+  const handleReset = useCallback(() => setSavedRates({}), [setSavedRates]);
 
   const sqft = parseFloat(inputs.sqft) || 0;
   const heatBtu = sqft * (HEATING_BTU[inputs.climate] ?? 35);
@@ -899,10 +1009,55 @@ const TABS: { id: Tab; label: string; group: "structural" | "mep" }[] = [
 ];
 
 export default function Estimator() {
+  // ── Prime localStorage from URL on first render (runs before child hooks) ──
+  const urlPrimed = useRef(false);
+  if (!urlPrimed.current) {
+    urlPrimed.current = true;
+    try {
+      const s = new URLSearchParams(window.location.search).get("s");
+      if (s) {
+        const decoded = deserializeState(s);
+        if (decoded) primeLocalStorageFromSnapshot(decoded);
+      }
+    } catch {}
+  }
+
   const [tab, setTab] = useState<Tab>("wall");
+  const [resetKey, setResetKey] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const [upgradeFeature, setUpgradeFeature] = useState<GatedFeature | null>(null);
+
+  const shareAccess = useFeatureAccess("share");
+
+  const handleCopyLink = useCallback(() => {
+    if (!shareAccess.allowed) { setUpgradeFeature("share"); return; }
+    const state = readAllLocalStorage();
+    const encoded = serializeState(state);
+    const url = new URL(window.location.href);
+    url.searchParams.set("s", encoded);
+    navigator.clipboard.writeText(url.toString()).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    }).catch(() => {
+      // Fallback: update URL so user can copy manually
+      window.history.replaceState({}, "", url.toString());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    });
+  }, [shareAccess.allowed]);
+
+  const handleClear = useCallback(() => {
+    clearAllLocalStorage();
+    const url = new URL(window.location.href);
+    url.searchParams.delete("s");
+    window.history.replaceState({}, "", url.toString());
+    setResetKey(k => k + 1);
+  }, []);
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-[#F7F4F0] text-[#1A1A1A]">
+      {upgradeFeature && <UpgradeModal feature={upgradeFeature} onClose={() => setUpgradeFeature(null)} />}
+
       <header className="sticky top-0 z-50 w-full border-b border-[#E0DAD3] bg-white shadow-sm">
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
           <Link href="/">
@@ -951,13 +1106,31 @@ export default function Estimator() {
                   </button>
                 ))}
               </div>
-              <button onClick={() => window.print()} className="ml-auto flex items-center gap-2 px-4 py-3 text-sm text-[#888] hover:text-[#1A1A1A] transition-colors whitespace-nowrap">
-                <Printer size={16} /> Print
-              </button>
+              {/* Toolbar actions */}
+              <div className="ml-auto flex items-center gap-1">
+                <button
+                  onClick={handleCopyLink}
+                  title="Copy shareable link"
+                  className={`flex items-center gap-2 px-4 py-3 text-sm transition-colors whitespace-nowrap ${copied ? "text-green-600" : "text-[#888] hover:text-[#E85D26]"}`}>
+                  {copied ? <Check size={15} /> : <Link2 size={15} />}
+                  <span className="hidden sm:inline">{copied ? "Copied!" : "Share"}</span>
+                </button>
+                <button
+                  onClick={handleClear}
+                  title="Clear all inputs and start over"
+                  className="flex items-center gap-2 px-4 py-3 text-sm text-[#888] hover:text-red-500 transition-colors whitespace-nowrap">
+                  <Trash2 size={15} />
+                  <span className="hidden sm:inline">Clear</span>
+                </button>
+                <button onClick={() => window.print()} className="flex items-center gap-2 px-4 py-3 text-sm text-[#888] hover:text-[#1A1A1A] transition-colors whitespace-nowrap">
+                  <Printer size={16} />
+                  <span className="hidden sm:inline">Print</span>
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="bg-white border border-[#DDD8D0] p-8 shadow-sm">
+          <div key={resetKey} className="bg-white border border-[#DDD8D0] p-8 shadow-sm">
             {tab === "wall" && <WallTab />}
             {tab === "floor" && <FloorTab />}
             {tab === "roof" && <RoofTab />}
