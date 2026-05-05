@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Calculator, HardHat, Building, PenTool, CheckCircle2, ChevronRight, Menu, X, ArrowRight, Activity, Globe, Scale } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useUser, useClerk } from "@clerk/react";
+import { Link } from "wouter";
 
 const fadeIn = {
   hidden: { opacity: 0, y: 20 },
@@ -21,6 +23,8 @@ const staggerContainer = {
 export default function Home() {
   const { toast } = useToast();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user, isLoaded } = useUser();
+  const { signOut } = useClerk();
   const [formData, setFormData] = useState({ name: "", email: "", message: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -77,10 +81,26 @@ export default function Home() {
             <a href="#expertise" className="text-[#444] hover:text-[#E85D26] transition-colors">EXPERTISE</a>
             <a href="#services" className="text-[#444] hover:text-[#E85D26] transition-colors">SERVICES</a>
             <a href="#experience" className="text-[#444] hover:text-[#E85D26] transition-colors">EXPERIENCE</a>
-            <a href="/estimator" className="text-[#444] hover:text-[#E85D26] transition-colors">ESTIMATOR</a>
-            <a href="#contact" className="bg-[#E85D26] text-white px-6 py-2.5 rounded-none hover:bg-[#D44A15] transition-colors font-bold uppercase tracking-wider">
-              Request Estimate
-            </a>
+            {isLoaded && user ? (
+              <>
+                <Link href="/estimator" className="bg-[#E85D26] text-white px-6 py-2.5 hover:bg-[#D44A15] transition-colors font-bold uppercase tracking-wider">
+                  Estimator
+                </Link>
+                <button
+                  onClick={() => signOut({ redirectUrl: "/" })}
+                  className="text-[#444] hover:text-[#E85D26] transition-colors"
+                >
+                  SIGN OUT
+                </button>
+              </>
+            ) : (
+              <>
+                <Link href="/sign-in" className="text-[#444] hover:text-[#E85D26] transition-colors">SIGN IN</Link>
+                <Link href="/sign-up" className="bg-[#E85D26] text-white px-6 py-2.5 hover:bg-[#D44A15] transition-colors font-bold uppercase tracking-wider">
+                  GET STARTED
+                </Link>
+              </>
+            )}
           </nav>
 
           <button className="md:hidden text-[#1A1A1A]" onClick={() => setIsMenuOpen(!isMenuOpen)}>
@@ -94,7 +114,17 @@ export default function Home() {
             <a href="#expertise" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium text-[#444]">Expertise</a>
             <a href="#services" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium text-[#444]">Services</a>
             <a href="#experience" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium text-[#444]">Experience</a>
-            <a href="#contact" onClick={() => setIsMenuOpen(false)} className="bg-[#E85D26] text-white px-6 py-3 text-center font-bold uppercase">Request Estimate</a>
+            {isLoaded && user ? (
+              <>
+                <Link href="/estimator" onClick={() => setIsMenuOpen(false)} className="bg-[#E85D26] text-white px-6 py-3 text-center font-bold uppercase">Go to Estimator</Link>
+                <button onClick={() => { setIsMenuOpen(false); signOut({ redirectUrl: "/" }); }} className="text-lg font-medium text-[#444] text-left">Sign Out</button>
+              </>
+            ) : (
+              <>
+                <Link href="/sign-in" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium text-[#444]">Sign In</Link>
+                <Link href="/sign-up" onClick={() => setIsMenuOpen(false)} className="bg-[#E85D26] text-white px-6 py-3 text-center font-bold uppercase">Get Started</Link>
+              </>
+            )}
           </div>
         )}
       </header>

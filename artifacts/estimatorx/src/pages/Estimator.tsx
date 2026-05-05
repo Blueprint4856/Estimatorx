@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { Link } from "wouter";
 import { ChevronRight, Printer, RotateCcw, Link2, Trash2, Check, Plus, X } from "lucide-react";
+import { useUser, useClerk } from "@clerk/react";
 
 type Tab = "wall" | "floor" | "roof" | "plumbing" | "electrical" | "hvac" | "summary";
 const WASTE = 1.10;
@@ -1257,6 +1258,25 @@ const TABS: { id: Exclude<Tab, "summary">; label: string; group: "structural" | 
   { id: "hvac", label: "Heating & Cooling", group: "mep" },
 ];
 
+function EstimatorUserNav() {
+  const { user } = useUser();
+  const { signOut } = useClerk();
+  if (!user) return null;
+  return (
+    <div className="flex items-center gap-3 border-l border-[#E0DAD3] pl-4">
+      <span className="text-xs text-[#888] hidden sm:block truncate max-w-[180px]">
+        {user.primaryEmailAddress?.emailAddress}
+      </span>
+      <button
+        onClick={() => signOut({ redirectUrl: "/" })}
+        className="text-xs font-bold uppercase tracking-wider text-[#E85D26] hover:text-[#D44A15] transition-colors"
+      >
+        Sign Out
+      </button>
+    </div>
+  );
+}
+
 export default function Estimator() {
   // Prime localStorage from URL on first render (before child hooks)
   const urlPrimed = useRef(false);
@@ -1318,10 +1338,13 @@ export default function Estimator() {
           <Link href="/">
             <img src="/logo.png" alt="EstimatorX.pro" className="h-16 object-contain cursor-pointer" />
           </Link>
-          <div className="flex items-center gap-2 text-sm text-[#888]">
-            <Link href="/" className="hover:text-[#E85D26] transition-colors">Home</Link>
-            <ChevronRight size={14} />
-            <span className="text-[#1A1A1A] font-semibold">Estimator</span>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-[#888]">
+              <Link href="/" className="hover:text-[#E85D26] transition-colors">Home</Link>
+              <ChevronRight size={14} />
+              <span className="text-[#1A1A1A] font-semibold">Estimator</span>
+            </div>
+            <EstimatorUserNav />
           </div>
         </div>
       </header>
