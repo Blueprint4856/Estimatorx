@@ -77,6 +77,7 @@ export default function Home() {
             <a href="#expertise" className="text-[#444] hover:text-[#E85D26] transition-colors">EXPERTISE</a>
             <a href="#services" className="text-[#444] hover:text-[#E85D26] transition-colors">SERVICES</a>
             <a href="#experience" className="text-[#444] hover:text-[#E85D26] transition-colors">EXPERIENCE</a>
+            <a href="/estimator" className="text-[#444] hover:text-[#E85D26] transition-colors">ESTIMATOR</a>
             <a href="#contact" className="bg-[#E85D26] text-white px-6 py-2.5 rounded-none hover:bg-[#D44A15] transition-colors font-bold uppercase tracking-wider">
               Request Estimate
             </a>
