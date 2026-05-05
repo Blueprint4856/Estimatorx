@@ -371,7 +371,7 @@ function FloorTab() {
 /* ─────────────────────────────────────────────
    ROOF TAB
 ───────────────────────────────────────────── */
-interface RoofInputs { footprintSqft: string; pitch: string; iceWater: boolean; includeDecking: boolean; }
+interface RoofInputs { footprintSqft: string; pitch: string; archShingles: boolean; iceWater: boolean; includeDecking: boolean; }
 const PITCH_FACTORS: Record<string, number> = { "4:12": 1.054, "5:12": 1.083, "6:12": 1.118, "7:12": 1.158, "8:12": 1.202, "9:12": 1.250, "10:12": 1.302, "12:12": 1.414 };
 
 function getRoofMatItems(inputs: RoofInputs): MatItem[] {
@@ -379,7 +379,7 @@ function getRoofMatItems(inputs: RoofInputs): MatItem[] {
   const factor = PITCH_FACTORS[inputs.pitch] ?? 1.118;
   const actual = fp * factor;
   return [
-    { label: "Architectural Shingles (bundle)", qty: Math.ceil((actual / 100) * 3.33 * WASTE), unit: "bundle", price: 38.98 },
+    ...(inputs.archShingles ? [{ label: "Architectural Shingles (bundle)", qty: Math.ceil((actual / 100) * 3.33 * WASTE), unit: "bundle", price: 38.98 }] : []),
     { label: "Synthetic Underlayment", qty: Math.ceil(actual * WASTE), unit: "sqft", price: 0.12 },
     ...(inputs.includeDecking ? [{ label: "7/16\" OSB Roof Decking (4×8)", qty: Math.ceil(actual * WASTE / 32), unit: "sheet", price: 22.98 }] : []),
     ...(inputs.iceWater ? [{ label: "Ice & Water Shield", qty: Math.ceil(fp * 0.25 * WASTE), unit: "sqft", price: 0.45 }] : []),
@@ -391,7 +391,7 @@ function getRoofLaborItems(inputs: RoofInputs): LaborItem[] {
   const factor = PITCH_FACTORS[inputs.pitch] ?? 1.118;
   const actual = Math.round(fp * factor);
   return [
-    { label: "Shingle Installation", qty: actual, unit: "sqft", nationalAvg: 0.75 },
+    ...(inputs.archShingles ? [{ label: "Shingle Installation", qty: actual, unit: "sqft", nationalAvg: 0.75 }] : []),
     { label: "Underlayment Install", qty: actual, unit: "sqft", nationalAvg: 0.12 },
     ...(inputs.includeDecking ? [{ label: "Roof Decking Install", qty: actual, unit: "sqft", nationalAvg: 0.62 }] : []),
     ...(inputs.iceWater ? [{ label: "Ice & Water Shield Install", qty: Math.round(fp * 0.25), unit: "sqft", nationalAvg: 0.28 }] : []),
@@ -399,7 +399,7 @@ function getRoofLaborItems(inputs: RoofInputs): LaborItem[] {
 }
 
 function RoofTab() {
-  const [inputs, setInputs] = useState<RoofInputs>({ footprintSqft: "", pitch: "6:12", iceWater: true, includeDecking: false });
+  const [inputs, setInputs] = useState<RoofInputs>({ footprintSqft: "", pitch: "6:12", archShingles: true, iceWater: true, includeDecking: false });
   const laborItems = getRoofLaborItems(inputs);
   const [rates, setRates] = useState<LaborRates>(() => defaultRates(laborItems));
   const handleRateChange = useCallback((label: string, val: string) => setRates(r => ({ ...r, [label]: val })), []);
@@ -429,6 +429,7 @@ function RoofTab() {
           </InfoBox>
         )}
         <div className="flex flex-col gap-4">
+          <Toggle checked={inputs.archShingles} onChange={v => setInputs(p => ({ ...p, archShingles: v }))} label="Architectural Shingles" />
           <Toggle checked={inputs.includeDecking} onChange={v => setInputs(p => ({ ...p, includeDecking: v }))} label="Include OSB Roof Decking" />
           <Toggle checked={inputs.iceWater} onChange={v => setInputs(p => ({ ...p, iceWater: v }))} label="Include Ice & Water Shield" />
         </div>
