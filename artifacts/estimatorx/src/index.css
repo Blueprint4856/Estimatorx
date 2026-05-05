@@ -141,3 +141,44 @@
     @apply font-serif tracking-tight;
   }
 }
+
+/* ── Print styles ─────────────────────────────────────────────────────────── */
+@media print {
+  /* Hide all navigation, input controls, and interactive UI */
+  .no-print { display: none !important; }
+
+  /* Show print-only elements (e.g. the estimate header in Summary) */
+  .print-show { display: block !important; }
+
+  /* Show the rate value span instead of the editable input */
+  .print-rate-display { display: inline !important; }
+
+  /* Reset backgrounds for print legibility */
+  body { background: white !important; }
+
+  /* Remove sticky header shadow / layout overhead */
+  header { box-shadow: none !important; }
+
+  /* Ensure the content area fills the page */
+  main { padding: 0 !important; }
+
+  /* The dark hero banner takes a lot of ink — compress it */
+  .bg-\[\#1A1A1A\] { background: white !important; color: black !important; }
+
+  /* Make dark table headers printable */
+  .bg-\[\#2C2825\], .bg-\[\#1A1A1A\] { background: #f7f4f0 !important; color: #1a1a1a !important; }
+
+  /* Orange grand total bar: keep the color but ensure it prints */
+  .bg-\[\#E85D26\] { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* Avoid page breaks inside tables */
+  table, tr, td, th { page-break-inside: avoid; }
+
+  /* Consistent font sizing */
+  body { font-size: 11pt; }
+
+  /* Give the page some margin */
+  @page {
+    margin: 0.75in;
+  }
+}
