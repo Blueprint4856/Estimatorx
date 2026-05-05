@@ -466,6 +466,7 @@ function RoofTab() {
    PLUMBING TAB
 ───────────────────────────────────────────── */
 interface PlumbingInputs {
+  homeSqft: string;
   fullBaths: number;
   halfBaths: number;
   hasKitchen: boolean;
@@ -473,19 +474,46 @@ interface PlumbingInputs {
   spigots: number;
 }
 
+// Pipe run distance factor: larger homes have longer runs from fixtures to the main stack/service entry.
+// Based on sqrt(sqft/1000) — a 1,000 sqft home = 1.0x, 2,500 sqft = 1.58x, 4,000 sqft = 2.0x.
+function pipeFactor(sqft: number): number {
+  if (sqft <= 0) return 1;
+  return Math.max(1.0, parseFloat(Math.sqrt(sqft / 1000).toFixed(2)));
+}
+
 function getPlumbingMatItems(i: PlumbingInputs): MatItem[] {
-  const pex12 = (i.fullBaths * 45) + (i.halfBaths * 25) + (i.hasKitchen ? 20 : 0) + (i.hasLaundry ? 15 : 0);
-  const pex34 = i.spigots * 25;
-  const pvc3 = (i.fullBaths * 30) + (i.halfBaths * 20);
-  const pvc2 = (i.hasKitchen ? 15 : 0) + (i.hasLaundry ? 10 : 0);
+  const sqft = parseFloat(i.homeSqft) || 0;
+  const pf = pipeFactor(sqft);
+
+  // Branch runs to fixtures — scaled by distance factor
+  const pex12Branch = (i.fullBaths * 45) + (i.halfBaths * 25) + (i.hasKitchen ? 20 : 0) + (i.hasLaundry ? 15 : 0);
+  const pvc3Branch = (i.fullBaths * 30) + (i.halfBaths * 20);
+  const pvc2Branch = (i.hasKitchen ? 15 : 0) + (i.hasLaundry ? 10 : 0);
+
+  // Main trunk lines — also scaled (longer house = longer mains)
+  const hasFixtures = pex12Branch > 0;
+  const pex34Trunk = hasFixtures ? Math.ceil(Math.sqrt(sqft) * 0.6) : 0;
+  const pvc4Trunk = (i.fullBaths + i.halfBaths) > 0 ? Math.ceil(Math.sqrt(sqft) * 0.5) : 0;
+
+  // Outdoor supply runs from meter/well to house + spigot branches
+  const pex34Outdoor = i.spigots * 25;
+
+  const pex12 = Math.ceil(pex12Branch * pf * WASTE);
+  const pex34 = Math.ceil((pex34Trunk + pex34Outdoor) * WASTE);
+  const pvc3 = Math.ceil(pvc3Branch * pf * WASTE);
+  const pvc4 = Math.ceil(pvc4Trunk * WASTE);
+  const pvc2 = Math.ceil(pvc2Branch * pf * WASTE);
+
   const shutoffs = (i.fullBaths * 4) + (i.halfBaths * 3) + (i.hasKitchen ? 2 : 0) + (i.hasLaundry ? 2 : 0);
   const ptraps = (i.fullBaths * 2) + (i.halfBaths * 1) + (i.hasKitchen ? 1 : 0) + (i.hasLaundry ? 1 : 0);
   const waxRings = i.fullBaths + i.halfBaths;
+
   const items: MatItem[] = [];
-  if (pex12 > 0) items.push({ label: 'PEX-A ½" Supply Pipe', qty: Math.ceil(pex12 * WASTE), unit: "LF", price: 0.68 });
-  if (pex34 > 0) items.push({ label: 'PEX-A ¾" Supply Pipe (Outdoor)', qty: Math.ceil(pex34 * WASTE), unit: "LF", price: 0.98 });
-  if (pvc3 > 0) items.push({ label: "3\" PVC Drain Pipe (Bathrooms)", qty: Math.ceil(pvc3 * WASTE), unit: "LF", price: 2.85 });
-  if (pvc2 > 0) items.push({ label: "2\" PVC Drain Pipe (Kitchen/Laundry)", qty: Math.ceil(pvc2 * WASTE), unit: "LF", price: 1.95 });
+  if (pex12 > 0) items.push({ label: 'PEX-A ½" Supply Branches', qty: pex12, unit: "LF", price: 0.68 });
+  if (pex34 > 0) items.push({ label: 'PEX-A ¾" Supply Trunk / Outdoor Runs', qty: pex34, unit: "LF", price: 0.98 });
+  if (pvc4 > 0) items.push({ label: '4" PVC Main Drain / Stack', qty: pvc4, unit: "LF", price: 4.25 });
+  if (pvc3 > 0) items.push({ label: '3" PVC Drain Branches (Bathrooms)', qty: pvc3, unit: "LF", price: 2.85 });
+  if (pvc2 > 0) items.push({ label: '2" PVC Drain (Kitchen/Laundry)', qty: pvc2, unit: "LF", price: 1.95 });
   if (shutoffs > 0) items.push({ label: "½\" Shut-Off Valves", qty: shutoffs, unit: "ea", price: 8.50 });
   if (ptraps > 0) items.push({ label: "P-Traps", qty: ptraps, unit: "ea", price: 12.50 });
   if (waxRings > 0) items.push({ label: "Toilet Wax Ring & Closet Flange", qty: waxRings, unit: "ea", price: 8.50 });
@@ -505,7 +533,7 @@ function getPlumbingLaborItems(i: PlumbingInputs): LaborItem[] {
 }
 
 function PlumbingTab() {
-  const [inputs, setInputs] = useState<PlumbingInputs>({ fullBaths: 1, halfBaths: 0, hasKitchen: true, hasLaundry: true, spigots: 2 });
+  const [inputs, setInputs] = useState<PlumbingInputs>({ homeSqft: "", fullBaths: 1, halfBaths: 0, hasKitchen: true, hasLaundry: true, spigots: 2 });
   const laborItems = getPlumbingLaborItems(inputs);
   const [rates, setRates] = useState<LaborRates>(() => defaultRates(laborItems));
   const handleRateChange = useCallback((label: string, val: string) => setRates(r => ({ ...r, [label]: val })), []);
@@ -516,9 +544,29 @@ function PlumbingTab() {
   const laborTotal = laborItems.reduce((s, i) => s + i.qty * effectiveRate(i, rates), 0);
   const totalRooms = inputs.fullBaths + inputs.halfBaths + (inputs.hasKitchen ? 1 : 0) + (inputs.hasLaundry ? 1 : 0) + inputs.spigots;
 
+  const sqftVal = parseFloat(inputs.homeSqft) || 0;
+  const pf = sqftVal > 0 ? Math.max(1.0, parseFloat(Math.sqrt(sqftVal / 1000).toFixed(2))) : 1;
+
   return (
     <div>
-      <p className="text-sm text-[#666] mb-6">Tell us about your home's water needs — no plumbing knowledge required.</p>
+      <p className="text-sm text-[#666] mb-6">Pipe quantities scale with house size — a bathroom at the far end of a 3,000 sqft home needs significantly more pipe than one in a 1,000 sqft house.</p>
+      <div className="mb-6">
+        <Field label="Home Size (sq ft)" note="Used to estimate pipe run lengths from fixtures to main stack and service entry">
+          <input
+            type="number"
+            min={0}
+            placeholder="e.g. 2000"
+            value={inputs.homeSqft}
+            onChange={e => setInputs(p => ({ ...p, homeSqft: e.target.value }))}
+            className="w-full border border-[#DDD8D0] px-4 py-3 text-base focus:outline-none focus:border-[#E85D26]"
+          />
+        </Field>
+        {sqftVal > 0 && (
+          <div className="mt-2 text-xs text-[#888]">
+            Pipe run distance factor: <strong>{pf.toFixed(2)}×</strong> — branch runs and trunk lines scaled accordingly
+          </div>
+        )}
+      </div>
       <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-8 mb-8">
         <Stepper label="Full Bathrooms" value={inputs.fullBaths} onChange={v => setInputs(p => ({ ...p, fullBaths: v }))} max={8} note="Toilet + sink + tub or shower" />
         <Stepper label="Half Baths / Powder Rooms" value={inputs.halfBaths} onChange={v => setInputs(p => ({ ...p, halfBaths: v }))} max={4} note="Toilet + sink only" />
@@ -531,6 +579,9 @@ function PlumbingTab() {
       </div>
       {totalRooms > 0 ? (
         <div className="mt-8 flex flex-col gap-3">
+          {!sqftVal && (
+            <InfoBox>Enter your home size above for more accurate pipe run quantities. Without it, estimates assume a compact layout with all fixtures close to the main stack.</InfoBox>
+          )}
           <MaterialsTable rows={matItems} />
           <LaborTable items={laborItems} rates={rates} onChange={handleRateChange} onReset={handleReset} />
           <GrandTotal matTotal={matTotal} laborTotal={laborTotal} />
