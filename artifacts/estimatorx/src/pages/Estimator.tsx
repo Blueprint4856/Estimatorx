@@ -231,7 +231,7 @@ function ResultNote() {
    WALL TAB
 ───────────────────────────────────────────── */
 interface WallInputs { linearFeet: string; ceilingHeight: string; exteriorSheathing: boolean; insulation: boolean; drywall: boolean; }
-const WALL_MAT_PRICES = { stud: 5.48, plate: 5.48, osb: 22.98, insulation: 0.55, drywall: 15.98 };
+const WALL_MAT_PRICES = { stud: 5.48, plate: 5.48, osb: 34.98, insulation: 0.55, drywall: 15.98 };
 
 function getWallMatItems(inputs: WallInputs): MatItem[] {
   const lf = parseFloat(inputs.linearFeet) || 0;
@@ -240,7 +240,10 @@ function getWallMatItems(inputs: WallInputs): MatItem[] {
   return [
     { label: "2×4×8 Studs (16\" OC)", qty: Math.ceil((lf / 1.333 + 1) * WASTE), unit: "ea", price: WALL_MAT_PRICES.stud },
     { label: "2×4×8 Plates (3 per run)", qty: Math.ceil(lf * 3 * WASTE / 8), unit: "ea", price: WALL_MAT_PRICES.plate },
-    ...(inputs.exteriorSheathing ? [{ label: "7/16\" OSB Sheathing (4×8)", qty: Math.ceil(area * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.osb }] : []),
+    ...(inputs.exteriorSheathing ? [
+      { label: "Advantech Wall Sheathing 7/16\" (4×8)", qty: Math.ceil(area * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.osb },
+      { label: "Advantech Seam Tape (75 LF roll)", qty: Math.max(1, Math.ceil(area * WASTE / 300)), unit: "roll", price: 24.98 },
+    ] : []),
     ...(inputs.insulation ? [{ label: "R-13 Batt Insulation", qty: Math.ceil(area * WASTE), unit: "sqft", price: WALL_MAT_PRICES.insulation }] : []),
     ...(inputs.drywall ? [{ label: "½\" Drywall (4×8)", qty: Math.ceil(area * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.drywall }] : []),
   ];
@@ -252,7 +255,7 @@ function getWallLaborItems(inputs: WallInputs): LaborItem[] {
   const area = Math.round(lf * h);
   return [
     { label: "Stud Framing", qty: area, unit: "sqft", nationalAvg: 1.85 },
-    ...(inputs.exteriorSheathing ? [{ label: "Sheathing Install", qty: area, unit: "sqft", nationalAvg: 0.45 }] : []),
+    ...(inputs.exteriorSheathing ? [{ label: "Advantech Sheathing Install & Seam Tape", qty: area, unit: "sqft", nationalAvg: 0.52 }] : []),
     ...(inputs.insulation ? [{ label: "Insulation (Batt) Install", qty: area, unit: "sqft", nationalAvg: 0.38 }] : []),
     ...(inputs.drywall ? [{ label: "Drywall Hang & Finish", qty: area, unit: "sqft", nationalAvg: 1.65 }] : []),
   ];
@@ -283,7 +286,7 @@ function WallTab() {
           </select>
         </Field>
         <div className="flex flex-col gap-4">
-          <Toggle checked={inputs.exteriorSheathing} onChange={v => setInputs(p => ({ ...p, exteriorSheathing: v }))} label="Exterior Sheathing (OSB)" />
+          <Toggle checked={inputs.exteriorSheathing} onChange={v => setInputs(p => ({ ...p, exteriorSheathing: v }))} label="Advantech Exterior Sheathing" />
           <Toggle checked={inputs.insulation} onChange={v => setInputs(p => ({ ...p, insulation: v }))} label="Insulation (R-13 Batts)" />
           <Toggle checked={inputs.drywall} onChange={v => setInputs(p => ({ ...p, drywall: v }))} label={'Interior Drywall (½")'} />
         </div>
@@ -311,7 +314,10 @@ const FLOOR_LABOR: Record<string, number> = { lvp: 2.15, carpet: 1.45, hardwood:
 function getFloorMatItems(inputs: FloorInputs): MatItem[] {
   const sqft = parseFloat(inputs.sqft) || 0;
   return [
-    ...(inputs.includeSubfloor ? [{ label: "¾\" T&G OSB Subfloor (4×8)", qty: Math.ceil(sqft * WASTE / 32), unit: "sheet", price: 42.98 }] : []),
+    ...(inputs.includeSubfloor ? [
+      { label: "Advantech 3/4\" Subfloor Panel (4×8)", qty: Math.ceil(sqft * WASTE / 32), unit: "sheet", price: 52.98 },
+      { label: "Subfloor Construction Adhesive (28 oz tube)", qty: Math.max(1, Math.ceil(sqft * WASTE / 40)), unit: "tube", price: 8.50 },
+    ] : []),
     ...(inputs.finish !== "none" ? [{ label: FLOOR_LABELS[inputs.finish], qty: Math.ceil(sqft * WASTE), unit: "sqft", price: FLOOR_MAT_PRICES[inputs.finish] ?? 0 }] : []),
   ];
 }
@@ -319,7 +325,7 @@ function getFloorMatItems(inputs: FloorInputs): MatItem[] {
 function getFloorLaborItems(inputs: FloorInputs): LaborItem[] {
   const sqft = Math.round(parseFloat(inputs.sqft) || 0);
   return [
-    ...(inputs.includeSubfloor ? [{ label: "Subfloor Installation", qty: sqft, unit: "sqft", nationalAvg: 0.82 }] : []),
+    ...(inputs.includeSubfloor ? [{ label: "Advantech Subfloor Install (glued & screwed)", qty: sqft, unit: "sqft", nationalAvg: 0.95 }] : []),
     ...(inputs.finish !== "none" ? [{ label: `${FLOOR_LABELS[inputs.finish]} Installation`, qty: sqft, unit: "sqft", nationalAvg: FLOOR_LABOR[inputs.finish] ?? 0 }] : []),
   ];
 }
@@ -353,7 +359,7 @@ function FloorTab() {
           </select>
         </Field>
         <div>
-          <Toggle checked={inputs.includeSubfloor} onChange={v => setInputs(p => ({ ...p, includeSubfloor: v }))} label={'Include ¾" T&G OSB Subfloor'} />
+          <Toggle checked={inputs.includeSubfloor} onChange={v => setInputs(p => ({ ...p, includeSubfloor: v }))} label={'Include Advantech 3/4" Subfloor'} />
         </div>
       </div>
       {hasResults ? (
@@ -381,7 +387,10 @@ function getRoofMatItems(inputs: RoofInputs): MatItem[] {
   return [
     ...(inputs.archShingles ? [{ label: "Architectural Shingles (bundle)", qty: Math.ceil((actual / 100) * 3.33 * WASTE), unit: "bundle", price: 38.98 }] : []),
     { label: "Synthetic Underlayment", qty: Math.ceil(actual * WASTE), unit: "sqft", price: 0.12 },
-    ...(inputs.includeDecking ? [{ label: "7/16\" OSB Roof Decking (4×8)", qty: Math.ceil(actual * WASTE / 32), unit: "sheet", price: 22.98 }] : []),
+    ...(inputs.includeDecking ? [
+      { label: "Advantech Roof Sheathing 7/16\" (4×8)", qty: Math.ceil(actual * WASTE / 32), unit: "sheet", price: 34.98 },
+      { label: "Advantech Seam Tape (75 LF roll)", qty: Math.max(1, Math.ceil(actual * WASTE / 300)), unit: "roll", price: 24.98 },
+    ] : []),
     ...(inputs.iceWater ? [{ label: "Ice & Water Shield", qty: Math.ceil(fp * 0.25 * WASTE), unit: "sqft", price: 0.45 }] : []),
   ];
 }
@@ -393,7 +402,7 @@ function getRoofLaborItems(inputs: RoofInputs): LaborItem[] {
   return [
     ...(inputs.archShingles ? [{ label: "Shingle Installation", qty: actual, unit: "sqft", nationalAvg: 0.75 }] : []),
     { label: "Underlayment Install", qty: actual, unit: "sqft", nationalAvg: 0.12 },
-    ...(inputs.includeDecking ? [{ label: "Roof Decking Install", qty: actual, unit: "sqft", nationalAvg: 0.62 }] : []),
+    ...(inputs.includeDecking ? [{ label: "Advantech Roof Sheathing Install & Seam Tape", qty: actual, unit: "sqft", nationalAvg: 0.68 }] : []),
     ...(inputs.iceWater ? [{ label: "Ice & Water Shield Install", qty: Math.round(fp * 0.25), unit: "sqft", nationalAvg: 0.28 }] : []),
   ];
 }
@@ -430,7 +439,7 @@ function RoofTab() {
         )}
         <div className="flex flex-col gap-4">
           <Toggle checked={inputs.archShingles} onChange={v => setInputs(p => ({ ...p, archShingles: v }))} label="Architectural Shingles" />
-          <Toggle checked={inputs.includeDecking} onChange={v => setInputs(p => ({ ...p, includeDecking: v }))} label="Include OSB Roof Decking" />
+          <Toggle checked={inputs.includeDecking} onChange={v => setInputs(p => ({ ...p, includeDecking: v }))} label="Include Advantech Roof Sheathing" />
           <Toggle checked={inputs.iceWater} onChange={v => setInputs(p => ({ ...p, iceWater: v }))} label="Include Ice & Water Shield" />
         </div>
       </div>
