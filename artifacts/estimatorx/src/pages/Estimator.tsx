@@ -975,7 +975,7 @@ function getElectricalLaborItems(inp: ElectricalInputs): LaborItem[] {
     + (appliances.electricRange ? 1 : 0) + (appliances.electricDryer ? 1 : 0)
     + (appliances.evCharger ? 1 : 0) + (appliances.hotTub ? 1 : 0);
   const items: LaborItem[] = [
-    { label: "Panel Installation & Setup", qty: 1, unit: "ea", nationalAvg: 425 },
+    { label: "Panel Installation & Setup", qty: 1, unit: "ea", nationalAvg: 550 },
     { label: "Circuit Rough-In (per circuit)", qty: totalCircuits, unit: "circuit", nationalAvg: 225 },
   ];
   if (appliances.evCharger) items.push({ label: "EV Charger Circuit (240V)", qty: 1, unit: "ea", nationalAvg: 760 });
