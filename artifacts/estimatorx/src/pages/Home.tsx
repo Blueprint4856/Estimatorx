@@ -248,7 +248,7 @@ export default function Home() {
                 <div className="w-12 h-[2px] bg-[#E85D26]"></div>
                 <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">Current Project</span>
               </div>
-              <h2 className="text-4xl md:text-5xl font-black font-serif uppercase mb-8 text-[#1A1A1A]">Rosewood Lane<br/>Subdivision</h2>
+              <h2 className="text-4xl md:text-5xl font-black font-serif uppercase mb-8 text-[#1A1A1A]">24-Lot Residential<br/>Subdivision</h2>
 
               <div className="space-y-6 text-[#3A3530] text-lg">
                 <p>Currently managing a 24-lot residential subdivision through every single phase of development.</p>
@@ -270,7 +270,7 @@ export default function Home() {
 
               <div className="mt-12 p-6 border-l-4 border-[#E85D26] bg-white shadow-sm">
                 <h4 className="text-[#E85D26] font-bold uppercase tracking-wider text-sm mb-2">Corporate Leadership Background</h4>
-                <p className="text-[#3A3530]">Former CEO of Unified Communications Corporation (2005–2015). Managed capital projects and infrastructure builds across a dozen+ US Data Center facilities — bringing corporate-grade financial rigor to residential construction estimating.</p>
+                <p className="text-[#3A3530]">Decades of executive leadership overseeing large-scale capital projects and infrastructure builds — bringing corporate-grade financial rigor to residential construction estimating.</p>
               </div>
             </div>
           </div>
