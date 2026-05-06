@@ -63,57 +63,59 @@ function MagicLinkPage() {
     setStage("sending");
     setErrMsg("");
 
-    // ── Step 1: identify — try sign-in ──────────────────────────────────────
-    const { error: createErr } = await signIn.create({ identifier: email });
+    // ── Step 1: identify — signUpIfMissing lets Clerk handle new vs existing ─
+    const { error: createErr } = await signIn.create({
+      identifier: email,
+      signUpIfMissing: true,
+    });
 
     if (createErr) {
-      const code = createErr.code ?? "";
+      setErrMsg(createErr.message ?? "Something went wrong. Please try again.");
+      setStage("error");
+      return;
+    }
 
-      if (code === "form_identifier_not_found") {
-        // ── New user — fall back to sign-up ──────────────────────────────────
-        const { error: suCreateErr } = await signUp.create({ emailAddress: email });
-        if (suCreateErr) {
-          setErrMsg(suCreateErr.message ?? "Something went wrong. Please try again.");
-          setStage("error");
-          return;
-        }
-
-        const { error: suSendErr } = await signUp.verifications.sendEmailLink({ verificationUrl });
-        if (suSendErr) {
-          setErrMsg(suSendErr.message ?? "Could not send the email link.");
-          setStage("error");
-          return;
-        }
-
-        modeRef.current = "signUp";
-        setStage("sent");
-
-        const { error: suWaitErr } = await signUp.verifications.waitForEmailLinkVerification();
-        if (suWaitErr) {
-          setErrMsg(suWaitErr.message ?? "Verification failed or expired.");
-          setStage("error");
-          return;
-        }
-
-        if (signUp.verifications.emailLinkVerification?.status === "verified") {
-          await signUp.finalize();
-          setStage("done");
-          setLocation("/estimator");
-        }
-      } else {
-        setErrMsg(createErr.message ?? "Something went wrong. Please try again.");
+    // ── Step 2a: new user — Clerk signals isTransferable ────────────────────
+    if (signIn.isTransferable) {
+      const { error: suCreateErr } = await signUp.create({ transfer: true });
+      if (suCreateErr) {
+        setErrMsg(suCreateErr.message ?? "Could not create your account.");
         setStage("error");
+        return;
+      }
+
+      const { error: suSendErr } = await signUp.verifications.sendEmailLink({ verificationUrl });
+      if (suSendErr) {
+        setErrMsg(suSendErr.message ?? "Could not send the sign-in link.");
+        setStage("error");
+        return;
+      }
+
+      modeRef.current = "signUp";
+      setStage("sent");
+
+      const { error: suWaitErr } = await signUp.verifications.waitForEmailLinkVerification();
+      if (suWaitErr) {
+        setErrMsg(suWaitErr.message ?? "Verification failed or expired.");
+        setStage("error");
+        return;
+      }
+
+      if (signUp.verifications.emailLinkVerification?.status === "verified") {
+        await signUp.finalize();
+        setStage("done");
+        setLocation("/estimator");
       }
       return;
     }
 
-    // ── Step 2: send magic link (existing user) ──────────────────────────────
+    // ── Step 2b: existing user — send magic link ─────────────────────────────
     const { error: sendErr } = await signIn.emailLink.sendLink({
       verificationUrl,
       emailAddress: email,
     });
     if (sendErr) {
-      setErrMsg(sendErr.message ?? "Could not send the email link.");
+      setErrMsg(sendErr.message ?? "Could not send the sign-in link.");
       setStage("error");
       return;
     }
