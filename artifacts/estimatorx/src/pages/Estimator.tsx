@@ -573,7 +573,7 @@ function getWallLaborItems(inputs: WallInputs): LaborItem[] {
   const area = Math.round(lf * h);
   return [
     { label: "Stud Framing", qty: area, unit: "sqft", nationalAvg: 1.85 },
-    ...(inputs.exteriorSheathing ? [{ label: "Advantech Sheathing Install & Seam Tape", qty: area, unit: "sqft", nationalAvg: 0.52 }] : []),
+    ...(inputs.exteriorSheathing ? [{ label: "Advantech Sheathing Install & Seam Tape", qty: area, unit: "sqft", nationalAvg: 1.25 }] : []),
     ...(inputs.insulation ? [{ label: "Insulation (Batt) Install", qty: area, unit: "sqft", nationalAvg: 0.38 }] : []),
     ...(inputs.drywall ? [{ label: "Drywall Hang & Finish", qty: area, unit: "sqft", nationalAvg: 1.65 }] : []),
   ];
