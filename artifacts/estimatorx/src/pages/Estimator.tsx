@@ -526,7 +526,7 @@ function getWallMatItems(inputs: WallInputs): MatItem[] {
   const lf = parseFloat(inputs.linearFeet) || 0;
   const h = parseFloat(inputs.ceilingHeight) || 9;
   const area = lf * h;
-  const sc = STUD_CONFIG[inputs.studSize];
+  const sc = STUD_CONFIG[inputs.studSize] ?? STUD_CONFIG["2x4"];
   return [
     { label: sc.studLabel, qty: Math.ceil((lf / sc.ocSpacing + 1) * WASTE), unit: "ea", price: sc.studPrice },
     { label: sc.plateLabel, qty: Math.ceil(lf * 3 * WASTE / 8), unit: "ea", price: sc.platePrice },
@@ -550,7 +550,8 @@ function getWallLaborItems(inputs: WallInputs): LaborItem[] {
   ];
 }
 function WallTab() {
-  const [inputs, setInputs] = useLocalStorage<WallInputs>(SK.wall, DEFAULT_WALL);
+  const [rawInputs, setInputs] = useLocalStorage<WallInputs>(SK.wall, DEFAULT_WALL);
+  const inputs: WallInputs = { ...DEFAULT_WALL, ...rawInputs };
   const laborItems = getWallLaborItems(inputs);
   const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.wallRates, {});
   const [savedMatPrices, setSavedMatPrices] = useLocalStorage<MatPrices>(SK.wallMatPrices, {});
