@@ -474,22 +474,29 @@ function ResultNote() {
 /* ─────────────────────────────────────────────
    WALL TAB
 ───────────────────────────────────────────── */
-interface WallInputs { linearFeet: string; ceilingHeight: string; exteriorSheathing: boolean; insulation: boolean; drywall: boolean; }
-const WALL_MAT_PRICES = { stud: 5.48, plate: 5.48, osb: 34.98, insulation: 0.55, drywall: 15.98 };
-const DEFAULT_WALL: WallInputs = { linearFeet: "", ceilingHeight: "9", exteriorSheathing: true, insulation: true, drywall: true };
+interface WallInputs { linearFeet: string; ceilingHeight: string; studSize: "2x4" | "2x6"; exteriorSheathing: boolean; insulation: boolean; drywall: boolean; }
+
+const STUD_CONFIG = {
+  "2x4": { studLabel: "2×4×8 Studs (16\" OC)", plateLabel: "2×4×8 Plates (3 per run)", studPrice: 5.48, platePrice: 5.48, ocSpacing: 1.333, insulLabel: "R-13 Batt Insulation", insulPrice: 0.55 },
+  "2x6": { studLabel: "2×6×8 Studs (24\" OC)", plateLabel: "2×6×8 Plates (3 per run)", studPrice: 8.98, platePrice: 8.98, ocSpacing: 2.0,   insulLabel: "R-21 Batt Insulation", insulPrice: 0.82 },
+} as const;
+
+const WALL_MAT_PRICES = { osb: 34.98, drywall: 15.98 };
+const DEFAULT_WALL: WallInputs = { linearFeet: "", ceilingHeight: "9", studSize: "2x4", exteriorSheathing: true, insulation: true, drywall: true };
 
 function getWallMatItems(inputs: WallInputs): MatItem[] {
   const lf = parseFloat(inputs.linearFeet) || 0;
   const h = parseFloat(inputs.ceilingHeight) || 9;
   const area = lf * h;
+  const sc = STUD_CONFIG[inputs.studSize];
   return [
-    { label: "2×4×8 Studs (16\" OC)", qty: Math.ceil((lf / 1.333 + 1) * WASTE), unit: "ea", price: WALL_MAT_PRICES.stud },
-    { label: "2×4×8 Plates (3 per run)", qty: Math.ceil(lf * 3 * WASTE / 8), unit: "ea", price: WALL_MAT_PRICES.plate },
+    { label: sc.studLabel, qty: Math.ceil((lf / sc.ocSpacing + 1) * WASTE), unit: "ea", price: sc.studPrice },
+    { label: sc.plateLabel, qty: Math.ceil(lf * 3 * WASTE / 8), unit: "ea", price: sc.platePrice },
     ...(inputs.exteriorSheathing ? [
       { label: "Advantech Wall Sheathing 7/16\" (4×8)", qty: Math.ceil(area * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.osb },
       { label: "Advantech Seam Tape (75 LF roll)", qty: Math.max(1, Math.ceil(area * WASTE / 300)), unit: "roll", price: 24.98 },
     ] : []),
-    ...(inputs.insulation ? [{ label: "R-13 Batt Insulation", qty: Math.ceil(area * WASTE), unit: "sqft", price: WALL_MAT_PRICES.insulation }] : []),
+    ...(inputs.insulation ? [{ label: sc.insulLabel, qty: Math.ceil(area * WASTE), unit: "sqft", price: sc.insulPrice }] : []),
     ...(inputs.drywall ? [{ label: "½\" Drywall (4×8)", qty: Math.ceil(area * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.drywall }] : []),
   ];
 }
@@ -529,9 +536,16 @@ function WallTab() {
             {["8", "9", "10", "11", "12"].map(h => <option key={h} value={h}>{h} ft</option>)}
           </select>
         </Field>
+        <Field label="Stud Size" note="2×6 uses 24″ OC spacing and R-21 insulation">
+          <select value={inputs.studSize} onChange={e => setInputs(p => ({ ...p, studSize: e.target.value as "2x4" | "2x6" }))}
+            className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+            <option value="2x4">2×4 (16″ OC)</option>
+            <option value="2x6">2×6 (24″ OC)</option>
+          </select>
+        </Field>
         <div className="flex flex-col gap-4">
           <Toggle checked={inputs.exteriorSheathing} onChange={v => setInputs(p => ({ ...p, exteriorSheathing: v }))} label="Advantech Exterior Sheathing" />
-          <Toggle checked={inputs.insulation} onChange={v => setInputs(p => ({ ...p, insulation: v }))} label="Insulation (R-13 Batts)" />
+          <Toggle checked={inputs.insulation} onChange={v => setInputs(p => ({ ...p, insulation: v }))} label={inputs.studSize === "2x6" ? "Insulation (R-21 Batts)" : "Insulation (R-13 Batts)"} />
           <Toggle checked={inputs.drywall} onChange={v => setInputs(p => ({ ...p, drywall: v }))} label={'Interior Drywall (½")'} />
         </div>
       </div>
