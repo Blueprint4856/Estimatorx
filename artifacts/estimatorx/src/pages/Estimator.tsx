@@ -12,6 +12,15 @@ const WASTE = 1.10;
 interface MatItem { label: string; qty: number; unit: string; price: number; }
 interface LaborItem { label: string; qty: number; unit: string; nationalAvg: number; }
 type LaborRates = Record<string, string>;
+type MatPrices = Record<string, string>;
+
+function defaultMatPrices(items: MatItem[]): MatPrices {
+  return Object.fromEntries(items.map(i => [i.label, String(i.price)]));
+}
+function effectiveMatPrice(item: MatItem, prices: MatPrices): number {
+  const v = parseFloat(prices[item.label]);
+  return isNaN(v) ? item.price : v;
+}
 
 interface CustomMatRow { id: string; label: string; qty: string; unit: string; price: string; }
 interface CustomLaborRow { id: string; label: string; qty: string; unit: string; rate: string; }
@@ -37,12 +46,12 @@ function customLaborTotal(rows: CustomLaborRow[]): number {
 ───────────────────────────────────────────── */
 
 const SK = {
-  wall: "ex.wall", wallRates: "ex.wall.rates",
-  floor: "ex.floor", floorRates: "ex.floor.rates",
-  roof: "ex.roof", roofRates: "ex.roof.rates",
-  plumbing: "ex.plumbing", plumbingRates: "ex.plumbing.rates",
-  electrical: "ex.electrical", electricalRates: "ex.electrical.rates",
-  hvac: "ex.hvac", hvacRates: "ex.hvac.rates",
+  wall: "ex.wall", wallRates: "ex.wall.rates", wallMatPrices: "ex.wall.mprices",
+  floor: "ex.floor", floorRates: "ex.floor.rates", floorMatPrices: "ex.floor.mprices",
+  roof: "ex.roof", roofRates: "ex.roof.rates", roofMatPrices: "ex.roof.mprices",
+  plumbing: "ex.plumbing", plumbingRates: "ex.plumbing.rates", plumbMatPrices: "ex.plumb.mprices",
+  electrical: "ex.electrical", electricalRates: "ex.electrical.rates", elecMatPrices: "ex.elec.mprices",
+  hvac: "ex.hvac", hvacRates: "ex.hvac.rates", hvacMatPrices: "ex.hvac.mprices",
   wallCMat: "ex.wall.cmat", wallCLab: "ex.wall.clab",
   floorCMat: "ex.floor.cmat", floorCLab: "ex.floor.clab",
   roofCMat: "ex.roof.cmat", roofCLab: "ex.roof.clab",
@@ -218,13 +227,23 @@ function InfoBox({ children }: { children: React.ReactNode }) {
 /* ─────────────────────────────────────────────
    RESULTS COMPONENTS
 ───────────────────────────────────────────── */
-function MaterialsTable({ rows }: { rows: MatItem[] }) {
-  const total = rows.reduce((s, r) => s + r.qty * r.price, 0);
+function MaterialsTable({ rows, prices, onPriceChange, onReset }: {
+  rows: MatItem[];
+  prices: MatPrices;
+  onPriceChange: (label: string, val: string) => void;
+  onReset: () => void;
+}) {
+  const total = rows.reduce((s, r) => s + r.qty * effectiveMatPrice(r, prices), 0);
   return (
     <div className="border border-[#DDD8D0] overflow-hidden">
       <div className="bg-[#2C2825] text-white px-6 py-3 flex justify-between items-center">
         <span className="font-bold uppercase tracking-widest text-xs">Materials</span>
-        <span className="text-[#E85D26] font-black text-base">${fmt(total)}</span>
+        <div className="flex items-center gap-4">
+          <button onClick={onReset} className="no-print flex items-center gap-1.5 text-xs text-white/50 hover:text-[#E85D26] transition-colors">
+            <RotateCcw size={11} /> Reset prices
+          </button>
+          <span className="text-[#E85D26] font-black text-base">${fmt(total)}</span>
+        </div>
       </div>
       <table className="w-full text-sm">
         <thead className="bg-[#F7F4F0] border-b border-[#DDD8D0]">
@@ -237,17 +256,36 @@ function MaterialsTable({ rows }: { rows: MatItem[] }) {
           </tr>
         </thead>
         <tbody className="divide-y divide-[#F0EDE8]">
-          {rows.map((r, i) => (
-            <tr key={i} className="hover:bg-[#FAF8F5]">
-              <td className="px-5 py-2.5 text-[#1A1A1A] font-medium">{r.label}</td>
-              <td className="px-3 py-2.5 text-right text-[#555]">{r.qty.toLocaleString()}</td>
-              <td className="px-3 py-2.5 text-right text-[#999]">{r.unit}</td>
-              <td className="px-3 py-2.5 text-right text-[#555]">${r.price.toFixed(2)}</td>
-              <td className="px-5 py-2.5 text-right font-semibold text-[#1A1A1A]">${fmt(r.qty * r.price)}</td>
-            </tr>
-          ))}
+          {rows.map((r, i) => {
+            const ep = effectiveMatPrice(r, prices);
+            const changed = parseFloat(prices[r.label]) !== r.price;
+            return (
+              <tr key={i} className="hover:bg-[#FAF8F5]">
+                <td className="px-5 py-2.5 text-[#1A1A1A] font-medium">
+                  <div>{r.label}</div>
+                  {changed && <div className="text-[10px] text-[#999]">Default: ${r.price.toFixed(2)}/{r.unit}</div>}
+                </td>
+                <td className="px-3 py-2.5 text-right text-[#555]">{r.qty.toLocaleString()}</td>
+                <td className="px-3 py-2.5 text-right text-[#999]">{r.unit}</td>
+                <td className="px-3 py-2.5 text-right">
+                  <div className="flex items-center justify-end gap-1">
+                    <span className="text-[#999] text-xs">$</span>
+                    <input type="number" min="0" step="0.01"
+                      value={prices[r.label] ?? String(r.price)}
+                      onChange={e => onPriceChange(r.label, e.target.value)}
+                      className={`no-print w-24 text-right bg-[#FAF8F5] border px-2 py-1 text-sm focus:outline-none focus:border-[#E85D26] transition-colors ${changed ? "border-[#E85D26]/50 text-[#E85D26] font-semibold" : "border-[#DDD8D0] text-[#555]"}`} />
+                    <span className={`print-rate-display hidden text-sm ${changed ? "text-[#E85D26] font-semibold" : "text-[#555]"}`}>${fmt(ep)}</span>
+                  </div>
+                </td>
+                <td className="px-5 py-2.5 text-right font-semibold text-[#1A1A1A]">${fmt(r.qty * ep)}</td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
+      <div className="px-5 py-2.5 bg-[#FAF8F5] border-t border-[#DDD8D0] text-[10px] text-[#AAA]">
+        Unit prices are national averages. Edit any price above to match your local supplier costs.
+      </div>
     </div>
   );
 }
@@ -392,7 +430,7 @@ function LaborTable({ items, rates, onChange, onReset }: { items: LaborItem[]; r
           <span className="text-[10px] bg-[#E85D26]/20 text-[#E85D26] border border-[#E85D26]/30 px-2 py-0.5 uppercase tracking-wider font-bold">RSMeans National Avg</span>
         </div>
         <div className="flex items-center gap-4">
-          <button onClick={onReset} className="no-print flex items-center gap-1.5 text-xs text-[#999] hover:text-[#E85D26] transition-colors">
+          <button onClick={onReset} className="no-print flex items-center gap-1.5 text-xs text-white/50 hover:text-[#E85D26] transition-colors">
             <RotateCcw size={11} /> Reset rates
           </button>
           <span className="text-[#E85D26] font-black text-base">${fmt(total)}</span>
@@ -515,13 +553,17 @@ function WallTab() {
   const [inputs, setInputs] = useLocalStorage<WallInputs>(SK.wall, DEFAULT_WALL);
   const laborItems = getWallLaborItems(inputs);
   const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.wallRates, {});
+  const [savedMatPrices, setSavedMatPrices] = useLocalStorage<MatPrices>(SK.wallMatPrices, {});
   const [customMat, setCustomMat] = useLocalStorage<CustomMatRow[]>(SK.wallCMat, []);
   const [customLabor, setCustomLabor] = useLocalStorage<CustomLaborRow[]>(SK.wallCLab, []);
   const rates: LaborRates = { ...defaultRates(laborItems), ...savedRates };
   const handleRateChange = useCallback((label: string, val: string) => setSavedRates(r => ({ ...r, [label]: val })), [setSavedRates]);
   const handleReset = useCallback(() => setSavedRates({}), [setSavedRates]);
   const matItems = getWallMatItems(inputs);
-  const matTotal = matItems.reduce((s, r) => s + r.qty * r.price, 0) + customMatTotal(customMat);
+  const matPrices: MatPrices = { ...defaultMatPrices(matItems), ...savedMatPrices };
+  const handleMatPriceChange = useCallback((label: string, val: string) => setSavedMatPrices(p => ({ ...p, [label]: val })), [setSavedMatPrices]);
+  const handleMatReset = useCallback(() => setSavedMatPrices({}), [setSavedMatPrices]);
+  const matTotal = matItems.reduce((s, r) => s + r.qty * effectiveMatPrice(r, matPrices), 0) + customMatTotal(customMat);
   const laborTotal = laborItems.reduce((s, i) => s + i.qty * effectiveRate(i, rates), 0) + customLaborTotal(customLabor);
   const hasResults = (parseFloat(inputs.linearFeet) || 0) > 0;
   return (
@@ -551,7 +593,7 @@ function WallTab() {
       </div>
       {hasResults ? (
         <div className="mt-8 flex flex-col gap-0">
-          <MaterialsTable rows={matItems} />
+          <MaterialsTable rows={matItems} prices={matPrices} onPriceChange={handleMatPriceChange} onReset={handleMatReset} />
           <CustomMatRows items={customMat} onChange={setCustomMat} />
           <div className="mt-3" />
           <LaborTable items={laborItems} rates={rates} onChange={handleRateChange} onReset={handleReset} />
@@ -595,13 +637,17 @@ function FloorTab() {
   const [inputs, setInputs] = useLocalStorage<FloorInputs>(SK.floor, DEFAULT_FLOOR);
   const laborItems = getFloorLaborItems(inputs);
   const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.floorRates, {});
+  const [savedMatPrices, setSavedMatPrices] = useLocalStorage<MatPrices>(SK.floorMatPrices, {});
   const [customMat, setCustomMat] = useLocalStorage<CustomMatRow[]>(SK.floorCMat, []);
   const [customLabor, setCustomLabor] = useLocalStorage<CustomLaborRow[]>(SK.floorCLab, []);
   const rates: LaborRates = { ...defaultRates(laborItems), ...savedRates };
   const handleRateChange = useCallback((label: string, val: string) => setSavedRates(r => ({ ...r, [label]: val })), [setSavedRates]);
   const handleReset = useCallback(() => setSavedRates({}), [setSavedRates]);
   const matItems = getFloorMatItems(inputs);
-  const matTotal = matItems.reduce((s, r) => s + r.qty * r.price, 0) + customMatTotal(customMat);
+  const matPrices: MatPrices = { ...defaultMatPrices(matItems), ...savedMatPrices };
+  const handleMatPriceChange = useCallback((label: string, val: string) => setSavedMatPrices(p => ({ ...p, [label]: val })), [setSavedMatPrices]);
+  const handleMatReset = useCallback(() => setSavedMatPrices({}), [setSavedMatPrices]);
+  const matTotal = matItems.reduce((s, r) => s + r.qty * effectiveMatPrice(r, matPrices), 0) + customMatTotal(customMat);
   const laborTotal = laborItems.reduce((s, i) => s + i.qty * effectiveRate(i, rates), 0) + customLaborTotal(customLabor);
   const hasResults = (parseFloat(inputs.sqft) || 0) > 0;
   return (
@@ -626,7 +672,7 @@ function FloorTab() {
       </div>
       {hasResults ? (
         <div className="mt-8 flex flex-col gap-0">
-          <MaterialsTable rows={matItems} />
+          <MaterialsTable rows={matItems} prices={matPrices} onPriceChange={handleMatPriceChange} onReset={handleMatReset} />
           <CustomMatRows items={customMat} onChange={setCustomMat} />
           <div className="mt-3" />
           <LaborTable items={laborItems} rates={rates} onChange={handleRateChange} onReset={handleReset} />
@@ -676,6 +722,7 @@ function RoofTab() {
   const [inputs, setInputs] = useLocalStorage<RoofInputs>(SK.roof, DEFAULT_ROOF);
   const laborItems = getRoofLaborItems(inputs);
   const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.roofRates, {});
+  const [savedMatPrices, setSavedMatPrices] = useLocalStorage<MatPrices>(SK.roofMatPrices, {});
   const [customMat, setCustomMat] = useLocalStorage<CustomMatRow[]>(SK.roofCMat, []);
   const [customLabor, setCustomLabor] = useLocalStorage<CustomLaborRow[]>(SK.roofCLab, []);
   const rates: LaborRates = { ...defaultRates(laborItems), ...savedRates };
@@ -685,7 +732,10 @@ function RoofTab() {
   const factor = PITCH_FACTORS[inputs.pitch] ?? 1.118;
   const actualArea = fp * factor;
   const matItems = getRoofMatItems(inputs);
-  const matTotal = matItems.reduce((s, r) => s + r.qty * r.price, 0) + customMatTotal(customMat);
+  const matPrices: MatPrices = { ...defaultMatPrices(matItems), ...savedMatPrices };
+  const handleMatPriceChange = useCallback((label: string, val: string) => setSavedMatPrices(p => ({ ...p, [label]: val })), [setSavedMatPrices]);
+  const handleMatReset = useCallback(() => setSavedMatPrices({}), [setSavedMatPrices]);
+  const matTotal = matItems.reduce((s, r) => s + r.qty * effectiveMatPrice(r, matPrices), 0) + customMatTotal(customMat);
   const laborTotal = laborItems.reduce((s, i) => s + i.qty * effectiveRate(i, rates), 0) + customLaborTotal(customLabor);
   return (
     <div>
@@ -712,7 +762,7 @@ function RoofTab() {
       </div>
       {fp > 0 ? (
         <div className="mt-8 flex flex-col gap-0">
-          <MaterialsTable rows={matItems} />
+          <MaterialsTable rows={matItems} prices={matPrices} onPriceChange={handleMatPriceChange} onReset={handleMatReset} />
           <CustomMatRows items={customMat} onChange={setCustomMat} />
           <div className="mt-3" />
           <LaborTable items={laborItems} rates={rates} onChange={handleRateChange} onReset={handleReset} />
@@ -776,13 +826,17 @@ function PlumbingTab() {
   const [inputs, setInputs] = useLocalStorage<PlumbingInputs>(SK.plumbing, DEFAULT_PLUMBING);
   const laborItems = getPlumbingLaborItems(inputs);
   const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.plumbingRates, {});
+  const [savedMatPrices, setSavedMatPrices] = useLocalStorage<MatPrices>(SK.plumbMatPrices, {});
   const [customMat, setCustomMat] = useLocalStorage<CustomMatRow[]>(SK.plumbCMat, []);
   const [customLabor, setCustomLabor] = useLocalStorage<CustomLaborRow[]>(SK.plumbCLab, []);
   const rates: LaborRates = { ...defaultRates(laborItems), ...savedRates };
   const handleRateChange = useCallback((label: string, val: string) => setSavedRates(r => ({ ...r, [label]: val })), [setSavedRates]);
   const handleReset = useCallback(() => setSavedRates({}), [setSavedRates]);
   const matItems = getPlumbingMatItems(inputs);
-  const matTotal = matItems.reduce((s, r) => s + r.qty * r.price, 0) + customMatTotal(customMat);
+  const matPrices: MatPrices = { ...defaultMatPrices(matItems), ...savedMatPrices };
+  const handleMatPriceChange = useCallback((label: string, val: string) => setSavedMatPrices(p => ({ ...p, [label]: val })), [setSavedMatPrices]);
+  const handleMatReset = useCallback(() => setSavedMatPrices({}), [setSavedMatPrices]);
+  const matTotal = matItems.reduce((s, r) => s + r.qty * effectiveMatPrice(r, matPrices), 0) + customMatTotal(customMat);
   const laborTotal = laborItems.reduce((s, i) => s + i.qty * effectiveRate(i, rates), 0) + customLaborTotal(customLabor);
   const totalRooms = inputs.fullBaths + inputs.halfBaths + (inputs.hasKitchen ? 1 : 0) + (inputs.hasLaundry ? 1 : 0) + inputs.spigots;
   const sqftVal = parseFloat(inputs.homeSqft) || 0;
@@ -811,7 +865,7 @@ function PlumbingTab() {
       {totalRooms > 0 ? (
         <div className="mt-8 flex flex-col gap-0">
           {!sqftVal && <div className="mb-3 no-print"><InfoBox>Enter your home size above for more accurate pipe run quantities.</InfoBox></div>}
-          <MaterialsTable rows={matItems} />
+          <MaterialsTable rows={matItems} prices={matPrices} onPriceChange={handleMatPriceChange} onReset={handleMatReset} />
           <CustomMatRows items={customMat} onChange={setCustomMat} />
           <div className="mt-3" />
           <LaborTable items={laborItems} rates={rates} onChange={handleRateChange} onReset={handleReset} />
@@ -887,6 +941,7 @@ function ElectricalTab() {
     setInputs(p => ({ ...p, appliances: { ...p.appliances, [key]: val } })), [setInputs]);
   const laborItems = getElectricalLaborItems(inputs);
   const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.electricalRates, {});
+  const [savedMatPrices, setSavedMatPrices] = useLocalStorage<MatPrices>(SK.elecMatPrices, {});
   const [customMat, setCustomMat] = useLocalStorage<CustomMatRow[]>(SK.elecCMat, []);
   const [customLabor, setCustomLabor] = useLocalStorage<CustomLaborRow[]>(SK.elecCLab, []);
   const rates: LaborRates = { ...defaultRates(laborItems), ...savedRates };
@@ -894,7 +949,10 @@ function ElectricalTab() {
   const handleReset = useCallback(() => setSavedRates({}), [setSavedRates]);
   const sqft = parseFloat(inputs.sqft) || 0;
   const matItems = getElectricalMatItems(inputs);
-  const matTotal = matItems.reduce((s, r) => s + r.qty * r.price, 0) + customMatTotal(customMat);
+  const matPrices: MatPrices = { ...defaultMatPrices(matItems), ...savedMatPrices };
+  const handleMatPriceChange = useCallback((label: string, val: string) => setSavedMatPrices(p => ({ ...p, [label]: val })), [setSavedMatPrices]);
+  const handleMatReset = useCallback(() => setSavedMatPrices({}), [setSavedMatPrices]);
+  const matTotal = matItems.reduce((s, r) => s + r.qty * effectiveMatPrice(r, matPrices), 0) + customMatTotal(customMat);
   const laborTotal = laborItems.reduce((s, i) => s + i.qty * effectiveRate(i, rates), 0) + customLaborTotal(customLabor);
   const panelSize = (inputs.appliances.evCharger && inputs.appliances.hotTub) ? "400A" : "200A";
   return (
@@ -917,7 +975,7 @@ function ElectricalTab() {
       {sqft > 0 && <div className="mb-6 no-print"><InfoBox>Based on your inputs, we recommend a <strong>{panelSize} service panel</strong>.{inputs.appliances.evCharger && inputs.appliances.hotTub && " EV charger + hot tub together typically require a 400A upgrade."}</InfoBox></div>}
       {sqft > 0 ? (
         <div className="mt-4 flex flex-col gap-0">
-          <MaterialsTable rows={matItems} />
+          <MaterialsTable rows={matItems} prices={matPrices} onPriceChange={handleMatPriceChange} onReset={handleMatReset} />
           <CustomMatRows items={customMat} onChange={setCustomMat} />
           <div className="mt-3" />
           <LaborTable items={laborItems} rates={rates} onChange={handleRateChange} onReset={handleReset} />
@@ -1007,6 +1065,7 @@ function HvacTab() {
   const [inputs, setInputs] = useLocalStorage<HvacInputs>(SK.hvac, DEFAULT_HVAC);
   const laborItems = getHvacLaborItems(inputs);
   const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.hvacRates, {});
+  const [savedMatPrices, setSavedMatPrices] = useLocalStorage<MatPrices>(SK.hvacMatPrices, {});
   const [customMat, setCustomMat] = useLocalStorage<CustomMatRow[]>(SK.hvacCMat, []);
   const [customLabor, setCustomLabor] = useLocalStorage<CustomLaborRow[]>(SK.hvacCLab, []);
   const rates: LaborRates = { ...defaultRates(laborItems), ...savedRates };
@@ -1016,7 +1075,10 @@ function HvacTab() {
   const heatBtu = sqft * (HEATING_BTU[inputs.climate] ?? 35);
   const coolBtu = sqft * (COOLING_BTU[inputs.climate] ?? 25);
   const matItems = getHvacMatItems(inputs);
-  const matTotal = matItems.reduce((s, r) => s + r.qty * r.price, 0) + customMatTotal(customMat);
+  const matPrices: MatPrices = { ...defaultMatPrices(matItems), ...savedMatPrices };
+  const handleMatPriceChange = useCallback((label: string, val: string) => setSavedMatPrices(p => ({ ...p, [label]: val })), [setSavedMatPrices]);
+  const handleMatReset = useCallback(() => setSavedMatPrices({}), [setSavedMatPrices]);
+  const matTotal = matItems.reduce((s, r) => s + r.qty * effectiveMatPrice(r, matPrices), 0) + customMatTotal(customMat);
   const laborTotal = laborItems.reduce((s, i) => s + i.qty * effectiveRate(i, rates), 0) + customLaborTotal(customLabor);
   const heads = Math.ceil(sqft / 500);
   return (
@@ -1056,7 +1118,7 @@ function HvacTab() {
       </div>
       {sqft > 0 ? (
         <div className="mt-4 flex flex-col gap-0">
-          <MaterialsTable rows={matItems} />
+          <MaterialsTable rows={matItems} prices={matPrices} onPriceChange={handleMatPriceChange} onReset={handleMatReset} />
           <CustomMatRows items={customMat} onChange={setCustomMat} />
           <div className="mt-3" />
           <LaborTable items={laborItems} rates={rates} onChange={handleRateChange} onReset={handleReset} />
@@ -1077,31 +1139,37 @@ function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "sum
   // Read all tab states — same keys as individual tabs; fresh on every mount
   const [wallInputs] = useLocalStorage<WallInputs>(SK.wall, DEFAULT_WALL);
   const [wallSR] = useLocalStorage<LaborRates>(SK.wallRates, {});
+  const [wallMP] = useLocalStorage<MatPrices>(SK.wallMatPrices, {});
   const [wallCM] = useLocalStorage<CustomMatRow[]>(SK.wallCMat, []);
   const [wallCL] = useLocalStorage<CustomLaborRow[]>(SK.wallCLab, []);
 
   const [floorInputs] = useLocalStorage<FloorInputs>(SK.floor, DEFAULT_FLOOR);
   const [floorSR] = useLocalStorage<LaborRates>(SK.floorRates, {});
+  const [floorMP] = useLocalStorage<MatPrices>(SK.floorMatPrices, {});
   const [floorCM] = useLocalStorage<CustomMatRow[]>(SK.floorCMat, []);
   const [floorCL] = useLocalStorage<CustomLaborRow[]>(SK.floorCLab, []);
 
   const [roofInputs] = useLocalStorage<RoofInputs>(SK.roof, DEFAULT_ROOF);
   const [roofSR] = useLocalStorage<LaborRates>(SK.roofRates, {});
+  const [roofMP] = useLocalStorage<MatPrices>(SK.roofMatPrices, {});
   const [roofCM] = useLocalStorage<CustomMatRow[]>(SK.roofCMat, []);
   const [roofCL] = useLocalStorage<CustomLaborRow[]>(SK.roofCLab, []);
 
   const [plumbInputs] = useLocalStorage<PlumbingInputs>(SK.plumbing, DEFAULT_PLUMBING);
   const [plumbSR] = useLocalStorage<LaborRates>(SK.plumbingRates, {});
+  const [plumbMP] = useLocalStorage<MatPrices>(SK.plumbMatPrices, {});
   const [plumbCM] = useLocalStorage<CustomMatRow[]>(SK.plumbCMat, []);
   const [plumbCL] = useLocalStorage<CustomLaborRow[]>(SK.plumbCLab, []);
 
   const [elecInputs] = useLocalStorage<ElectricalInputs>(SK.electrical, DEFAULT_ELECTRICAL);
   const [elecSR] = useLocalStorage<LaborRates>(SK.electricalRates, {});
+  const [elecMP] = useLocalStorage<MatPrices>(SK.elecMatPrices, {});
   const [elecCM] = useLocalStorage<CustomMatRow[]>(SK.elecCMat, []);
   const [elecCL] = useLocalStorage<CustomLaborRow[]>(SK.elecCLab, []);
 
   const [hvacInputs] = useLocalStorage<HvacInputs>(SK.hvac, DEFAULT_HVAC);
   const [hvacSR] = useLocalStorage<LaborRates>(SK.hvacRates, {});
+  const [hvacMP] = useLocalStorage<MatPrices>(SK.hvacMatPrices, {});
   const [hvacCM] = useLocalStorage<CustomMatRow[]>(SK.hvacCMat, []);
   const [hvacCL] = useLocalStorage<CustomLaborRow[]>(SK.hvacCLab, []);
 
@@ -1113,24 +1181,26 @@ function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "sum
     tabId: Exclude<Tab, "summary">,
     matItems: MatItem[],
     cMat: CustomMatRow[],
+    savedMatPrices: MatPrices,
     laborItems: LaborItem[],
     savedRates: LaborRates,
     cLab: CustomLaborRow[],
     hasData: boolean,
   ) => {
     const rates = { ...defaultRates(laborItems), ...savedRates };
-    const mat = matItems.reduce((s, r) => s + r.qty * r.price, 0) + customMatTotal(cMat);
+    const matPrices = { ...defaultMatPrices(matItems), ...savedMatPrices };
+    const mat = matItems.reduce((s, r) => s + r.qty * effectiveMatPrice(r, matPrices), 0) + customMatTotal(cMat);
     const lab = laborItems.reduce((s, i) => s + i.qty * effectiveRate(i, rates), 0) + customLaborTotal(cLab);
     return { label, tabId, mat, lab, total: mat + lab, hasData };
   };
 
   const rows = [
-    computeTab("Walls", "wall", getWallMatItems(wallInputs), wallCM, getWallLaborItems(wallInputs), wallSR, wallCL, (parseFloat(wallInputs.linearFeet) || 0) > 0),
-    computeTab("Floors", "floor", getFloorMatItems(floorInputs), floorCM, getFloorLaborItems(floorInputs), floorSR, floorCL, (parseFloat(floorInputs.sqft) || 0) > 0),
-    computeTab("Roofing", "roof", getRoofMatItems(roofInputs), roofCM, getRoofLaborItems(roofInputs), roofSR, roofCL, (parseFloat(roofInputs.footprintSqft) || 0) > 0),
-    computeTab("Plumbing", "plumbing", getPlumbingMatItems(plumbInputs), plumbCM, getPlumbingLaborItems(plumbInputs), plumbSR, plumbCL, (plumbInputs.fullBaths + plumbInputs.halfBaths + plumbInputs.spigots + (plumbInputs.hasKitchen ? 1 : 0) + (plumbInputs.hasLaundry ? 1 : 0)) > 0),
-    computeTab("Electrical", "electrical", getElectricalMatItems(elecInputs), elecCM, getElectricalLaborItems(elecInputs), elecSR, elecCL, (parseFloat(elecInputs.sqft) || 0) > 0),
-    computeTab("Heating & Cooling", "hvac", getHvacMatItems(hvacInputs), hvacCM, getHvacLaborItems(hvacInputs), hvacSR, hvacCL, (parseFloat(hvacInputs.sqft) || 0) > 0),
+    computeTab("Walls", "wall", getWallMatItems(wallInputs), wallCM, wallMP, getWallLaborItems(wallInputs), wallSR, wallCL, (parseFloat(wallInputs.linearFeet) || 0) > 0),
+    computeTab("Floors", "floor", getFloorMatItems(floorInputs), floorCM, floorMP, getFloorLaborItems(floorInputs), floorSR, floorCL, (parseFloat(floorInputs.sqft) || 0) > 0),
+    computeTab("Roofing", "roof", getRoofMatItems(roofInputs), roofCM, roofMP, getRoofLaborItems(roofInputs), roofSR, roofCL, (parseFloat(roofInputs.footprintSqft) || 0) > 0),
+    computeTab("Plumbing", "plumbing", getPlumbingMatItems(plumbInputs), plumbCM, plumbMP, getPlumbingLaborItems(plumbInputs), plumbSR, plumbCL, (plumbInputs.fullBaths + plumbInputs.halfBaths + plumbInputs.spigots + (plumbInputs.hasKitchen ? 1 : 0) + (plumbInputs.hasLaundry ? 1 : 0)) > 0),
+    computeTab("Electrical", "electrical", getElectricalMatItems(elecInputs), elecCM, elecMP, getElectricalLaborItems(elecInputs), elecSR, elecCL, (parseFloat(elecInputs.sqft) || 0) > 0),
+    computeTab("Heating & Cooling", "hvac", getHvacMatItems(hvacInputs), hvacCM, hvacMP, getHvacLaborItems(hvacInputs), hvacSR, hvacCL, (parseFloat(hvacInputs.sqft) || 0) > 0),
   ];
 
   const filledRows = rows.filter(r => r.hasData);
