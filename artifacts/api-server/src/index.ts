@@ -30,7 +30,14 @@ app.listen(port, (err) => {
       headers: { Authorization: `Bearer ${sk}`, "Content-Type": "application/json" },
       body: JSON.stringify({ application_name: "EstimatorX" }),
     })
-      .then(() => logger.info("Clerk instance name set to EstimatorX"))
+      .then(async (res) => {
+        const body = await res.text();
+        if (res.ok) {
+          logger.info({ status: res.status }, "Clerk instance name set to EstimatorX");
+        } else {
+          logger.warn({ status: res.status, body }, "Clerk instance name PATCH failed");
+        }
+      })
       .catch((e: unknown) => logger.warn({ err: e }, "Could not update Clerk instance name"));
   }
 });
