@@ -1185,7 +1185,7 @@ function HvacTab() {
             <option value="gas-central">Gas Furnace + Central A/C — Most common, uses ductwork</option>
             <option value="heat-pump">Electric Heat Pump — Heats & cools in one system, uses ductwork</option>
             <option value="mini-split">Mini-Split (Ductless) — No ductwork, room-by-room control</option>
-            <option value="on-demand-hydro">On-Demand Boiler + Hot Water Baseboards — Heat only, includes domestic hot water</option>
+            <option value="on-demand-hydro">On-Demand Boiler + Hot Water Baseboards — Heat only, no cooling, includes domestic hot water</option>
           </select>
         </Field>
         {sqft > 0 && (
@@ -1203,8 +1203,8 @@ function HvacTab() {
         <CheckCard
           checked={inputs.gasFireplace}
           onChange={v => setInputs(p => ({ ...p, gasFireplace: v }))}
-          label="Gas / Propane Fireplace"
-          description="Direct-vent unit — operates without electricity, ideal backup heat source"
+          label="Gas / Propane Fireplace (runs without electricity)"
+          description="Direct-vent unit — operates during power outages, ideal backup heat source"
         />
       </div>
       {sqft > 0 ? (
