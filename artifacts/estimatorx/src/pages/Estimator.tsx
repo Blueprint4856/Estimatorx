@@ -555,7 +555,7 @@ function getWallMatItems(inputs: WallInputs): MatItem[] {
   const studDim = family === "2x4" ? "2×4" : "2×6";
   const ocLabel = inputs.studSize === "2x6-24" ? "24\" OC" : "16\" OC";
   const studLabel = `${studDim}×${precutLabel} Pre-Cut Studs (${ocLabel})`;
-  const plateLabel = `${studDim}×16 Plates (3 per run)`;
+  const plateLabel = `${studDim}×16 Plates (1 bottom + 2 top)`;
   return [
     { label: studLabel, qty: Math.ceil((lf / sc.ocSpacing + 1) * WASTE), unit: "ea", price: studPrice },
     { label: plateLabel, qty: Math.ceil(lf * 3 * WASTE / 16), unit: "ea", price: sc.platePrice },
