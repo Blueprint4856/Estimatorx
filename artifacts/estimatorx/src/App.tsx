@@ -86,7 +86,10 @@ function OTPSignInPage() {
       return;
     }
 
-    const { error: suErr } = await signUp.create({ emailAddress: email });
+    // Include a random password so Clerk's password requirement is satisfied.
+    // The user never sees or uses it — every login goes through OTP codes.
+    const pw = crypto.randomUUID().replace(/-/g, "") + "Xx1!";
+    const { error: suErr } = await signUp.create({ emailAddress: email, password: pw });
     if (suErr) {
       setErrMsg(suErr.message ?? "Could not create your account. Please try again.");
       setStage("error");
@@ -109,21 +112,31 @@ function OTPSignInPage() {
     setErrMsg("");
 
     if (modeRef.current === "signUp") {
-      const { error } = await signUp.verifications.verifyEmailCode({ code });
-      if (error) {
-        setErrMsg(error.message ?? "Incorrect code. Please try again.");
+      const { error: verifyErr } = await signUp.verifications.verifyEmailCode({ code });
+      if (verifyErr) {
+        setErrMsg(verifyErr.message ?? "Incorrect code. Please try again.");
         setStage("code");
         return;
       }
-      await signUp.finalize();
+      const { error: finalizeErr } = await signUp.finalize();
+      if (finalizeErr) {
+        setErrMsg(finalizeErr.message ?? "Sign-up could not be completed. Please try again.");
+        setStage("error");
+        return;
+      }
     } else {
-      const { error } = await signIn.emailCode.verifyCode({ code });
-      if (error) {
-        setErrMsg(error.message ?? "Incorrect code. Please try again.");
+      const { error: verifyErr } = await signIn.emailCode.verifyCode({ code });
+      if (verifyErr) {
+        setErrMsg(verifyErr.message ?? "Incorrect code. Please try again.");
         setStage("code");
         return;
       }
-      await signIn.finalize();
+      const { error: finalizeErr } = await signIn.finalize();
+      if (finalizeErr) {
+        setErrMsg(finalizeErr.message ?? "Sign-in could not be completed. Please try again.");
+        setStage("error");
+        return;
+      }
     }
 
     setStage("done");
