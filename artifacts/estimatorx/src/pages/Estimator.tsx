@@ -528,6 +528,19 @@ function migrateStudSize(v: unknown): StudSize {
   return "2x4-16";
 }
 
+const PRECUT_LABEL: Record<string, string> = {
+  "8":  '92⅝"',
+  "9":  '104⅝"',
+  "10": '116⅝"',
+  "11": '128⅝"',
+  "12": '140⅝"',
+};
+
+const STUD_PRICES: Record<"2x4" | "2x6", Record<string, number>> = {
+  "2x4": { "8": 5.48, "9": 6.48, "10": 7.48, "11": 8.48, "12": 9.48 },
+  "2x6": { "8": 8.98, "9": 10.48, "10": 11.98, "11": 13.48, "12": 14.98 },
+};
+
 const WALL_MAT_PRICES = { osb: 34.98, drywall: 15.98 };
 const DEFAULT_WALL: WallInputs = { linearFeet: "", ceilingHeight: "9", studSize: "2x4-16", exteriorSheathing: true, insulation: true, drywall: true };
 
@@ -536,9 +549,16 @@ function getWallMatItems(inputs: WallInputs): MatItem[] {
   const h = parseFloat(inputs.ceilingHeight) || 9;
   const area = lf * h;
   const sc = STUD_CONFIG[inputs.studSize] ?? STUD_CONFIG["2x4-16"];
+  const family = inputs.studSize.startsWith("2x4") ? "2x4" : "2x6";
+  const precutLabel = PRECUT_LABEL[inputs.ceilingHeight] ?? '92⅝"';
+  const studPrice = STUD_PRICES[family][inputs.ceilingHeight] ?? STUD_PRICES[family]["8"];
+  const studDim = family === "2x4" ? "2×4" : "2×6";
+  const ocLabel = inputs.studSize === "2x6-24" ? "24\" OC" : "16\" OC";
+  const studLabel = `${studDim}×${precutLabel} Pre-Cut Studs (${ocLabel})`;
+  const plateLabel = `${studDim}×8 Plates (3 per run)`;
   return [
-    { label: sc.studLabel, qty: Math.ceil((lf / sc.ocSpacing + 1) * WASTE), unit: "ea", price: sc.studPrice },
-    { label: sc.plateLabel, qty: Math.ceil(lf * 3 * WASTE / 8), unit: "ea", price: sc.platePrice },
+    { label: studLabel, qty: Math.ceil((lf / sc.ocSpacing + 1) * WASTE), unit: "ea", price: studPrice },
+    { label: plateLabel, qty: Math.ceil(lf * 3 * WASTE / 8), unit: "ea", price: sc.platePrice },
     ...(inputs.exteriorSheathing ? [
       { label: "Advantech Wall Sheathing 7/16\" (4×8)", qty: Math.ceil(area * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.osb },
       { label: "Advantech Seam Tape (75 LF roll)", qty: Math.max(1, Math.ceil(area * WASTE / 300)), unit: "roll", price: 24.98 },
