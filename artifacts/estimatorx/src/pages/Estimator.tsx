@@ -572,10 +572,10 @@ function getWallLaborItems(inputs: WallInputs): LaborItem[] {
   const h = parseFloat(inputs.ceilingHeight) || 9;
   const area = Math.round(lf * h);
   return [
-    { label: "Stud Framing", qty: area, unit: "sqft", nationalAvg: 1.85 },
-    ...(inputs.exteriorSheathing ? [{ label: "Advantech Sheathing Install & Seam Tape", qty: area, unit: "sqft", nationalAvg: 1.25 }] : []),
-    ...(inputs.insulation ? [{ label: "Insulation (Batt) Install", qty: area, unit: "sqft", nationalAvg: 0.38 }] : []),
-    ...(inputs.drywall ? [{ label: "Drywall Hang & Finish", qty: area, unit: "sqft", nationalAvg: 1.65 }] : []),
+    { label: "Stud Framing", qty: area, unit: "sqft", nationalAvg: 2.65 },
+    ...(inputs.exteriorSheathing ? [{ label: "Advantech Sheathing Install & Seam Tape", qty: area, unit: "sqft", nationalAvg: 1.33 }] : []),
+    ...(inputs.insulation ? [{ label: "Insulation (Batt) Install", qty: area, unit: "sqft", nationalAvg: 1.08 }] : []),
+    ...(inputs.drywall ? [{ label: "Drywall Hang & Finish", qty: area, unit: "sqft", nationalAvg: 1.88 }] : []),
   ];
 }
 function WallTab() {
@@ -645,7 +645,7 @@ type AdhesiveType = "liquid" | "spray";
 interface FloorInputs { sqft: string; finish: string; includeSubfloor: boolean; adhesiveType: AdhesiveType; }
 const FLOOR_MAT_PRICES: Record<string, number> = { lvp: 2.89, carpet: 2.49, hardwood: 5.98, tile: 3.49, none: 0 };
 const FLOOR_LABELS: Record<string, string> = { lvp: "LVP — Luxury Vinyl Plank", carpet: "Carpet", hardwood: "Hardwood", tile: "Ceramic / Porcelain Tile", none: "None" };
-const FLOOR_LABOR: Record<string, number> = { lvp: 2.15, carpet: 1.45, hardwood: 4.25, tile: 5.75, none: 0 };
+const FLOOR_LABOR: Record<string, number> = { lvp: 2.63, carpet: 1.25, hardwood: 5.25, tile: 8.75, none: 0 };
 const DEFAULT_FLOOR: FloorInputs = { sqft: "", finish: "lvp", includeSubfloor: true, adhesiveType: "liquid" };
 
 const ADHESIVE_CONFIG: Record<AdhesiveType, { label: string; coverage: number; unit: string; price: number }> = {
@@ -759,10 +759,10 @@ function getRoofLaborItems(inputs: RoofInputs): LaborItem[] {
   const factor = PITCH_FACTORS[inputs.pitch] ?? 1.118;
   const actual = Math.round(fp * factor);
   return [
-    ...(inputs.archShingles ? [{ label: "Shingle Installation", qty: actual, unit: "sqft", nationalAvg: 2.75 }] : []),
-    { label: "Underlayment Install", qty: actual, unit: "sqft", nationalAvg: 1.93 },
-    ...(inputs.includeDecking ? [{ label: "Advantech Roof Sheathing Install & Seam Tape", qty: actual, unit: "sqft", nationalAvg: 2.50 }] : []),
-    ...(inputs.iceWater ? [{ label: "Ice & Water Shield Install", qty: Math.round(fp * 0.25), unit: "sqft", nationalAvg: 2.20 }] : []),
+    ...(inputs.archShingles ? [{ label: "Shingle Installation", qty: actual, unit: "sqft", nationalAvg: 3.13 }] : []),
+    { label: "Underlayment Install", qty: actual, unit: "sqft", nationalAvg: 2.56 },
+    ...(inputs.includeDecking ? [{ label: "Advantech Roof Sheathing Install & Seam Tape", qty: actual, unit: "sqft", nationalAvg: 3.00 }] : []),
+    ...(inputs.iceWater ? [{ label: "Ice & Water Shield Install", qty: Math.round(fp * 0.25), unit: "sqft", nationalAvg: 2.37 }] : []),
   ];
 }
 function RoofTab() {
@@ -862,11 +862,11 @@ function getPlumbingMatItems(i: PlumbingInputs): MatItem[] {
 }
 function getPlumbingLaborItems(i: PlumbingInputs): LaborItem[] {
   const items: LaborItem[] = [];
-  if (i.fullBaths > 0) items.push({ label: "Full Bathroom Rough-In", qty: i.fullBaths, unit: "ea", nationalAvg: 485 });
-  if (i.halfBaths > 0) items.push({ label: "Half Bath / Powder Room Rough-In", qty: i.halfBaths, unit: "ea", nationalAvg: 310 });
-  if (i.hasKitchen) items.push({ label: "Kitchen Plumbing Rough-In", qty: 1, unit: "ea", nationalAvg: 225 });
-  if (i.hasLaundry) items.push({ label: "Laundry Hookup Rough-In", qty: 1, unit: "ea", nationalAvg: 185 });
-  if (i.spigots > 0) items.push({ label: "Outdoor Spigot Rough-In", qty: i.spigots, unit: "ea", nationalAvg: 145 });
+  if (i.fullBaths > 0) items.push({ label: "Full Bathroom Rough-In", qty: i.fullBaths, unit: "ea", nationalAvg: 1080 });
+  if (i.halfBaths > 0) items.push({ label: "Half Bath / Powder Room Rough-In", qty: i.halfBaths, unit: "ea", nationalAvg: 638 });
+  if (i.hasKitchen) items.push({ label: "Kitchen Plumbing Rough-In", qty: 1, unit: "ea", nationalAvg: 395 });
+  if (i.hasLaundry) items.push({ label: "Laundry Hookup Rough-In", qty: 1, unit: "ea", nationalAvg: 361 });
+  if (i.spigots > 0) items.push({ label: "Outdoor Spigot Rough-In", qty: i.spigots, unit: "ea", nationalAvg: 126 });
   return items;
 }
 function PlumbingTab() {
@@ -975,11 +975,11 @@ function getElectricalLaborItems(inp: ElectricalInputs): LaborItem[] {
     + (appliances.electricRange ? 1 : 0) + (appliances.electricDryer ? 1 : 0)
     + (appliances.evCharger ? 1 : 0) + (appliances.hotTub ? 1 : 0);
   const items: LaborItem[] = [
-    { label: "Panel Installation & Setup", qty: 1, unit: "ea", nationalAvg: 550 },
-    { label: "Circuit Rough-In (per circuit)", qty: totalCircuits, unit: "circuit", nationalAvg: 225 },
+    { label: "Panel Installation & Setup", qty: 1, unit: "ea", nationalAvg: 675 },
+    { label: "Circuit Rough-In (per circuit)", qty: totalCircuits, unit: "circuit", nationalAvg: 263 },
   ];
-  if (appliances.evCharger) items.push({ label: "EV Charger Circuit (240V)", qty: 1, unit: "ea", nationalAvg: 760 });
-  if (appliances.hotTub) items.push({ label: "Hot Tub / Spa Circuit (240V, GFCI)", qty: 1, unit: "ea", nationalAvg: 760 });
+  if (appliances.evCharger) items.push({ label: "EV Charger Circuit (240V)", qty: 1, unit: "ea", nationalAvg: 865 });
+  if (appliances.hotTub) items.push({ label: "Hot Tub / Spa Circuit (240V, GFCI)", qty: 1, unit: "ea", nationalAvg: 865 });
   return items;
 }
 function ElectricalTab() {
@@ -1102,11 +1102,11 @@ function getHvacLaborItems(inp: HvacInputs): LaborItem[] {
   if (inp.system === "mini-split") {
     const heads = Math.ceil(sqft / 500);
     return [
-      { label: "Mini-Split Installation (per head)", qty: heads, unit: "head", nationalAvg: 485 },
-      { label: "Outdoor Unit Set & Startup", qty: 1, unit: "ea", nationalAvg: 385 },
+      { label: "Mini-Split Installation (per head)", qty: heads, unit: "head", nationalAvg: 1025 },
+      { label: "Outdoor Unit Set & Startup", qty: 1, unit: "ea", nationalAvg: 538 },
     ];
   }
-  return [{ label: "HVAC Rough-In & Equipment Set", qty: sqft, unit: "sqft", nationalAvg: 1.85 }];
+  return [{ label: "HVAC Rough-In & Equipment Set", qty: sqft, unit: "sqft", nationalAvg: 2.31 }];
 }
 function HvacTab() {
   const [inputs, setInputs] = useLocalStorage<HvacInputs>(SK.hvac, DEFAULT_HVAC);
