@@ -512,21 +512,30 @@ function ResultNote() {
 /* ─────────────────────────────────────────────
    WALL TAB
 ───────────────────────────────────────────── */
-interface WallInputs { linearFeet: string; ceilingHeight: string; studSize: "2x4" | "2x6"; exteriorSheathing: boolean; insulation: boolean; drywall: boolean; }
+type StudSize = "2x4-16" | "2x6-16" | "2x6-24";
+interface WallInputs { linearFeet: string; ceilingHeight: string; studSize: StudSize; exteriorSheathing: boolean; insulation: boolean; drywall: boolean; }
 
-const STUD_CONFIG = {
-  "2x4": { studLabel: "2×4×8 Studs (16\" OC)", plateLabel: "2×4×8 Plates (3 per run)", studPrice: 5.48, platePrice: 5.48, ocSpacing: 1.333, insulLabel: "R-13 Batt Insulation", insulPrice: 0.55 },
-  "2x6": { studLabel: "2×6×8 Studs (24\" OC)", plateLabel: "2×6×8 Plates (3 per run)", studPrice: 8.98, platePrice: 8.98, ocSpacing: 2.0,   insulLabel: "R-21 Batt Insulation", insulPrice: 0.82 },
-} as const;
+const STUD_CONFIG: Record<StudSize, { studLabel: string; plateLabel: string; studPrice: number; platePrice: number; ocSpacing: number; insulLabel: string; insulPrice: number }> = {
+  "2x4-16": { studLabel: "2×4×8 Studs (16\" OC)", plateLabel: "2×4×8 Plates (3 per run)", studPrice: 5.48, platePrice: 5.48, ocSpacing: 1.333, insulLabel: "R-13 Batt Insulation", insulPrice: 0.55 },
+  "2x6-16": { studLabel: "2×6×8 Studs (16\" OC)", plateLabel: "2×6×8 Plates (3 per run)", studPrice: 8.98, platePrice: 8.98, ocSpacing: 1.333, insulLabel: "R-21 Batt Insulation", insulPrice: 0.82 },
+  "2x6-24": { studLabel: "2×6×8 Studs (24\" OC)", plateLabel: "2×6×8 Plates (3 per run)", studPrice: 8.98, platePrice: 8.98, ocSpacing: 2.0,   insulLabel: "R-21 Batt Insulation", insulPrice: 0.82 },
+};
+
+function migrateStudSize(v: unknown): StudSize {
+  if (v === "2x4") return "2x4-16";
+  if (v === "2x6") return "2x6-24";
+  if (v === "2x4-16" || v === "2x6-16" || v === "2x6-24") return v;
+  return "2x4-16";
+}
 
 const WALL_MAT_PRICES = { osb: 34.98, drywall: 15.98 };
-const DEFAULT_WALL: WallInputs = { linearFeet: "", ceilingHeight: "9", studSize: "2x4", exteriorSheathing: true, insulation: true, drywall: true };
+const DEFAULT_WALL: WallInputs = { linearFeet: "", ceilingHeight: "9", studSize: "2x4-16", exteriorSheathing: true, insulation: true, drywall: true };
 
 function getWallMatItems(inputs: WallInputs): MatItem[] {
   const lf = parseFloat(inputs.linearFeet) || 0;
   const h = parseFloat(inputs.ceilingHeight) || 9;
   const area = lf * h;
-  const sc = STUD_CONFIG[inputs.studSize] ?? STUD_CONFIG["2x4"];
+  const sc = STUD_CONFIG[inputs.studSize] ?? STUD_CONFIG["2x4-16"];
   return [
     { label: sc.studLabel, qty: Math.ceil((lf / sc.ocSpacing + 1) * WASTE), unit: "ea", price: sc.studPrice },
     { label: sc.plateLabel, qty: Math.ceil(lf * 3 * WASTE / 8), unit: "ea", price: sc.platePrice },
@@ -551,7 +560,7 @@ function getWallLaborItems(inputs: WallInputs): LaborItem[] {
 }
 function WallTab() {
   const [rawInputs, setInputs] = useLocalStorage<WallInputs>(SK.wall, DEFAULT_WALL);
-  const inputs: WallInputs = { ...DEFAULT_WALL, ...rawInputs };
+  const inputs: WallInputs = { ...DEFAULT_WALL, ...rawInputs, studSize: migrateStudSize(rawInputs?.studSize) };
   const laborItems = getWallLaborItems(inputs);
   const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.wallRates, {});
   const [savedMatPrices, setSavedMatPrices] = useLocalStorage<MatPrices>(SK.wallMatPrices, {});
@@ -579,16 +588,17 @@ function WallTab() {
             {["8", "9", "10", "11", "12"].map(h => <option key={h} value={h}>{h} ft</option>)}
           </select>
         </Field>
-        <Field label="Stud Size" note="2×6 uses 24″ OC spacing and R-21 insulation">
-          <select value={inputs.studSize} onChange={e => setInputs(p => ({ ...p, studSize: e.target.value as "2x4" | "2x6" }))}
+        <Field label="Stud Size &amp; Spacing" note="2×6 uses R-21 insulation regardless of spacing">
+          <select value={inputs.studSize} onChange={e => setInputs(p => ({ ...p, studSize: e.target.value as StudSize }))}
             className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
-            <option value="2x4">2×4 (16″ OC)</option>
-            <option value="2x6">2×6 (24″ OC)</option>
+            <option value="2x4-16">2×4 @ 16″ OC</option>
+            <option value="2x6-16">2×6 @ 16″ OC</option>
+            <option value="2x6-24">2×6 @ 24″ OC</option>
           </select>
         </Field>
         <div className="flex flex-col gap-4">
           <Toggle checked={inputs.exteriorSheathing} onChange={v => setInputs(p => ({ ...p, exteriorSheathing: v }))} label="Advantech Exterior Sheathing" />
-          <Toggle checked={inputs.insulation} onChange={v => setInputs(p => ({ ...p, insulation: v }))} label={inputs.studSize === "2x6" ? "Insulation (R-21 Batts)" : "Insulation (R-13 Batts)"} />
+          <Toggle checked={inputs.insulation} onChange={v => setInputs(p => ({ ...p, insulation: v }))} label={(inputs.studSize === "2x6-16" || inputs.studSize === "2x6-24") ? "Insulation (R-21 Batts)" : "Insulation (R-13 Batts)"} />
           <Toggle checked={inputs.drywall} onChange={v => setInputs(p => ({ ...p, drywall: v }))} label={'Interior Drywall (½")'} />
         </div>
       </div>
