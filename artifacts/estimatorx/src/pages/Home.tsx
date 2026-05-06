@@ -246,12 +246,12 @@ export default function Home() {
             <div className="max-w-2xl">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-12 h-[2px] bg-[#E85D26]"></div>
-                <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">Current Project</span>
+                <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">Proven Track Record</span>
               </div>
-              <h2 className="text-4xl md:text-5xl font-black font-serif uppercase mb-8 text-[#1A1A1A]">24-Lot Residential<br/>Subdivision</h2>
+              <h2 className="text-4xl md:text-5xl font-black font-serif uppercase mb-8 text-[#1A1A1A]">Multiple Subdivision<br/>Projects Delivered</h2>
 
               <div className="space-y-6 text-[#3A3530] text-lg">
-                <p>Currently managing a 24-lot residential subdivision through every single phase of development.</p>
+                <p>Led multiple residential subdivision projects from raw land through final turnover — managing every phase with the same financial discipline on a 10-lot infill as a 100-lot master-planned community.</p>
 
                 <ul className="space-y-4">
                   {[
