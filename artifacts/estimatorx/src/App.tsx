@@ -56,35 +56,11 @@ function OTPSignInPage() {
     setStage("sending");
     setErrMsg("");
 
-    // Identify the user; signUpIfMissing handles new vs existing transparently
-    const { error: createErr } = await signIn.create({
-      identifier: email,
-      signUpIfMissing: true,
-    });
+    // Try sign-in first. If the user doesn't exist yet, fall through to sign-up.
+    const { error: createErr } = await signIn.create({ identifier: email });
 
-    if (createErr) {
-      setErrMsg(createErr.message ?? "Something went wrong. Please try again.");
-      setStage("error");
-      return;
-    }
-
-    if (signIn.isTransferable) {
-      // ── New user: transfer to sign-up and send code ──────────────────────
-      const { error: suErr } = await signUp.create({ transfer: true });
-      if (suErr) {
-        setErrMsg(suErr.message ?? "Could not create your account.");
-        setStage("error");
-        return;
-      }
-      const { error: sendErr } = await signUp.verifications.sendEmailCode();
-      if (sendErr) {
-        setErrMsg(sendErr.message ?? "Could not send the verification code.");
-        setStage("error");
-        return;
-      }
-      modeRef.current = "signUp";
-    } else {
-      // ── Existing user: send email code ───────────────────────────────────
+    if (!createErr) {
+      // ── Existing user: send OTP ──────────────────────────────────────────
       const { error: sendErr } = await signIn.emailCode.sendCode({ emailAddress: email });
       if (sendErr) {
         setErrMsg(sendErr.message ?? "Could not send the verification code.");
@@ -92,8 +68,37 @@ function OTPSignInPage() {
         return;
       }
       modeRef.current = "signIn";
+      setStage("code");
+      return;
     }
 
+    // ── User not found: create account and send verification code ────────
+    const isNotFound =
+      createErr.code === "form_identifier_not_found" ||
+      createErr.clerkError ||
+      createErr.message?.toLowerCase().includes("find") ||
+      createErr.message?.toLowerCase().includes("exist");
+
+    if (!isNotFound) {
+      // Unexpected error — surface it
+      setErrMsg(createErr.message ?? "Something went wrong. Please try again.");
+      setStage("error");
+      return;
+    }
+
+    const { error: suErr } = await signUp.create({ emailAddress: email });
+    if (suErr) {
+      setErrMsg(suErr.message ?? "Could not create your account. Please try again.");
+      setStage("error");
+      return;
+    }
+    const { error: sendErr } = await signUp.verifications.sendEmailCode();
+    if (sendErr) {
+      setErrMsg(sendErr.message ?? "Could not send the verification code.");
+      setStage("error");
+      return;
+    }
+    modeRef.current = "signUp";
     setStage("code");
   }
 
