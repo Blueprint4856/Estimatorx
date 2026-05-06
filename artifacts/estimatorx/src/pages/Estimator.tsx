@@ -759,10 +759,10 @@ function getRoofLaborItems(inputs: RoofInputs): LaborItem[] {
   const factor = PITCH_FACTORS[inputs.pitch] ?? 1.118;
   const actual = Math.round(fp * factor);
   return [
-    ...(inputs.archShingles ? [{ label: "Shingle Installation", qty: actual, unit: "sqft", nationalAvg: 0.75 }] : []),
-    { label: "Underlayment Install", qty: actual, unit: "sqft", nationalAvg: 0.12 },
+    ...(inputs.archShingles ? [{ label: "Shingle Installation", qty: actual, unit: "sqft", nationalAvg: 3.00 }] : []),
+    { label: "Underlayment Install", qty: actual, unit: "sqft", nationalAvg: 0.18 },
     ...(inputs.includeDecking ? [{ label: "Advantech Roof Sheathing Install & Seam Tape", qty: actual, unit: "sqft", nationalAvg: 0.68 }] : []),
-    ...(inputs.iceWater ? [{ label: "Ice & Water Shield Install", qty: Math.round(fp * 0.25), unit: "sqft", nationalAvg: 0.28 }] : []),
+    ...(inputs.iceWater ? [{ label: "Ice & Water Shield Install", qty: Math.round(fp * 0.25), unit: "sqft", nationalAvg: 0.35 }] : []),
   ];
 }
 function RoofTab() {
