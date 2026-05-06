@@ -516,9 +516,9 @@ type StudSize = "2x4-16" | "2x6-16" | "2x6-24";
 interface WallInputs { linearFeet: string; ceilingHeight: string; studSize: StudSize; exteriorSheathing: boolean; insulation: boolean; drywall: boolean; }
 
 const STUD_CONFIG: Record<StudSize, { studLabel: string; plateLabel: string; studPrice: number; platePrice: number; ocSpacing: number; insulLabel: string; insulPrice: number }> = {
-  "2x4-16": { studLabel: "2×4×8 Studs (16\" OC)", plateLabel: "2×4×8 Plates (3 per run)", studPrice: 5.48, platePrice: 5.48, ocSpacing: 1.333, insulLabel: "R-13 Batt Insulation", insulPrice: 0.55 },
-  "2x6-16": { studLabel: "2×6×8 Studs (16\" OC)", plateLabel: "2×6×8 Plates (3 per run)", studPrice: 8.98, platePrice: 8.98, ocSpacing: 1.333, insulLabel: "R-21 Batt Insulation", insulPrice: 0.82 },
-  "2x6-24": { studLabel: "2×6×8 Studs (24\" OC)", plateLabel: "2×6×8 Plates (3 per run)", studPrice: 8.98, platePrice: 8.98, ocSpacing: 2.0,   insulLabel: "R-21 Batt Insulation", insulPrice: 0.82 },
+  "2x4-16": { studLabel: "2×4×8 Studs (16\" OC)", plateLabel: "2×4×16 Plates (3 per run)", studPrice: 5.48, platePrice: 10.97, ocSpacing: 1.333, insulLabel: "R-13 Batt Insulation", insulPrice: 0.55 },
+  "2x6-16": { studLabel: "2×6×8 Studs (16\" OC)", plateLabel: "2×6×16 Plates (3 per run)", studPrice: 8.98, platePrice: 17.98, ocSpacing: 1.333, insulLabel: "R-21 Batt Insulation", insulPrice: 0.82 },
+  "2x6-24": { studLabel: "2×6×8 Studs (24\" OC)", plateLabel: "2×6×16 Plates (3 per run)", studPrice: 8.98, platePrice: 17.98, ocSpacing: 2.0,   insulLabel: "R-21 Batt Insulation", insulPrice: 0.82 },
 };
 
 function migrateStudSize(v: unknown): StudSize {
@@ -555,10 +555,10 @@ function getWallMatItems(inputs: WallInputs): MatItem[] {
   const studDim = family === "2x4" ? "2×4" : "2×6";
   const ocLabel = inputs.studSize === "2x6-24" ? "24\" OC" : "16\" OC";
   const studLabel = `${studDim}×${precutLabel} Pre-Cut Studs (${ocLabel})`;
-  const plateLabel = `${studDim}×8 Plates (3 per run)`;
+  const plateLabel = `${studDim}×16 Plates (3 per run)`;
   return [
     { label: studLabel, qty: Math.ceil((lf / sc.ocSpacing + 1) * WASTE), unit: "ea", price: studPrice },
-    { label: plateLabel, qty: Math.ceil(lf * 3 * WASTE / 8), unit: "ea", price: sc.platePrice },
+    { label: plateLabel, qty: Math.ceil(lf * 3 * WASTE / 16), unit: "ea", price: sc.platePrice },
     ...(inputs.exteriorSheathing ? [
       { label: "Advantech Wall Sheathing 7/16\" (4×8)", qty: Math.ceil(area * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.osb },
       { label: "Advantech Seam Tape (75 LF roll)", qty: Math.max(1, Math.ceil(area * WASTE / 300)), unit: "roll", price: 24.98 },
