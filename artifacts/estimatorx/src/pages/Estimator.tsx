@@ -641,18 +641,25 @@ function WallTab() {
 /* ─────────────────────────────────────────────
    FLOOR TAB
 ───────────────────────────────────────────── */
-interface FloorInputs { sqft: string; finish: string; includeSubfloor: boolean; }
+type AdhesiveType = "liquid" | "spray";
+interface FloorInputs { sqft: string; finish: string; includeSubfloor: boolean; adhesiveType: AdhesiveType; }
 const FLOOR_MAT_PRICES: Record<string, number> = { lvp: 2.89, carpet: 2.49, hardwood: 5.98, tile: 3.49, none: 0 };
 const FLOOR_LABELS: Record<string, string> = { lvp: "LVP — Luxury Vinyl Plank", carpet: "Carpet", hardwood: "Hardwood", tile: "Ceramic / Porcelain Tile", none: "None" };
 const FLOOR_LABOR: Record<string, number> = { lvp: 2.15, carpet: 1.45, hardwood: 4.25, tile: 5.75, none: 0 };
-const DEFAULT_FLOOR: FloorInputs = { sqft: "", finish: "lvp", includeSubfloor: true };
+const DEFAULT_FLOOR: FloorInputs = { sqft: "", finish: "lvp", includeSubfloor: true, adhesiveType: "liquid" };
+
+const ADHESIVE_CONFIG: Record<AdhesiveType, { label: string; coverage: number; unit: string; price: number }> = {
+  liquid: { label: "Subfloor Construction Adhesive (28 oz tube)", coverage: 83,  unit: "tube", price: 8.50  },
+  spray:  { label: "Subfloor Construction Adhesive (Spray)",      coverage: 365, unit: "can",  price: 28.98 },
+};
 
 function getFloorMatItems(inputs: FloorInputs): MatItem[] {
   const sqft = parseFloat(inputs.sqft) || 0;
+  const adhesive = ADHESIVE_CONFIG[inputs.adhesiveType ?? "liquid"];
   return [
     ...(inputs.includeSubfloor ? [
       { label: "Advantech 3/4\" Subfloor Panel (4×8)", qty: Math.ceil(sqft * WASTE / 32), unit: "sheet", price: 52.98 },
-      { label: "Subfloor Construction Adhesive (28 oz tube)", qty: Math.max(1, Math.ceil(sqft * WASTE / 40)), unit: "tube", price: 8.50 },
+      { label: adhesive.label, qty: Math.max(1, Math.ceil(sqft * WASTE / adhesive.coverage)), unit: adhesive.unit, price: adhesive.price },
     ] : []),
     ...(inputs.finish !== "none" ? [{ label: FLOOR_LABELS[inputs.finish], qty: Math.ceil(sqft * WASTE), unit: "sqft", price: FLOOR_MAT_PRICES[inputs.finish] ?? 0 }] : []),
   ];
@@ -697,8 +704,17 @@ function FloorTab() {
             <option value="none">None (subfloor only)</option>
           </select>
         </Field>
-        <div>
+        <div className="flex flex-col gap-4">
           <Toggle checked={inputs.includeSubfloor} onChange={v => setInputs(p => ({ ...p, includeSubfloor: v }))} label={'Include Advantech 3/4" Subfloor'} />
+          {inputs.includeSubfloor && (
+            <Field label="Subfloor Adhesive Type">
+              <select value={inputs.adhesiveType ?? "liquid"} onChange={e => setInputs(p => ({ ...p, adhesiveType: e.target.value as AdhesiveType }))}
+                className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+                <option value="liquid">Liquid — 28 oz tube (~83 sqft/tube)</option>
+                <option value="spray">Spray can (~365 sqft/can)</option>
+              </select>
+            </Field>
+          )}
         </div>
       </div>
       {hasResults ? (
