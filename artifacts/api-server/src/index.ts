@@ -22,4 +22,15 @@ app.listen(port, (err) => {
   }
 
   logger.info({ port }, "Server listening");
+
+  const sk = process.env["CLERK_SECRET_KEY"];
+  if (sk) {
+    fetch("https://api.clerk.com/v1/instance", {
+      method: "PATCH",
+      headers: { Authorization: `Bearer ${sk}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ application_name: "EstimatorX" }),
+    })
+      .then(() => logger.info("Clerk instance name set to EstimatorX"))
+      .catch((e: unknown) => logger.warn({ err: e }, "Could not update Clerk instance name"));
+  }
 });
