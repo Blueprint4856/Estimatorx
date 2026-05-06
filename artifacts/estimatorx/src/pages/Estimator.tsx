@@ -1039,8 +1039,8 @@ function ElectricalTab() {
 /* ─────────────────────────────────────────────
    HVAC TAB
 ───────────────────────────────────────────── */
-interface HvacInputs { sqft: string; stories: string; climate: string; system: string; }
-const DEFAULT_HVAC: HvacInputs = { sqft: "", stories: "1", climate: "mixed", system: "gas-central" };
+interface HvacInputs { sqft: string; stories: string; climate: string; system: string; gasFireplace: boolean; }
+const DEFAULT_HVAC: HvacInputs = { sqft: "", stories: "1", climate: "mixed", system: "gas-central", gasFireplace: false };
 const HEATING_BTU: Record<string, number> = { cold: 45, mixed: 35, hot: 25 };
 const COOLING_BTU: Record<string, number> = { cold: 20, mixed: 25, hot: 35 };
 
@@ -1060,53 +1060,85 @@ function sizeHP(btu: number): { label: string; tons: number; price: number } {
   const match = sizes.find(s => s.btu >= btu) ?? sizes[sizes.length - 1];
   return { label: `${match.tons}-Ton Heat Pump`, tons: match.tons, price: match.price };
 }
+function sizeBoiler(btu: number): { label: string; price: number } {
+  if (btu <= 60000) return { label: "60,000 BTU Condensing Boiler (On-Demand)", price: 1850 };
+  if (btu <= 80000) return { label: "80,000 BTU Condensing Boiler (On-Demand)", price: 2250 };
+  if (btu <= 100000) return { label: "100,000 BTU Condensing Boiler (On-Demand)", price: 2750 };
+  return { label: "120,000 BTU Condensing Boiler (On-Demand)", price: 3250 };
+}
 function getHvacMatItems(inp: HvacInputs): MatItem[] {
   const sqft = parseFloat(inp.sqft) || 0;
-  const { climate, system } = inp;
+  const { climate, system, gasFireplace } = inp;
   const heatBtu = sqft * (HEATING_BTU[climate] ?? 35);
   const coolBtu = sqft * (COOLING_BTU[climate] ?? 25);
   const registers = Math.ceil(sqft / 150);
   const returns = Math.ceil(sqft / 300);
   const ductLF = Math.ceil(sqft * 0.85 * WASTE);
+  let items: MatItem[] = [];
   if (system === "mini-split") {
     const heads = Math.ceil(sqft / 500);
-    return [
+    items = [
       { label: `Mini-Split Indoor Heads (${heads}×12,000 BTU)`, qty: heads, unit: "ea", price: 750 },
       { label: "Mini-Split Outdoor Condenser Unit", qty: 1, unit: "ea", price: 1200 + Math.max(0, heads - 2) * 850 },
       { label: "Refrigerant Lineset", qty: heads * 25, unit: "LF", price: 5.50 },
       { label: "Control Wiring", qty: heads * 25, unit: "LF", price: 0.85 },
     ];
-  }
-  const items: MatItem[] = [];
-  if (system === "gas-central") {
-    const furnace = sizeFurnace(heatBtu);
-    const ac = sizeAC(coolBtu);
-    items.push({ label: furnace.label, qty: 1, unit: "ea", price: furnace.price });
-    items.push({ label: ac.label, qty: 1, unit: "ea", price: ac.price });
-    items.push({ label: "Evaporator Coil / Air Handler", qty: 1, unit: "ea", price: 650 });
-    items.push({ label: "Refrigerant Lineset (25 LF)", qty: 25, unit: "LF", price: 5.50 });
+  } else if (system === "on-demand-hydro") {
+    const boiler = sizeBoiler(heatBtu);
+    const baseboardLF = Math.ceil(sqft / 60);
+    const pexLF = Math.ceil(baseboardLF * 2 * WASTE);
+    items = [
+      { label: boiler.label, qty: 1, unit: "ea", price: boiler.price },
+      { label: "Baseboard Fin-Tube Radiators", qty: baseboardLF, unit: "LF", price: 18.50 },
+      { label: 'PEX-B ¾" Heating Loop Tubing', qty: pexLF, unit: "LF", price: 0.62 },
+      { label: "Circulator Pump", qty: 1, unit: "ea", price: 185 },
+      { label: "Expansion Tank", qty: 1, unit: "ea", price: 65 },
+      { label: "Pressure Relief Valve", qty: 1, unit: "ea", price: 28 },
+      { label: "Zone Manifold (2–4 zones)", qty: 1, unit: "ea", price: 185 },
+      { label: "Programmable Thermostat", qty: 1, unit: "ea", price: 125 },
+    ];
   } else {
-    const hp = sizeHP(Math.max(heatBtu, coolBtu));
-    items.push({ label: hp.label, qty: 1, unit: "ea", price: hp.price });
-    items.push({ label: "Air Handler / Indoor Unit", qty: 1, unit: "ea", price: 685 });
-    items.push({ label: "Refrigerant Lineset (25 LF)", qty: 25, unit: "LF", price: 5.50 });
+    if (system === "gas-central") {
+      const furnace = sizeFurnace(heatBtu);
+      const ac = sizeAC(coolBtu);
+      items.push({ label: furnace.label, qty: 1, unit: "ea", price: furnace.price });
+      items.push({ label: ac.label, qty: 1, unit: "ea", price: ac.price });
+      items.push({ label: "Evaporator Coil / Air Handler", qty: 1, unit: "ea", price: 650 });
+      items.push({ label: "Refrigerant Lineset (25 LF)", qty: 25, unit: "LF", price: 5.50 });
+    } else {
+      const hp = sizeHP(Math.max(heatBtu, coolBtu));
+      items.push({ label: hp.label, qty: 1, unit: "ea", price: hp.price });
+      items.push({ label: "Air Handler / Indoor Unit", qty: 1, unit: "ea", price: 685 });
+      items.push({ label: "Refrigerant Lineset (25 LF)", qty: 25, unit: "LF", price: 5.50 });
+    }
+    items.push({ label: "Flex Duct", qty: ductLF, unit: "LF", price: 2.50 });
+    items.push({ label: "Supply Registers", qty: registers, unit: "ea", price: 13.50 });
+    items.push({ label: "Return Air Grilles", qty: returns, unit: "ea", price: 18.50 });
+    items.push({ label: "Programmable Thermostat", qty: 1, unit: "ea", price: 125 });
   }
-  items.push({ label: "Flex Duct", qty: ductLF, unit: "LF", price: 2.50 });
-  items.push({ label: "Supply Registers", qty: registers, unit: "ea", price: 13.50 });
-  items.push({ label: "Return Air Grilles", qty: returns, unit: "ea", price: 18.50 });
-  items.push({ label: "Programmable Thermostat", qty: 1, unit: "ea", price: 125 });
+  if (gasFireplace) {
+    items.push({ label: "Direct-Vent Gas / Propane Fireplace", qty: 1, unit: "ea", price: 1450 });
+    items.push({ label: "Direct-Vent Vent Kit", qty: 1, unit: "ea", price: 285 });
+    items.push({ label: 'Gas Line Stub to Fireplace (½" black iron)', qty: 10, unit: "LF", price: 2.85 });
+  }
   return items;
 }
 function getHvacLaborItems(inp: HvacInputs): LaborItem[] {
   const sqft = parseFloat(inp.sqft) || 0;
+  const items: LaborItem[] = [];
   if (inp.system === "mini-split") {
     const heads = Math.ceil(sqft / 500);
-    return [
-      { label: "Mini-Split Installation (per head)", qty: heads, unit: "head", nationalAvg: 1025 },
-      { label: "Outdoor Unit Set & Startup", qty: 1, unit: "ea", nationalAvg: 538 },
-    ];
+    items.push({ label: "Mini-Split Installation (per head)", qty: heads, unit: "head", nationalAvg: 1025 });
+    items.push({ label: "Outdoor Unit Set & Startup", qty: 1, unit: "ea", nationalAvg: 538 });
+  } else if (inp.system === "on-demand-hydro") {
+    items.push({ label: "Hydronic Rough-In, Boiler Set & Startup", qty: sqft, unit: "sqft", nationalAvg: 4.63 });
+  } else {
+    items.push({ label: "HVAC Rough-In & Equipment Set", qty: sqft, unit: "sqft", nationalAvg: 2.31 });
   }
-  return [{ label: "HVAC Rough-In & Equipment Set", qty: sqft, unit: "sqft", nationalAvg: 2.31 }];
+  if (inp.gasFireplace) {
+    items.push({ label: "Gas Fireplace Install & Vent", qty: 1, unit: "ea", nationalAvg: 575 });
+  }
+  return items;
 }
 function HvacTab() {
   const [inputs, setInputs] = useLocalStorage<HvacInputs>(SK.hvac, DEFAULT_HVAC);
@@ -1153,15 +1185,27 @@ function HvacTab() {
             <option value="gas-central">Gas Furnace + Central A/C — Most common, uses ductwork</option>
             <option value="heat-pump">Electric Heat Pump — Heats & cools in one system, uses ductwork</option>
             <option value="mini-split">Mini-Split (Ductless) — No ductwork, room-by-room control</option>
+            <option value="on-demand-hydro">On-Demand Boiler + Hot Water Baseboards — Heat only, includes domestic hot water</option>
           </select>
         </Field>
         {sqft > 0 && (
           <InfoBox>
             {inputs.system === "mini-split"
               ? <>Recommended: <strong>{heads} indoor {heads === 1 ? "head" : "heads"}</strong> to cover {sqft.toLocaleString()} sqft.</>
+              : inputs.system === "on-demand-hydro"
+              ? <>Estimated load: <strong>{Math.round(heatBtu / 1000)}k BTU boiler</strong> / <strong>{Math.ceil(sqft / 60)} LF of baseboard</strong> for {sqft.toLocaleString()} sqft. No cooling — add a mini-split if needed later.</>
               : <>Estimated load: <strong>{Math.round(coolBtu / 12000 * 10) / 10} tons cooling</strong> / <strong>{Math.round(heatBtu / 1000)}k BTU heating</strong> for your climate.</>}
           </InfoBox>
         )}
+      </div>
+      <div className="mb-6 no-print">
+        <p className="text-sm font-semibold text-[#1A1A1A] mb-3">Backup Heat Source</p>
+        <CheckCard
+          checked={inputs.gasFireplace}
+          onChange={v => setInputs(p => ({ ...p, gasFireplace: v }))}
+          label="Gas / Propane Fireplace"
+          description="Direct-vent unit — operates without electricity, ideal backup heat source"
+        />
       </div>
       {sqft > 0 ? (
         <div className="mt-4 flex flex-col gap-0">
