@@ -976,10 +976,10 @@ function getElectricalLaborItems(inp: ElectricalInputs): LaborItem[] {
     + (appliances.evCharger ? 1 : 0) + (appliances.hotTub ? 1 : 0);
   const items: LaborItem[] = [
     { label: "Panel Installation & Setup", qty: 1, unit: "ea", nationalAvg: 425 },
-    { label: "Circuit Rough-In (per circuit)", qty: totalCircuits, unit: "circuit", nationalAvg: 195 },
+    { label: "Circuit Rough-In (per circuit)", qty: totalCircuits, unit: "circuit", nationalAvg: 225 },
   ];
-  if (appliances.evCharger) items.push({ label: "EV Charger Circuit (240V)", qty: 1, unit: "ea", nationalAvg: 285 });
-  if (appliances.hotTub) items.push({ label: "Hot Tub / Spa Circuit (240V, GFCI)", qty: 1, unit: "ea", nationalAvg: 345 });
+  if (appliances.evCharger) items.push({ label: "EV Charger Circuit (240V)", qty: 1, unit: "ea", nationalAvg: 760 });
+  if (appliances.hotTub) items.push({ label: "Hot Tub / Spa Circuit (240V, GFCI)", qty: 1, unit: "ea", nationalAvg: 760 });
   return items;
 }
 function ElectricalTab() {
