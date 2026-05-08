@@ -1802,6 +1802,14 @@ const JOIST_PRICE: Record<JoistType, number> = {
 };
 const JOIST_SPACING_FT: Record<JoistSpacing, number> = { "12": 1.0, "16": 4 / 3, "19.2": 1.6, "24": 2.0 };
 
+const JOIST_MAX_SPAN: Record<JoistType, Record<JoistSpacing, number>> = {
+  "2x10":       { "12": 16.4, "16": 14.9, "19.2": 13.8, "24": 12.2 },
+  "2x12":       { "12": 19.8, "16": 18.0, "19.2": 16.5, "24": 14.9 },
+  "tji_9.5":    { "12": 20.5, "16": 18.5, "19.2": 17.0, "24": 15.0 },
+  "tji_11.875": { "12": 24.5, "16": 22.0, "19.2": 20.0, "24": 18.0 },
+  "tji_14":     { "12": 28.0, "16": 25.5, "19.2": 23.5, "24": 21.0 },
+};
+
 const BEAM_LABEL: Record<string, string> = {
   "triple_2x12":    'Triple 2×12 Built-Up Beam',
   "lvl_3.5x9.5":   'LVL Beam 3-1/2"×9-1/2"',
@@ -1982,6 +1990,8 @@ function FloorTab() {
   const hasResults = (parseFloat(inputs.sqft) || 0) > 0;
   const spanVal = parseFloat(inputs.joistSpan) || 0;
   const spanMissing = inputs.includeFraming && spanVal === 0;
+  const maxSpan = JOIST_MAX_SPAN[inputs.joistType]?.[inputs.joistSpacing] ?? 0;
+  const beamNeeded = spanVal > 0 && maxSpan > 0 && spanVal > maxSpan;
 
   return (
     <div>
@@ -2040,7 +2050,15 @@ function FloorTab() {
                     <option value="solid">Solid Lumber (matches joist) / LVL Rim</option>
                   </select>
                 </Field>
-                <Field label="Main Beam Type" note="Required when joists can't span the full width">
+                <Field
+                  label="Main Beam Type"
+                  note={
+                    spanVal === 0 ? "Enter span above to see if a beam is required" :
+                    beamNeeded
+                      ? `⚠ ${spanVal} ft exceeds max (${maxSpan} ft) — beam required to support joists`
+                      : `✓ ${spanVal} ft is within max span (${maxSpan} ft) — no beam needed`
+                  }
+                >
                   <select value={inputs.beamType} onChange={e => set("beamType", e.target.value as BeamType)} className={SELECT_CLS}>
                     <option value="none">No Beam — joists span full width</option>
                     <option value="triple_2x12">Triple 2×12 Built-Up Beam</option>
