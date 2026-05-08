@@ -1838,18 +1838,27 @@ const ADHESIVE_CONFIG: Record<AdhesiveType, { label: string; coverage: number; u
 };
 
 const STD_LUMBER_LENGTHS = [8, 10, 12, 14, 16, 18, 20];
+const STD_LVL_LENGTHS   = [12, 14, 16, 18, 20];
 
-function beamBoardSplit(runLF: number): number[] {
+function boardSplit(runLF: number, stdLengths: number[], primaryPrefs: number[]): number[] {
   if (runLF <= 0) return [];
-  const single = STD_LUMBER_LENGTHS.find(l => l >= runLF);
+  const single = stdLengths.find(l => l >= runLF);
   if (single) return [single];
-  for (const l1 of [16, 18, 20]) {
+  for (const l1 of primaryPrefs) {
     const minL2 = runLF - l1 + 2;
-    const l2 = STD_LUMBER_LENGTHS.find(l => l >= minL2);
+    const l2 = stdLengths.find(l => l >= minL2);
     if (l2) return [l1, l2];
   }
-  return [20, 20];
+  return [stdLengths[stdLengths.length - 1], stdLengths[stdLengths.length - 1]];
 }
+
+type LVLConfig = { plies: number; pieceLabel: string; pricePerPlyLF: number };
+const LVL_CONFIG: Record<string, LVLConfig> = {
+  "lvl_3.5x9.5":   { plies: 2, pieceLabel: '1-3/4"×9-1/2" LVL',   pricePerPlyLF: 4.25 },
+  "lvl_3.5x11.25": { plies: 2, pieceLabel: '1-3/4"×11-1/4" LVL',  pricePerPlyLF: 5.50 },
+  "lvl_5.25x9.5":  { plies: 3, pieceLabel: '1-3/4"×9-1/2" LVL',   pricePerPlyLF: 4.17 },
+  "lvl_5.25x11.25":{ plies: 3, pieceLabel: '1-3/4"×11-1/4" LVL',  pricePerPlyLF: 5.17 },
+};
 
 function getFloorFramingMatItems(inputs: FloorInputs): MatItem[] {
   if (!inputs.includeFraming) return [];
@@ -1883,7 +1892,7 @@ function getFloorFramingMatItems(inputs: FloorInputs): MatItem[] {
   if (inputs.beamType !== "none") {
     if (inputs.beamType === "triple_2x12") {
       const plies = 3 * beamCount;
-      const split = beamBoardSplit(runLength);
+      const split = boardSplit(runLength, STD_LUMBER_LENGTHS, [16, 18, 20]);
       split.forEach(len => {
         items.push({
           label: `Triple 2×12 Beam — 2×12×${len}' Boards`,
@@ -1893,8 +1902,19 @@ function getFloorFramingMatItems(inputs: FloorInputs): MatItem[] {
         });
       });
     } else {
-      const totalBeamLF = Math.ceil(runLength * beamCount);
-      items.push({ label: BEAM_LABEL[inputs.beamType], qty: totalBeamLF, unit: "LF", price: BEAM_PRICE[inputs.beamType] });
+      const lvl = LVL_CONFIG[inputs.beamType];
+      if (lvl) {
+        const totalPlies = lvl.plies * beamCount;
+        const split = boardSplit(runLength, STD_LVL_LENGTHS, [20, 18, 16]);
+        split.forEach(len => {
+          items.push({
+            label: `${lvl.pieceLabel} — ${len}' Pieces (staggered)`,
+            qty: totalPlies,
+            unit: "ea",
+            price: parseFloat((lvl.pricePerPlyLF * len).toFixed(2)),
+          });
+        });
+      }
     }
     items.push({ label: "Beam Post Caps & Saddle Hardware", qty: beamCount * 3, unit: "ea", price: 18.50 });
   }
