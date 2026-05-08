@@ -1837,6 +1837,20 @@ const ADHESIVE_CONFIG: Record<AdhesiveType, { label: string; coverage: number; u
   spray:  { label: "Subfloor Construction Adhesive (Spray)",      coverage: 365, unit: "can",  price: 28.98 },
 };
 
+const STD_LUMBER_LENGTHS = [8, 10, 12, 14, 16, 18, 20];
+
+function beamBoardSplit(runLF: number): number[] {
+  if (runLF <= 0) return [];
+  const single = STD_LUMBER_LENGTHS.find(l => l >= runLF);
+  if (single) return [single];
+  for (const l1 of [16, 18, 20]) {
+    const minL2 = runLF - l1 + 2;
+    const l2 = STD_LUMBER_LENGTHS.find(l => l >= minL2);
+    if (l2) return [l1, l2];
+  }
+  return [20, 20];
+}
+
 function getFloorFramingMatItems(inputs: FloorInputs): MatItem[] {
   if (!inputs.includeFraming) return [];
   const sqft = parseFloat(inputs.sqft) || 0;
@@ -1867,10 +1881,19 @@ function getFloorFramingMatItems(inputs: FloorInputs): MatItem[] {
   }
 
   if (inputs.beamType !== "none") {
-    const totalBeamLF = beamRunLF * beamCount;
     if (inputs.beamType === "triple_2x12") {
-      items.push({ label: BEAM_LABEL["triple_2x12"], qty: Math.ceil(totalBeamLF * 3), unit: "LF", price: 2.45 });
+      const plies = 3 * beamCount;
+      const split = beamBoardSplit(runLength);
+      split.forEach(len => {
+        items.push({
+          label: `Triple 2×12 Beam — 2×12×${len}' Boards`,
+          qty: plies,
+          unit: "ea",
+          price: parseFloat((2.45 * len).toFixed(2)),
+        });
+      });
     } else {
+      const totalBeamLF = Math.ceil(runLength * beamCount);
       items.push({ label: BEAM_LABEL[inputs.beamType], qty: totalBeamLF, unit: "LF", price: BEAM_PRICE[inputs.beamType] });
     }
     items.push({ label: "Beam Post Caps & Saddle Hardware", qty: beamCount * 3, unit: "ea", price: 18.50 });
