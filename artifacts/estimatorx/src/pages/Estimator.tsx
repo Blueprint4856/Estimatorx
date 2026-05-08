@@ -2327,9 +2327,10 @@ function getRoofMatItems(inputs: RoofInputs): MatItem[] {
   const spacingFt = spacing / 12;
   const hasFraming = bw > 0 && bl > 0;
 
+  const roofSystem = inputs.roofSystem ?? "truss";
   const framingItems: MatItem[] = [];
   if (hasFraming) {
-    if (inputs.roofSystem === "truss") {
+    if (roofSystem === "truss") {
       const trussCount = Math.ceil(bl / spacingFt) + 1;
       const tPrice = trussUnitPrice(bw);
       framingItems.push(
@@ -2398,7 +2399,7 @@ function getRoofLaborItems(inputs: RoofInputs): LaborItem[] {
   const framingLabor: LaborItem[] = [];
   if (hasFraming) {
     const spacingFt = spacing / 12;
-    if (inputs.roofSystem === "truss") {
+    if ((inputs.roofSystem ?? "truss") === "truss") {
       const trussCount = Math.ceil(bl / spacingFt) + 1;
       // RSMeans 06 17 53 — light residential truss set, 75th %ile
       framingLabor.push(
@@ -2423,7 +2424,8 @@ function getRoofLaborItems(inputs: RoofInputs): LaborItem[] {
   ];
 }
 function RoofTab() {
-  const [inputs, setInputs] = useLocalStorage<RoofInputs>(SK.roof, DEFAULT_ROOF);
+  const [rawInputs, setInputs] = useLocalStorage<RoofInputs>(SK.roof, DEFAULT_ROOF);
+  const inputs: RoofInputs = { ...DEFAULT_ROOF, ...rawInputs };
   const laborItems = getRoofLaborItems(inputs);
   const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.roofRates, {});
   const [savedMatPrices, setSavedMatPrices] = useLocalStorage<MatPrices>(SK.roofMatPrices, {});
