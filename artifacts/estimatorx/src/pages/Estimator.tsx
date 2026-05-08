@@ -1514,6 +1514,9 @@ interface WallInputs {
   interiorLF: string; interiorDrywall: boolean;
   blockingLF: string;
   intDoorCount: string; extDoorCount: string; windowCount: string;
+  stories: "1" | "2";
+  buildingWidth: string;
+  roofPitch: string;
 }
 
 const STUD_CONFIG: Record<StudSize, { studLabel: string; plateLabel: string; studPrice: number; platePrice: number; ocSpacing: number; insulLabel: string; insulPrice: number }> = {
@@ -1549,23 +1552,26 @@ const DEFAULT_WALL: WallInputs = {
   interiorLF: "", interiorDrywall: true,
   blockingLF: "",
   intDoorCount: "", extDoorCount: "", windowCount: "",
+  stories: "1", buildingWidth: "", roofPitch: "6",
 };
 
 function getWallMatItems(inputs: WallInputs): MatItem[] {
   const lf = parseFloat(inputs.linearFeet) || 0;
   const h = parseFloat(inputs.ceilingHeight) || 9;
-  const area = lf * h;
+  const storiesCount = parseInt(inputs.stories ?? "1") || 1;
+  const area = lf * h * storiesCount;
   const sc = STUD_CONFIG[inputs.studSize] ?? STUD_CONFIG["2x4-16"];
   const family = inputs.studSize.startsWith("2x4") ? "2x4" : "2x6";
   const precutLabel = PRECUT_LABEL[inputs.ceilingHeight] ?? '92⅝"';
   const studPrice = STUD_PRICES[family][inputs.ceilingHeight] ?? STUD_PRICES[family]["8"];
   const studDim = family === "2x4" ? "2×4" : "2×6";
   const ocLabel = inputs.studSize === "2x6-24" ? "24\" OC" : "16\" OC";
-  const studLabel = `${studDim}×${precutLabel} Pre-Cut Studs (${ocLabel})`;
-  const plateLabel = `${studDim}×16 Plates (1 bottom + 2 top)`;
+  const floorSfx = storiesCount > 1 ? " (both floors)" : "";
+  const studLabel = `${studDim}×${precutLabel} Pre-Cut Studs (${ocLabel})${floorSfx}`;
+  const plateLabel = `${studDim}×16 Plates (1 bottom + 2 top)${floorSfx}`;
 
   const intLF = parseFloat(inputs.interiorLF) || 0;
-  const intArea = intLF * h;
+  const intArea = intLF * h * storiesCount;
   const intPrecut = PRECUT_LABEL[inputs.ceilingHeight] ?? '92⅝"';
 
   const blkLF = parseFloat(inputs.blockingLF) || 0;
@@ -1575,29 +1581,35 @@ function getWallMatItems(inputs: WallInputs): MatItem[] {
   const windows = parseInt(inputs.windowCount) || 0;
   const totalRO = intDoors + extDoors + windows;
 
+  // ── Gable ends ──
+  const bw = parseFloat(inputs.buildingWidth) || 0;
+  const pitch = parseFloat(inputs.roofPitch) || 0;
+  const gableHeight = bw > 0 && pitch > 0 ? (pitch / 12) * (bw / 2) : 0;
+  const gableArea = bw * gableHeight; // both triangular ends combined = 1 rectangle
+
   return [
-    // ── Exterior walls ──
+    // ── Exterior walls (× stories) ──
     ...(lf > 0 ? [
-      { label: studLabel, qty: Math.ceil((lf / sc.ocSpacing + 1) * WASTE), unit: "ea", price: studPrice },
-      { label: plateLabel, qty: Math.ceil(lf * 3 * WASTE / 16), unit: "ea", price: sc.platePrice },
+      { label: studLabel, qty: Math.ceil((lf / sc.ocSpacing + 1) * storiesCount * WASTE), unit: "ea", price: studPrice },
+      { label: plateLabel, qty: Math.ceil(lf * 3 * storiesCount * WASTE / 16), unit: "ea", price: sc.platePrice },
     ] : []),
     ...(lf > 0 && inputs.exteriorSheathing ? [
-      { label: "Advantech Wall Sheathing 7/16\" (4×8)", qty: Math.ceil(area * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.osb },
-      { label: "Advantech Seam Tape (75 LF roll)", qty: Math.max(1, Math.ceil(area * WASTE / 300)), unit: "roll", price: 24.98 },
+      { label: `Advantech Wall Sheathing 7/16" (4×8)${floorSfx}`, qty: Math.ceil(area * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.osb },
+      { label: `Advantech Seam Tape (75 LF roll)${floorSfx}`, qty: Math.max(1, Math.ceil(area * WASTE / 300)), unit: "roll", price: 24.98 },
     ] : []),
-    ...(lf > 0 && inputs.insulation ? [{ label: sc.insulLabel, qty: Math.ceil(area * WASTE), unit: "sqft", price: sc.insulPrice }] : []),
-    ...(lf > 0 && inputs.drywall ? [{ label: "½\" Drywall — Exterior Walls (4×8)", qty: Math.ceil(area * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.drywall }] : []),
+    ...(lf > 0 && inputs.insulation ? [{ label: sc.insulLabel + floorSfx, qty: Math.ceil(area * WASTE), unit: "sqft", price: sc.insulPrice }] : []),
+    ...(lf > 0 && inputs.drywall ? [{ label: `½" Drywall — Exterior Walls (4×8)${floorSfx}`, qty: Math.ceil(area * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.drywall }] : []),
 
-    // ── Interior walls (2×4 @ 16" OC) ──
+    // ── Interior walls (× stories) ──
     ...(intLF > 0 ? [
-      { label: `2×4×${intPrecut} Pre-Cut Studs — Interior (16" OC)`, qty: Math.ceil((intLF / 1.333 + 1) * WASTE), unit: "ea", price: STUD_PRICES["2x4"][inputs.ceilingHeight] ?? 5.48 },
-      { label: "2×4×16 Plates — Interior (1 bottom + 2 top)", qty: Math.ceil(intLF * 3 * WASTE / 16), unit: "ea", price: 10.97 },
+      { label: `2×4×${intPrecut} Pre-Cut Studs — Interior (16" OC)${floorSfx}`, qty: Math.ceil((intLF / 1.333 + 1) * storiesCount * WASTE), unit: "ea", price: STUD_PRICES["2x4"][inputs.ceilingHeight] ?? 5.48 },
+      { label: `2×4×16 Plates — Interior (1 bottom + 2 top)${floorSfx}`, qty: Math.ceil(intLF * 3 * storiesCount * WASTE / 16), unit: "ea", price: 10.97 },
     ] : []),
     ...(intLF > 0 && inputs.interiorDrywall ? [
-      { label: "½\" Drywall — Interior Walls, Both Sides (4×8)", qty: Math.ceil(intArea * 2 * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.drywall },
+      { label: `½" Drywall — Interior Walls, Both Sides (4×8)${floorSfx}`, qty: Math.ceil(intArea * 2 * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.drywall },
     ] : []),
 
-    // ── Door & window rough opening framing ──
+    // ── Door & window rough opening framing (user enters total for all floors) ──
     ...(intDoors > 0 ? [
       { label: "King & Jack Studs — Interior Door RO (4 per opening)", qty: intDoors * 4, unit: "ea", price: STUD_PRICES["2x4"][inputs.ceilingHeight] ?? 5.48 },
       { label: "2×10×8 Header Boards — Interior Door (2 per opening)", qty: Math.ceil(intDoors * 2 * WASTE), unit: "ea", price: 16.98 },
@@ -1620,29 +1632,50 @@ function getWallMatItems(inputs: WallInputs): MatItem[] {
     ...(blkLF > 0 ? [
       { label: "2×10×8 Blocking Boards (cabinets, vanities, fixtures)", qty: Math.ceil(blkLF * WASTE / 8), unit: "ea", price: 16.98 },
     ] : []),
+
+    // ── Gable end framing (2 ends, triangular — independent of story count) ──
+    ...(gableArea > 0 ? [
+      { label: `Gable End Studs — ${studDim} Cut Studs (both ends)`, qty: Math.ceil((bw / sc.ocSpacing + 1) * 2 * WASTE), unit: "ea", price: studPrice },
+    ] : []),
+    ...(gableArea > 0 && inputs.exteriorSheathing ? [
+      { label: "Gable End Sheathing — Advantech 7/16\" (4×8)", qty: Math.ceil(gableArea * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.osb },
+    ] : []),
+    ...(gableArea > 0 && inputs.insulation ? [
+      { label: `Gable End Insulation — ${sc.insulLabel}`, qty: Math.ceil(gableArea * WASTE), unit: "sqft", price: sc.insulPrice },
+    ] : []),
   ];
 }
 function getWallLaborItems(inputs: WallInputs): LaborItem[] {
   const lf = parseFloat(inputs.linearFeet) || 0;
   const h = parseFloat(inputs.ceilingHeight) || 9;
-  const area = Math.round(lf * h);
+  const storiesCount = parseInt(inputs.stories ?? "1") || 1;
+  const area = Math.round(lf * h * storiesCount);
   const intLF = parseFloat(inputs.interiorLF) || 0;
-  const intArea = Math.round(intLF * h);
+  const intArea = Math.round(intLF * h * storiesCount);
   const blkLF = parseFloat(inputs.blockingLF) || 0;
   const intDoors = parseInt(inputs.intDoorCount) || 0;
   const extDoors = parseInt(inputs.extDoorCount) || 0;
   const windows = parseInt(inputs.windowCount) || 0;
+  const floorSfx = storiesCount > 1 ? " (both floors)" : "";
+
+  const bw = parseFloat(inputs.buildingWidth) || 0;
+  const pitch = parseFloat(inputs.roofPitch) || 0;
+  const gableHeight = bw > 0 && pitch > 0 ? (pitch / 12) * (bw / 2) : 0;
+  const gableArea = Math.round(bw * gableHeight);
+
   return [
-    ...(lf > 0 ? [{ label: "Exterior Wall Framing", qty: area, unit: "sqft", nationalAvg: 4.50 }] : []),
-    ...(lf > 0 && inputs.exteriorSheathing ? [{ label: "Advantech Sheathing Install & Seam Tape", qty: area, unit: "sqft", nationalAvg: 2.40 }] : []),
-    ...(lf > 0 && inputs.insulation ? [{ label: "Insulation (Batt) Install", qty: area, unit: "sqft", nationalAvg: 1.45 }] : []),
-    ...(lf > 0 && inputs.drywall ? [{ label: "Drywall Hang & Finish — Exterior Walls", qty: area, unit: "sqft", nationalAvg: 2.25 }] : []),
-    ...(intLF > 0 ? [{ label: "Interior Wall Framing", qty: intArea, unit: "sqft", nationalAvg: 3.85 }] : []),
-    ...(intLF > 0 && inputs.interiorDrywall ? [{ label: "Drywall Hang & Finish — Interior Walls (both sides)", qty: intArea * 2, unit: "sqft", nationalAvg: 2.25 }] : []),
+    ...(lf > 0 ? [{ label: `Exterior Wall Framing${floorSfx}`, qty: area, unit: "sqft", nationalAvg: 4.50 }] : []),
+    ...(lf > 0 && inputs.exteriorSheathing ? [{ label: `Advantech Sheathing Install & Seam Tape${floorSfx}`, qty: area, unit: "sqft", nationalAvg: 2.40 }] : []),
+    ...(lf > 0 && inputs.insulation ? [{ label: `Insulation (Batt) Install${floorSfx}`, qty: area, unit: "sqft", nationalAvg: 1.45 }] : []),
+    ...(lf > 0 && inputs.drywall ? [{ label: `Drywall Hang & Finish — Exterior Walls${floorSfx}`, qty: area, unit: "sqft", nationalAvg: 2.25 }] : []),
+    ...(intLF > 0 ? [{ label: `Interior Wall Framing${floorSfx}`, qty: intArea, unit: "sqft", nationalAvg: 3.85 }] : []),
+    ...(intLF > 0 && inputs.interiorDrywall ? [{ label: `Drywall Hang & Finish — Interior Walls (both sides)${floorSfx}`, qty: intArea * 2, unit: "sqft", nationalAvg: 2.25 }] : []),
     ...(intDoors > 0 ? [{ label: "Interior Door Rough Opening Framing", qty: intDoors, unit: "ea", nationalAvg: 115.00 }] : []),
     ...(extDoors > 0 ? [{ label: "Exterior Door Rough Opening Framing", qty: extDoors, unit: "ea", nationalAvg: 145.00 }] : []),
     ...(windows > 0 ? [{ label: "Window Rough Opening Framing", qty: windows, unit: "ea", nationalAvg: 125.00 }] : []),
     ...(blkLF > 0 ? [{ label: "2×10 Blocking Install (cabinets, vanities, fixtures)", qty: blkLF, unit: "LF", nationalAvg: 2.65 }] : []),
+    ...(gableArea > 0 ? [{ label: "Gable End Framing (both ends)", qty: gableArea, unit: "sqft", nationalAvg: 4.50 }] : []),
+    ...(gableArea > 0 && inputs.exteriorSheathing ? [{ label: "Gable End Sheathing Install", qty: gableArea, unit: "sqft", nationalAvg: 2.40 }] : []),
   ];
 }
 function WallTab() {
@@ -1677,16 +1710,28 @@ function WallTab() {
     </div>
   );
 
+  const storiesCount = parseInt(inputs.stories ?? "1") || 1;
+  const bwNum = parseFloat(inputs.buildingWidth) || 0;
+  const pitchNum = parseFloat(inputs.roofPitch) || 0;
+  const gableHeightDisplay = (bwNum > 0 && pitchNum > 0) ? ((pitchNum / 12) * (bwNum / 2)).toFixed(1) : null;
+
   return (
     <div>
       {/* ── Exterior Walls ── */}
       <div className="no-print">
         <SectionHeader title="Exterior Walls" note="Choose stud size, sheathing, insulation & drywall" />
         <div className="grid md:grid-cols-2 gap-6">
-          <Field label="Exterior Wall Linear Feet">
+          <Field label="Number of Stories">
+            <select value={inputs.stories ?? "1"} onChange={e => setInputs(p => ({ ...p, stories: e.target.value as "1" | "2" }))}
+              className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+              <option value="1">1 story</option>
+              <option value="2">2 stories</option>
+            </select>
+          </Field>
+          <Field label="Exterior Wall Linear Feet" note={storiesCount > 1 ? "Enter perimeter for one floor — quantities auto-doubled" : undefined}>
             <NumberInput value={inputs.linearFeet} onChange={v => setInputs(p => ({ ...p, linearFeet: v }))} placeholder="e.g. 180" />
           </Field>
-          <Field label="Ceiling Height (ft)">
+          <Field label="Ceiling Height (ft)" note={storiesCount > 1 ? "Per floor" : undefined}>
             <select value={inputs.ceilingHeight} onChange={e => setInputs(p => ({ ...p, ceilingHeight: e.target.value }))}
               className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
               {["8", "9", "10", "11", "12"].map(h => <option key={h} value={h}>{h} ft</option>)}
@@ -1706,6 +1751,23 @@ function WallTab() {
             <Toggle checked={inputs.drywall} onChange={v => setInputs(p => ({ ...p, drywall: v }))} label='Drywall — Exterior Walls (½", one side)' />
           </div>
         </div>
+
+        {/* ── Gable Ends ── */}
+        <SectionHeader title="Gable Ends" note="Triangular wall area at each end of the roof — uses same stud size & sheathing as exterior walls" />
+        <div className="grid md:grid-cols-2 gap-6">
+          <Field label="Building Width (ft)" note="Gable span — the narrow dimension of the building">
+            <NumberInput value={inputs.buildingWidth} onChange={v => setInputs(p => ({ ...p, buildingWidth: v }))} placeholder="e.g. 28" />
+          </Field>
+          <Field label="Roof Pitch (rise per 12)" note={gableHeightDisplay ? `Gable height: ${gableHeightDisplay} ft` : "e.g. 6 = 6:12 pitch"}>
+            <select value={inputs.roofPitch ?? "6"} onChange={e => setInputs(p => ({ ...p, roofPitch: e.target.value }))}
+              className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+              {["4","5","6","7","8","9","10","12"].map(p => <option key={p} value={p}>{p}:12</option>)}
+            </select>
+          </Field>
+        </div>
+        {!inputs.buildingWidth && (
+          <p className="text-xs text-[#AAA] mt-2">Leave Building Width blank to skip gable end materials.</p>
+        )}
 
         {/* ── Interior Walls ── */}
         <SectionHeader title="Interior Walls" note="Always 2×4 @ 16″ OC — drywall applied both sides" />
