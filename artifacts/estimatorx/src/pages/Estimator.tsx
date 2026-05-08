@@ -1778,8 +1778,11 @@ interface FloorInputs {
   rimType: RimType;
   beamType: BeamType;
   beamCount: string;
-  includeStairs: boolean;
-  stairRisers: string;
+  stories: "1" | "2";
+  includeBasementStairs: boolean;
+  basementRisers: string;
+  includeInteriorStairs: boolean;
+  interiorRisers: string;
 }
 
 const FLOOR_MAT_PRICES: Record<string, number> = { lvp: 2.89, carpet: 2.49, carpet_pad: 2.89, hardwood: 5.98, tile: 3.49, none: 0 };
@@ -1816,7 +1819,9 @@ const DEFAULT_FLOOR: FloorInputs = {
   sqft: "", finish: "lvp", includeSubfloor: true, adhesiveType: "liquid",
   includeFraming: false, joistSpan: "", joistType: "2x10", joistSpacing: "16",
   rimType: "advantech", beamType: "none", beamCount: "1",
-  includeStairs: false, stairRisers: "13",
+  stories: "1",
+  includeBasementStairs: false, basementRisers: "13",
+  includeInteriorStairs: false, interiorRisers: "14",
 };
 
 const ADHESIVE_CONFIG: Record<AdhesiveType, { label: string; coverage: number; unit: string; price: number }> = {
@@ -1877,11 +1882,19 @@ function getFloorFramingMatItems(inputs: FloorInputs): MatItem[] {
     items.push({ label: blockLabel, qty: blockLF, unit: "LF", price: JOIST_PRICE[inputs.joistType] });
   }
 
-  if (inputs.includeStairs) {
-    const risers = Math.max(3, parseInt(inputs.stairRisers) || 13);
-    items.push({ label: '2×12 Stair Stringers (14 ft)', qty: 3, unit: "ea", price: 52.98 });
-    items.push({ label: '2×12 Stair Treads', qty: risers - 1, unit: "ea", price: 9.80 });
-    items.push({ label: "Stair Framing Hardware & Fasteners", qty: 1, unit: "lot", price: 48.00 });
+  if (inputs.includeBasementStairs) {
+    const risers = Math.max(3, parseInt(inputs.basementRisers) || 13);
+    items.push({ label: 'Basement Stair — 2×12 Stringers (14 ft)', qty: 3, unit: "ea", price: 52.98 });
+    items.push({ label: 'Basement Stair — 2×12 Treads', qty: risers - 1, unit: "ea", price: 9.80 });
+    items.push({ label: "Basement Stair Framing Hardware & Fasteners", qty: 1, unit: "lot", price: 48.00 });
+  }
+
+  if (inputs.includeInteriorStairs) {
+    const risers = Math.max(3, parseInt(inputs.interiorRisers) || 14);
+    items.push({ label: 'Interior Stair — 2×12 Stringers (14 ft)', qty: 3, unit: "ea", price: 52.98 });
+    items.push({ label: 'Interior Stair — 2×12 Treads', qty: risers - 1, unit: "ea", price: 9.80 });
+    items.push({ label: 'Interior Stair Opening — Double 2×10 Header', qty: 10, unit: "LF", price: 2.45 });
+    items.push({ label: "Interior Stair Framing Hardware & Fasteners", qty: 1, unit: "lot", price: 62.00 });
   }
 
   return items;
@@ -1906,8 +1919,12 @@ function getFloorFramingLaborItems(inputs: FloorInputs): LaborItem[] {
     items.push({ label: "Main Beam Set & Hardware", qty: beamLF, unit: "LF", nationalAvg: 6.50 });
   }
 
-  if (inputs.includeStairs) {
+  if (inputs.includeBasementStairs) {
     items.push({ label: "Basement Stair Rough Framing", qty: 1, unit: "ea", nationalAvg: 525 });
+  }
+
+  if (inputs.includeInteriorStairs) {
+    items.push({ label: "Interior Stair Rough Framing & Opening", qty: 1, unit: "ea", nationalAvg: 685 });
   }
 
   return items;
@@ -1963,16 +1980,23 @@ function FloorTab() {
   const matTotal = matItems.reduce((s, r) => s + effectiveQty(r, savedMatQtys) * effectiveMatPrice(r, matPrices), 0) + customMatTotal(customMat);
   const laborTotal = laborItems.reduce((s, i) => s + effectiveQty(i, savedLabQtys) * effectiveRate(i, rates), 0) + customLaborTotal(customLabor);
   const hasResults = (parseFloat(inputs.sqft) || 0) > 0;
-  const framingReady = inputs.includeFraming && (parseFloat(inputs.joistSpan) || 0) > 0;
+  const spanVal = parseFloat(inputs.joistSpan) || 0;
+  const spanMissing = inputs.includeFraming && spanVal === 0;
 
   return (
     <div>
       <div className="flex flex-col gap-6 no-print">
 
-        {/* ── Floor area ── */}
+        {/* ── Floor area + story count ── */}
         <div className="grid md:grid-cols-2 gap-6">
-          <Field label="Floor Area (sq ft)">
+          <Field label="Floor Area (sq ft)" note="Enter the total floor area being estimated">
             <NumberInput value={inputs.sqft} onChange={v => set("sqft", v)} placeholder="e.g. 1200" />
+          </Field>
+          <Field label="Number of Stories">
+            <select value={inputs.stories ?? "1"} onChange={e => set("stories", e.target.value as "1" | "2")} className={SELECT_CLS}>
+              <option value="1">1 Story</option>
+              <option value="2">2 Stories</option>
+            </select>
           </Field>
         </div>
 
@@ -1981,12 +2005,16 @@ function FloorTab() {
           <Toggle
             checked={inputs.includeFraming}
             onChange={v => set("includeFraming", v)}
-            label="Include Floor System Framing (joists, rim, beam, stairs)"
+            label="Include Floor System Framing (joists, rim board, beam, stairs)"
           />
           {inputs.includeFraming && (
             <>
-              <div className="grid md:grid-cols-2 gap-4">
-                <Field label="Joist Clear Span (ft)" note="Wall-to-wall or wall-to-beam bearing distance">
+              {/* Span — must be filled first; show a prominent alert if missing */}
+              <div className={`grid md:grid-cols-2 gap-4 p-3 ${spanMissing ? "border border-[#E85D26] bg-[#FFF8F5]" : ""}`}>
+                <Field
+                  label={spanMissing ? "⚠ Joist Clear Span (ft) — required to calculate quantities" : "Joist Clear Span (ft)"}
+                  note="Clear distance joists must span — wall-to-wall, or wall-to-beam bearing point"
+                >
                   <NumberInput value={inputs.joistSpan} onChange={v => set("joistSpan", v)} placeholder="e.g. 14" />
                 </Field>
                 <Field label="Joist Type">
@@ -2012,9 +2040,9 @@ function FloorTab() {
                     <option value="solid">Solid Lumber (matches joist) / LVL Rim</option>
                   </select>
                 </Field>
-                <Field label="Main Beam Type" note="Use for spans over 14 ft or multi-story loads">
+                <Field label="Main Beam Type" note="Required when joists can't span the full width">
                   <select value={inputs.beamType} onChange={e => set("beamType", e.target.value as BeamType)} className={SELECT_CLS}>
-                    <option value="none">No Beam (joists span full width)</option>
+                    <option value="none">No Beam — joists span full width</option>
                     <option value="triple_2x12">Triple 2×12 Built-Up Beam</option>
                     <option value="lvl_3.5x9.5">LVL 3-1/2"×9-1/2"</option>
                     <option value="lvl_3.5x11.25">LVL 3-1/2"×11-1/4"</option>
@@ -2023,7 +2051,7 @@ function FloorTab() {
                   </select>
                 </Field>
                 {inputs.beamType !== "none" && (
-                  <Field label="Number of Beams" note="Parallel beams dividing the span">
+                  <Field label="Number of Beams" note="Parallel beams subdividing the span">
                     <select value={inputs.beamCount} onChange={e => set("beamCount", e.target.value)} className={SELECT_CLS}>
                       <option value="1">1 beam</option>
                       <option value="2">2 beams</option>
@@ -2032,17 +2060,35 @@ function FloorTab() {
                   </Field>
                 )}
               </div>
-              <div className="flex flex-col gap-3">
-                <Toggle checked={inputs.includeStairs} onChange={v => set("includeStairs", v)} label="Include Basement / Crawl Space Stair System" />
-                {inputs.includeStairs && (
+
+              {/* Stair systems */}
+              <div className="flex flex-col gap-3 pt-1 border-t border-[#EEE]">
+                <p className="text-xs font-semibold text-[#555] uppercase tracking-wide">Stair Systems</p>
+                <Toggle
+                  checked={inputs.includeBasementStairs ?? false}
+                  onChange={v => set("includeBasementStairs", v)}
+                  label="Basement / Crawl Space Stair System"
+                />
+                {inputs.includeBasementStairs && (
                   <Field label="Number of Risers" note="Typical 8 ft basement = 13 risers">
-                    <NumberInput value={inputs.stairRisers} onChange={v => set("stairRisers", v)} placeholder="13" />
+                    <NumberInput value={inputs.basementRisers ?? "13"} onChange={v => set("basementRisers", v)} placeholder="13" />
                   </Field>
                 )}
+                {(inputs.stories ?? "1") === "2" && (
+                  <>
+                    <Toggle
+                      checked={inputs.includeInteriorStairs ?? false}
+                      onChange={v => set("includeInteriorStairs", v)}
+                      label="Interior Stair — 1st to 2nd Floor"
+                    />
+                    {inputs.includeInteriorStairs && (
+                      <Field label="Number of Risers" note="Typical 9 ft 1st floor = 14 risers">
+                        <NumberInput value={inputs.interiorRisers ?? "14"} onChange={v => set("interiorRisers", v)} placeholder="14" />
+                      </Field>
+                    )}
+                  </>
+                )}
               </div>
-              {!framingReady && (
-                <p className="text-xs text-[#AAA]">Enter joist clear span above to generate framing quantities.</p>
-              )}
             </>
           )}
         </div>
