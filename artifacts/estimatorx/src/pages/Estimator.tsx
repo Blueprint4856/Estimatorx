@@ -1338,26 +1338,86 @@ function getWallMatItems(inputs: WallInputs): MatItem[] {
   const ocLabel = inputs.studSize === "2x6-24" ? "24\" OC" : "16\" OC";
   const studLabel = `${studDim}×${precutLabel} Pre-Cut Studs (${ocLabel})`;
   const plateLabel = `${studDim}×16 Plates (1 bottom + 2 top)`;
+
+  const intLF = parseFloat(inputs.interiorLF) || 0;
+  const intArea = intLF * h;
+  const intPrecut = PRECUT_LABEL[inputs.ceilingHeight] ?? '92⅝"';
+
+  const blkLF = parseFloat(inputs.blockingLF) || 0;
+
+  const intDoors = parseInt(inputs.intDoorCount) || 0;
+  const extDoors = parseInt(inputs.extDoorCount) || 0;
+  const windows = parseInt(inputs.windowCount) || 0;
+  const totalRO = intDoors + extDoors + windows;
+
   return [
-    { label: studLabel, qty: Math.ceil((lf / sc.ocSpacing + 1) * WASTE), unit: "ea", price: studPrice },
-    { label: plateLabel, qty: Math.ceil(lf * 3 * WASTE / 16), unit: "ea", price: sc.platePrice },
-    ...(inputs.exteriorSheathing ? [
+    // ── Exterior walls ──
+    ...(lf > 0 ? [
+      { label: studLabel, qty: Math.ceil((lf / sc.ocSpacing + 1) * WASTE), unit: "ea", price: studPrice },
+      { label: plateLabel, qty: Math.ceil(lf * 3 * WASTE / 16), unit: "ea", price: sc.platePrice },
+    ] : []),
+    ...(lf > 0 && inputs.exteriorSheathing ? [
       { label: "Advantech Wall Sheathing 7/16\" (4×8)", qty: Math.ceil(area * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.osb },
       { label: "Advantech Seam Tape (75 LF roll)", qty: Math.max(1, Math.ceil(area * WASTE / 300)), unit: "roll", price: 24.98 },
     ] : []),
-    ...(inputs.insulation ? [{ label: sc.insulLabel, qty: Math.ceil(area * WASTE), unit: "sqft", price: sc.insulPrice }] : []),
-    ...(inputs.drywall ? [{ label: "½\" Drywall (4×8)", qty: Math.ceil(area * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.drywall }] : []),
+    ...(lf > 0 && inputs.insulation ? [{ label: sc.insulLabel, qty: Math.ceil(area * WASTE), unit: "sqft", price: sc.insulPrice }] : []),
+    ...(lf > 0 && inputs.drywall ? [{ label: "½\" Drywall — Exterior Walls (4×8)", qty: Math.ceil(area * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.drywall }] : []),
+
+    // ── Interior walls (2×4 @ 16" OC) ──
+    ...(intLF > 0 ? [
+      { label: `2×4×${intPrecut} Pre-Cut Studs — Interior (16" OC)`, qty: Math.ceil((intLF / 1.333 + 1) * WASTE), unit: "ea", price: STUD_PRICES["2x4"][inputs.ceilingHeight] ?? 5.48 },
+      { label: "2×4×16 Plates — Interior (1 bottom + 2 top)", qty: Math.ceil(intLF * 3 * WASTE / 16), unit: "ea", price: 10.97 },
+    ] : []),
+    ...(intLF > 0 && inputs.interiorDrywall ? [
+      { label: "½\" Drywall — Interior Walls, Both Sides (4×8)", qty: Math.ceil(intArea * 2 * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.drywall },
+    ] : []),
+
+    // ── Door & window rough opening framing ──
+    ...(intDoors > 0 ? [
+      { label: "King & Jack Studs — Interior Door RO (4 per opening)", qty: intDoors * 4, unit: "ea", price: STUD_PRICES["2x4"][inputs.ceilingHeight] ?? 5.48 },
+      { label: "2×10×8 Header Boards — Interior Door (2 per opening)", qty: Math.ceil(intDoors * 2 * WASTE), unit: "ea", price: 16.98 },
+    ] : []),
+    ...(extDoors > 0 ? [
+      { label: "King & Jack Studs — Exterior Door RO (4 per opening)", qty: extDoors * 4, unit: "ea", price: studPrice },
+      { label: "2×10×8 Header Boards — Exterior Door (2 per opening)", qty: Math.ceil(extDoors * 2 * WASTE), unit: "ea", price: 16.98 },
+      { label: "½\" Plywood Header Spacer — Exterior Door", qty: extDoors, unit: "ea", price: 4.50 },
+    ] : []),
+    ...(windows > 0 ? [
+      { label: "King, Jack & Cripple Studs — Window RO (6 per opening)", qty: windows * 6, unit: "ea", price: studPrice },
+      { label: "2×10×8 Header Boards — Window (2 per opening)", qty: Math.ceil(windows * 2 * WASTE), unit: "ea", price: 16.98 },
+      { label: "Rough Sill Lumber — Window (1 per opening)", qty: windows, unit: "ea", price: 5.48 },
+    ] : []),
+    ...(totalRO > 0 ? [
+      { label: "LVL Header Nails / Structural Screws (box)", qty: Math.ceil(totalRO / 8), unit: "box", price: 18.50 },
+    ] : []),
+
+    // ── 2×10 blocking ──
+    ...(blkLF > 0 ? [
+      { label: "2×10×8 Blocking Boards (cabinets, vanities, fixtures)", qty: Math.ceil(blkLF * WASTE / 8), unit: "ea", price: 16.98 },
+    ] : []),
   ];
 }
 function getWallLaborItems(inputs: WallInputs): LaborItem[] {
   const lf = parseFloat(inputs.linearFeet) || 0;
   const h = parseFloat(inputs.ceilingHeight) || 9;
   const area = Math.round(lf * h);
+  const intLF = parseFloat(inputs.interiorLF) || 0;
+  const intArea = Math.round(intLF * h);
+  const blkLF = parseFloat(inputs.blockingLF) || 0;
+  const intDoors = parseInt(inputs.intDoorCount) || 0;
+  const extDoors = parseInt(inputs.extDoorCount) || 0;
+  const windows = parseInt(inputs.windowCount) || 0;
   return [
-    { label: "Stud Framing", qty: area, unit: "sqft", nationalAvg: 2.65 },
-    ...(inputs.exteriorSheathing ? [{ label: "Advantech Sheathing Install & Seam Tape", qty: area, unit: "sqft", nationalAvg: 1.33 }] : []),
-    ...(inputs.insulation ? [{ label: "Insulation (Batt) Install", qty: area, unit: "sqft", nationalAvg: 1.08 }] : []),
-    ...(inputs.drywall ? [{ label: "Drywall Hang & Finish", qty: area, unit: "sqft", nationalAvg: 1.88 }] : []),
+    ...(lf > 0 ? [{ label: "Exterior Wall Framing", qty: area, unit: "sqft", nationalAvg: 2.65 }] : []),
+    ...(lf > 0 && inputs.exteriorSheathing ? [{ label: "Advantech Sheathing Install & Seam Tape", qty: area, unit: "sqft", nationalAvg: 1.33 }] : []),
+    ...(lf > 0 && inputs.insulation ? [{ label: "Insulation (Batt) Install", qty: area, unit: "sqft", nationalAvg: 1.08 }] : []),
+    ...(lf > 0 && inputs.drywall ? [{ label: "Drywall Hang & Finish — Exterior Walls", qty: area, unit: "sqft", nationalAvg: 1.88 }] : []),
+    ...(intLF > 0 ? [{ label: "Interior Wall Framing", qty: intArea, unit: "sqft", nationalAvg: 2.45 }] : []),
+    ...(intLF > 0 && inputs.interiorDrywall ? [{ label: "Drywall Hang & Finish — Interior Walls (both sides)", qty: intArea * 2, unit: "sqft", nationalAvg: 1.88 }] : []),
+    ...(intDoors > 0 ? [{ label: "Interior Door Rough Opening Framing", qty: intDoors, unit: "ea", nationalAvg: 75.00 }] : []),
+    ...(extDoors > 0 ? [{ label: "Exterior Door Rough Opening Framing", qty: extDoors, unit: "ea", nationalAvg: 95.00 }] : []),
+    ...(windows > 0 ? [{ label: "Window Rough Opening Framing", qty: windows, unit: "ea", nationalAvg: 85.00 }] : []),
+    ...(blkLF > 0 ? [{ label: "2×10 Blocking Install (cabinets, vanities, fixtures)", qty: blkLF, unit: "LF", nationalAvg: 1.85 }] : []),
   ];
 }
 function WallTab() {
@@ -1377,33 +1437,81 @@ function WallTab() {
   const handleMatReset = useCallback(() => setSavedMatPrices({}), [setSavedMatPrices]);
   const matTotal = matItems.reduce((s, r) => s + r.qty * effectiveMatPrice(r, matPrices), 0) + customMatTotal(customMat);
   const laborTotal = laborItems.reduce((s, i) => s + i.qty * effectiveRate(i, rates), 0) + customLaborTotal(customLabor);
-  const hasResults = (parseFloat(inputs.linearFeet) || 0) > 0;
+  const hasResults = (parseFloat(inputs.linearFeet) || 0) > 0 || (parseFloat(inputs.interiorLF) || 0) > 0 ||
+    (parseInt(inputs.intDoorCount) || 0) > 0 || (parseInt(inputs.extDoorCount) || 0) > 0 ||
+    (parseInt(inputs.windowCount) || 0) > 0 || (parseFloat(inputs.blockingLF) || 0) > 0;
+
+  const SectionHeader = ({ title, note }: { title: string; note?: string }) => (
+    <div className="flex items-baseline gap-3 mb-4 mt-6 first:mt-0 pb-2 border-b border-[#E8E4DF]">
+      <span className="text-xs font-black uppercase tracking-widest text-[#E85D26]">{title}</span>
+      {note && <span className="text-xs text-[#AAA]">{note}</span>}
+    </div>
+  );
+
   return (
     <div>
-      <div className="grid md:grid-cols-2 gap-6 no-print">
-        <Field label="Total Linear Feet of Wall" note="Include all walls — exterior and interior">
-          <NumberInput value={inputs.linearFeet} onChange={v => setInputs(p => ({ ...p, linearFeet: v }))} placeholder="e.g. 240" />
-        </Field>
-        <Field label="Ceiling Height (ft)">
-          <select value={inputs.ceilingHeight} onChange={e => setInputs(p => ({ ...p, ceilingHeight: e.target.value }))}
-            className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
-            {["8", "9", "10", "11", "12"].map(h => <option key={h} value={h}>{h} ft</option>)}
-          </select>
-        </Field>
-        <Field label="Stud Size &amp; Spacing" note="2×6 uses R-21 insulation regardless of spacing">
-          <select value={inputs.studSize} onChange={e => setInputs(p => ({ ...p, studSize: e.target.value as StudSize }))}
-            className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
-            <option value="2x4-16">2×4 @ 16″ OC</option>
-            <option value="2x6-16">2×6 @ 16″ OC</option>
-            <option value="2x6-24">2×6 @ 24″ OC</option>
-          </select>
-        </Field>
-        <div className="flex flex-col gap-4">
-          <Toggle checked={inputs.exteriorSheathing} onChange={v => setInputs(p => ({ ...p, exteriorSheathing: v }))} label="Advantech Exterior Sheathing" />
-          <Toggle checked={inputs.insulation} onChange={v => setInputs(p => ({ ...p, insulation: v }))} label={(inputs.studSize === "2x6-16" || inputs.studSize === "2x6-24") ? "Insulation (R-21 Batts)" : "Insulation (R-13 Batts)"} />
-          <Toggle checked={inputs.drywall} onChange={v => setInputs(p => ({ ...p, drywall: v }))} label={'Interior Drywall (½")'} />
+      {/* ── Exterior Walls ── */}
+      <div className="no-print">
+        <SectionHeader title="Exterior Walls" note="Choose stud size, sheathing, insulation & drywall" />
+        <div className="grid md:grid-cols-2 gap-6">
+          <Field label="Exterior Wall Linear Feet">
+            <NumberInput value={inputs.linearFeet} onChange={v => setInputs(p => ({ ...p, linearFeet: v }))} placeholder="e.g. 180" />
+          </Field>
+          <Field label="Ceiling Height (ft)">
+            <select value={inputs.ceilingHeight} onChange={e => setInputs(p => ({ ...p, ceilingHeight: e.target.value }))}
+              className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+              {["8", "9", "10", "11", "12"].map(h => <option key={h} value={h}>{h} ft</option>)}
+            </select>
+          </Field>
+          <Field label="Stud Size &amp; Spacing" note="2×6 uses R-21 insulation regardless of spacing">
+            <select value={inputs.studSize} onChange={e => setInputs(p => ({ ...p, studSize: e.target.value as StudSize }))}
+              className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+              <option value="2x4-16">2×4 @ 16″ OC</option>
+              <option value="2x6-16">2×6 @ 16″ OC</option>
+              <option value="2x6-24">2×6 @ 24″ OC</option>
+            </select>
+          </Field>
+          <div className="flex flex-col gap-4">
+            <Toggle checked={inputs.exteriorSheathing} onChange={v => setInputs(p => ({ ...p, exteriorSheathing: v }))} label="Advantech Exterior Sheathing" />
+            <Toggle checked={inputs.insulation} onChange={v => setInputs(p => ({ ...p, insulation: v }))} label={(inputs.studSize === "2x6-16" || inputs.studSize === "2x6-24") ? "Insulation (R-21 Batts)" : "Insulation (R-13 Batts)"} />
+            <Toggle checked={inputs.drywall} onChange={v => setInputs(p => ({ ...p, drywall: v }))} label='Drywall — Exterior Walls (½", one side)' />
+          </div>
+        </div>
+
+        {/* ── Interior Walls ── */}
+        <SectionHeader title="Interior Walls" note="Always 2×4 @ 16″ OC — drywall applied both sides" />
+        <div className="grid md:grid-cols-2 gap-6">
+          <Field label="Interior Wall Linear Feet">
+            <NumberInput value={inputs.interiorLF} onChange={v => setInputs(p => ({ ...p, interiorLF: v }))} placeholder="e.g. 120" />
+          </Field>
+          <div className="flex items-end pb-1">
+            <Toggle checked={inputs.interiorDrywall} onChange={v => setInputs(p => ({ ...p, interiorDrywall: v }))} label='Drywall — Interior Walls (½", both sides)' />
+          </div>
+        </div>
+
+        {/* ── Rough Openings ── */}
+        <SectionHeader title="Rough Openings" note="King studs, jack studs & doubled headers auto-calculated per opening" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          <Field label="Interior Doors" note="King + jack studs + 2×10 header">
+            <NumberInput value={inputs.intDoorCount} onChange={v => setInputs(p => ({ ...p, intDoorCount: v }))} placeholder="e.g. 12" />
+          </Field>
+          <Field label="Exterior Doors" note="King + jack studs + 2×10 header + spacer">
+            <NumberInput value={inputs.extDoorCount} onChange={v => setInputs(p => ({ ...p, extDoorCount: v }))} placeholder="e.g. 3" />
+          </Field>
+          <Field label="Windows" note="King + jack + cripple studs + 2×10 header + sill">
+            <NumberInput value={inputs.windowCount} onChange={v => setInputs(p => ({ ...p, windowCount: v }))} placeholder="e.g. 18" />
+          </Field>
+        </div>
+
+        {/* ── Wall Blocking ── */}
+        <SectionHeader title="Wall Blocking" note="2×10 nailer blocking for cabinets, vanities &amp; wall-mounted fixtures" />
+        <div className="grid md:grid-cols-2 gap-6">
+          <Field label="Blocking Linear Feet" note="Measure each run of cabinets, vanity walls, grab bars, TV mounts, etc.">
+            <NumberInput value={inputs.blockingLF} onChange={v => setInputs(p => ({ ...p, blockingLF: v }))} placeholder="e.g. 45" />
+          </Field>
         </div>
       </div>
+
       {hasResults ? (
         <div className="mt-8 flex flex-col gap-0">
           <MaterialsTable rows={matItems} prices={matPrices} onPriceChange={handleMatPriceChange} onReset={handleMatReset} />
@@ -1415,7 +1523,7 @@ function WallTab() {
           <GrandTotal matTotal={matTotal} laborTotal={laborTotal} />
           <div className="mt-2"><ResultNote /></div>
         </div>
-      ) : <EmptyState text="Enter wall dimensions above to see your estimate." />}
+      ) : <EmptyState text="Enter exterior or interior wall dimensions above to see your estimate." />}
     </div>
   );
 }
