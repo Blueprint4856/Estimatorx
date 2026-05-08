@@ -2187,8 +2187,15 @@ function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "sum
     return { label, tabId, mat, lab, total: mat + lab, hasData };
   };
 
+  const siteHasData = (() => {
+    const lot = parseFloat(siteInputs.lotSqft) || 0;
+    const fp = parseFloat(siteInputs.footprintSqft) || 0;
+    const driveSqft = (parseFloat(siteInputs.drivewayLength) || 0) * (parseFloat(siteInputs.drivewayWidth) || 12);
+    return lot > 0 || fp > 0 || (siteInputs.includeDriveway && driveSqft > 0);
+  })();
+
   const rows = [
-    computeTab("Site Work", "sitework", getSiteWorkMatItems(siteInputs), siteCM, siteMP, getSiteWorkLaborItems(siteInputs), siteSR, siteCL, (parseFloat(siteInputs.lotSqft) || 0) > 0 || (parseFloat(siteInputs.footprintSqft) || 0) > 0 || (siteInputs.includeDriveway && (parseFloat(siteInputs.drivewayLength) || 0) > 0)),
+    computeTab("Site Work", "sitework", getSiteWorkMatItems(siteInputs), siteCM, siteMP, getSiteWorkLaborItems(siteInputs), siteSR, siteCL, siteHasData),
     computeTab("Foundation", "foundation", getFoundationMatItems(foundInputs), foundCM, foundMP, getFoundationLaborItems(foundInputs), foundSR, foundCL, (parseFloat(foundInputs.sqft) || 0) > 0),
     computeTab("Walls", "wall", getWallMatItems(wallInputs), wallCM, wallMP, getWallLaborItems(wallInputs), wallSR, wallCL, (parseFloat(wallInputs.linearFeet) || 0) > 0),
     computeTab("Floors", "floor", getFloorMatItems(floorInputs), floorCM, floorMP, getFloorLaborItems(floorInputs), floorSR, floorCL, (parseFloat(floorInputs.sqft) || 0) > 0),
