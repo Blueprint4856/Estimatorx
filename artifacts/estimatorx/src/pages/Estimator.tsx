@@ -525,6 +525,7 @@ function ResultNote() {
    SITE WORK TAB
 ───────────────────────────────────────────── */
 type DrivewaySurface = "gravel" | "asphalt" | "concrete";
+type SepticType = "gravity" | "mound";
 
 interface SiteWorkInputs {
   lotSqft: string;
@@ -534,6 +535,16 @@ interface SiteWorkInputs {
   drivewayWidth: string;
   drivewaySurface: DrivewaySurface;
   includeDriveway: boolean;
+  // material sourcing
+  topsoilHauledIn: boolean;
+  backfillHauledIn: boolean;
+  // utilities
+  hasMunicipalWater: boolean;
+  hasMunicipalSewer: boolean;
+  wellDepthFt: string;
+  septicBedrooms: string;
+  septicType: SepticType;
+  septicSandHauledIn: boolean;
 }
 
 const DEFAULT_SITEWORK: SiteWorkInputs = {
@@ -544,7 +555,22 @@ const DEFAULT_SITEWORK: SiteWorkInputs = {
   drivewayWidth: "12",
   drivewaySurface: "asphalt",
   includeDriveway: true,
+  topsoilHauledIn: true,
+  backfillHauledIn: false,
+  hasMunicipalWater: true,
+  hasMunicipalSewer: true,
+  wellDepthFt: "200",
+  septicBedrooms: "3",
+  septicType: "gravity",
+  septicSandHauledIn: true,
 };
+
+function septicTankSpec(br: number): { label: string; price: number } {
+  if (br <= 2) return { label: "Precast Concrete Septic Tank — 1,000 gal", price: 2400 };
+  if (br === 3) return { label: "Precast Concrete Septic Tank — 1,250 gal", price: 2850 };
+  if (br === 4) return { label: "Precast Concrete Septic Tank — 1,500 gal", price: 3400 };
+  return { label: "Precast Concrete Septic Tank — 2,000 gal", price: 4150 };
+}
 
 function getSiteWorkMatItems(inputs: SiteWorkInputs): MatItem[] {
   const lot = parseFloat(inputs.lotSqft) || 0;
@@ -554,18 +580,31 @@ function getSiteWorkMatItems(inputs: SiteWorkInputs): MatItem[] {
   const driveW = parseFloat(inputs.drivewayWidth) || 12;
   const driveSqft = driveLF * driveW;
   const lotPerim = lot > 0 ? Math.ceil(Math.sqrt(lot) * 4) : 0;
+  const fpPerim = fp > 0 ? Math.ceil(Math.sqrt(fp) * 4) : 0;
+  const backfillCY = fp > 0 ? Math.ceil(fpPerim * (cut / 12) * 2 / 27 * WASTE) : 0;
+  const wellDepth = parseFloat(inputs.wellDepthFt) || 0;
+  const bedrooms = Math.max(1, parseInt(inputs.septicBedrooms) || 3);
+  const fieldLF = bedrooms * 75;
+  const moundCY = inputs.septicType === "mound" ? Math.ceil(fieldLF * 15 * 2 / 27) : 0;
+  const tank = septicTankSpec(bedrooms);
 
   const items: MatItem[] = [];
 
+  // ── Grading & earthwork ──
   if (lot > 0) {
     items.push({ label: "Silt Fence — Erosion Control", qty: lotPerim, unit: "LF", price: 1.85 });
-    items.push({ label: "Topsoil Import (4\" finish layer)", qty: Math.ceil(lot * (4 / 12) / 27), unit: "CY", price: 45 });
+    if (inputs.topsoilHauledIn) {
+      items.push({ label: "Topsoil Import — 4\" finish layer", qty: Math.ceil(lot * (4 / 12) / 27), unit: "CY", price: 45 });
+    }
   }
-
   if (fp > 0 && cut > 0) {
     items.push({ label: "Haul-off Disposal (excavated material)", qty: Math.ceil(fp * (cut / 12) / 27 * 1.25), unit: "CY", price: 22 });
+    if (inputs.backfillHauledIn && backfillCY > 0) {
+      items.push({ label: "Foundation Backfill Sand — imported clean fill", qty: backfillCY, unit: "CY", price: 38 });
+    }
   }
 
+  // ── Driveway ──
   if (inputs.includeDriveway && driveSqft > 0) {
     items.push({ label: "Driveway Aggregate Base (6\")", qty: Math.ceil(driveSqft * (6 / 12) / 27), unit: "CY", price: 42 });
     if (inputs.drivewaySurface === "gravel") {
@@ -580,6 +619,28 @@ function getSiteWorkMatItems(inputs: SiteWorkInputs): MatItem[] {
     }
   }
 
+  // ── Well ──
+  if (!inputs.hasMunicipalWater && wellDepth > 0) {
+    items.push({ label: "Well Casing & Grouting Materials (per LF)", qty: wellDepth, unit: "LF", price: 12.50 });
+    items.push({ label: "Submersible Well Pump (1 HP)", qty: 1, unit: "ea", price: 1195 });
+    items.push({ label: "Pressure Tank (34 gal)", qty: 1, unit: "ea", price: 485 });
+    items.push({ label: "Pitless Adapter & Well Cap", qty: 1, unit: "ea", price: 195 });
+    items.push({ label: "1\" Poly Water Supply Line to House", qty: 100, unit: "LF", price: 1.25 });
+  }
+
+  // ── Septic ──
+  if (!inputs.hasMunicipalSewer) {
+    items.push({ label: tank.label, qty: 1, unit: "ea", price: tank.price });
+    items.push({ label: "Distribution Box (D-box)", qty: 1, unit: "ea", price: 185 });
+    items.push({ label: "4\" Perforated PVC Drain Pipe — Leach Field", qty: fieldLF, unit: "LF", price: 1.85 });
+    items.push({ label: "#57 Stone Septic Media", qty: Math.ceil(fieldLF * 1.5 / 27), unit: "CY", price: 52 });
+    items.push({ label: "Geotextile Filter Fabric", qty: Math.ceil(fieldLF * 3 * WASTE), unit: "sqft", price: 0.35 });
+    items.push({ label: "Inspection Ports", qty: 2, unit: "ea", price: 45 });
+    if (inputs.septicType === "mound" && inputs.septicSandHauledIn && moundCY > 0) {
+      items.push({ label: "Septic Sand Import — Mound Fill", qty: moundCY, unit: "CY", price: 42 });
+    }
+  }
+
   return items;
 }
 
@@ -590,20 +651,30 @@ function getSiteWorkLaborItems(inputs: SiteWorkInputs): LaborItem[] {
   const driveLF = parseFloat(inputs.drivewayLength) || 0;
   const driveW = parseFloat(inputs.drivewayWidth) || 12;
   const driveSqft = driveLF * driveW;
+  const fpPerim = fp > 0 ? Math.ceil(Math.sqrt(fp) * 4) : 0;
+  const backfillCY = fp > 0 ? Math.ceil(fpPerim * (cut / 12) * 2 / 27 * WASTE) : 0;
+  const wellDepth = parseFloat(inputs.wellDepthFt) || 0;
+  const bedrooms = Math.max(1, parseInt(inputs.septicBedrooms) || 3);
+  const fieldLF = bedrooms * 75;
+  const moundCY = inputs.septicType === "mound" ? Math.ceil(fieldLF * 15 * 2 / 27) : 0;
 
   const items: LaborItem[] = [];
 
+  // ── Grading & earthwork ──
   if (lot > 0) {
     items.push({ label: "Clearing & Grubbing", qty: lot, unit: "sqft", nationalAvg: 0.35 });
     items.push({ label: "Rough Grading (machine)", qty: lot, unit: "sqft", nationalAvg: 0.45 });
     items.push({ label: "Topsoil Respread & Fine Grade", qty: lot, unit: "sqft", nationalAvg: 0.28 });
   }
-
   if (fp > 0 && cut > 0) {
     items.push({ label: "Bulk Excavation & Haul (machine)", qty: Math.ceil(fp * (cut / 12) / 27 * 1.25), unit: "CY", nationalAvg: 8.00 });
     items.push({ label: "Fine Grading — Building Pad", qty: fp, unit: "sqft", nationalAvg: 0.65 });
+    if (backfillCY > 0) {
+      items.push({ label: "Foundation Backfill & Compact", qty: backfillCY, unit: "CY", nationalAvg: 12.50 });
+    }
   }
 
+  // ── Driveway ──
   if (inputs.includeDriveway && driveSqft > 0) {
     items.push({ label: "Driveway Base Compact & Install", qty: driveSqft, unit: "sqft", nationalAvg: 0.85 });
     if (inputs.drivewaySurface === "gravel") {
@@ -612,6 +683,23 @@ function getSiteWorkLaborItems(inputs: SiteWorkInputs): LaborItem[] {
       items.push({ label: "Asphalt Pave & Roll", qty: driveSqft, unit: "sqft", nationalAvg: 2.85 });
     } else {
       items.push({ label: "Concrete Driveway — Form, Pour & Finish", qty: driveSqft, unit: "sqft", nationalAvg: 4.50 });
+    }
+  }
+
+  // ── Well ──
+  if (!inputs.hasMunicipalWater && wellDepth > 0) {
+    items.push({ label: "Well Drilling (incl. casing & grouting)", qty: wellDepth, unit: "LF", nationalAvg: 32.00 });
+    items.push({ label: "Submersible Pump & Pressure Tank Install", qty: 1, unit: "ea", nationalAvg: 650 });
+  }
+
+  // ── Septic ──
+  if (!inputs.hasMunicipalSewer) {
+    items.push({ label: "Septic Tank Excavation & Setting", qty: 1, unit: "ea", nationalAvg: 1850 });
+    items.push({ label: "Leach Field Trench Excavation", qty: fieldLF, unit: "LF", nationalAvg: 12.50 });
+    items.push({ label: "Drain Pipe, Stone & D-Box Install", qty: fieldLF, unit: "LF", nationalAvg: 8.50 });
+    items.push({ label: "Leach Field Backfill & Grade", qty: fieldLF * 3, unit: "sqft", nationalAvg: 0.45 });
+    if (inputs.septicType === "mound" && moundCY > 0) {
+      items.push({ label: "Mound Construction & Sand Place", qty: moundCY, unit: "CY", nationalAvg: 22.00 });
     }
   }
 
@@ -641,33 +729,49 @@ function SiteWorkTab() {
   const fp = parseFloat(inputs.footprintSqft) || 0;
   const driveSqft = (parseFloat(inputs.drivewayLength) || 0) * (parseFloat(inputs.drivewayWidth) || 12);
 
+  const SWSection = ({ title, note }: { title: string; note?: string }) => (
+    <div className="flex items-baseline gap-3 mt-8 mb-4 pb-2 border-b border-[#E8E4DF]">
+      <span className="text-xs font-black uppercase tracking-widest text-[#E85D26]">{title}</span>
+      {note && <span className="text-xs text-[#AAA]">{note}</span>}
+    </div>
+  );
+
   return (
     <div>
       <div className="mb-8">
         <h2 className="text-2xl font-black uppercase font-serif text-[#1A1A1A] mb-1">Site Work</h2>
-        <p className="text-sm text-[#888]">Clearing, grading, excavation, and driveway — the work that happens before the foundation goes in.</p>
+        <p className="text-sm text-[#888]">Clearing, grading, excavation, utilities, and driveway — everything before the foundation goes in.</p>
       </div>
 
-      {/* Inputs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        <Field label="Lot Size (sqft)" note="Used for clearing, grading & topsoil">
+      {/* ── Grading & Excavation ── */}
+      <SWSection title="Grading & Excavation" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <Field label="Lot Size (sqft)" note="Clearing, grading & topsoil">
           <NumberInput value={inputs.lotSqft} onChange={v => set("lotSqft", v)} placeholder="e.g. 12000" />
         </Field>
-        <Field label="Building Footprint (sqft)" note="Used for excavation & pad prep">
+        <Field label="Building Footprint (sqft)" note="Excavation & pad prep">
           <NumberInput value={inputs.footprintSqft} onChange={v => set("footprintSqft", v)} placeholder="e.g. 1500" />
         </Field>
-        <Field label="Average Site Cut Depth (in)" note="Depth of topsoil stripping & cut">
+        <Field label="Average Site Cut Depth (in)" note="Topsoil stripping & excavation depth">
           <NumberInput value={inputs.cutDepthIn} onChange={v => set("cutDepthIn", v)} placeholder="6" />
         </Field>
       </div>
-
-      {/* Driveway toggle */}
-      <div className="mb-6">
-        <Toggle checked={inputs.includeDriveway} onChange={v => set("includeDriveway", v)} label="Include driveway" />
+      <div className="flex flex-col gap-3 mb-4">
+        <Toggle checked={inputs.topsoilHauledIn} onChange={v => set("topsoilHauledIn", v)}
+          label="Topsoil — import from off-site (adds material cost)" />
+        {fp > 0 && (
+          <Toggle checked={inputs.backfillHauledIn} onChange={v => set("backfillHauledIn", v)}
+            label="Foundation backfill sand — haul in clean fill (unchecked = reuse excavated material)" />
+        )}
       </div>
 
+      {/* ── Driveway ── */}
+      <SWSection title="Driveway" />
+      <div className="mb-4">
+        <Toggle checked={inputs.includeDriveway} onChange={v => set("includeDriveway", v)} label="Include driveway" />
+      </div>
       {inputs.includeDriveway && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8 pl-4 border-l-2 border-[#E85D26]/30">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-4 pl-4 border-l-2 border-[#E85D26]/30">
           <Field label="Driveway Length (LF)">
             <NumberInput value={inputs.drivewayLength} onChange={v => set("drivewayLength", v)} placeholder="e.g. 80" />
           </Field>
@@ -685,15 +789,63 @@ function SiteWorkTab() {
         </div>
       )}
 
+      {/* ── Water Supply ── */}
+      <SWSection title="Water Supply" />
+      <div className="flex flex-col gap-3 mb-4">
+        <Toggle checked={inputs.hasMunicipalWater} onChange={v => set("hasMunicipalWater", v)}
+          label="Municipal / public water available" />
+      </div>
+      {!inputs.hasMunicipalWater && (
+        <div className="pl-4 border-l-2 border-[#E85D26]/30 mb-4">
+          <Field label="Estimated Well Depth (ft)" note="Typical residential range 100–400 ft — varies by geology & water table">
+            <NumberInput value={inputs.wellDepthFt} onChange={v => set("wellDepthFt", v)} placeholder="200" />
+          </Field>
+          <p className="mt-2 text-xs text-[#AAA]">Includes casing, grouting materials, submersible pump, pressure tank, pitless adapter & supply line to house.</p>
+        </div>
+      )}
+
+      {/* ── Wastewater / Sewer ── */}
+      <SWSection title="Wastewater Disposal" />
+      <div className="flex flex-col gap-3 mb-4">
+        <Toggle checked={inputs.hasMunicipalSewer} onChange={v => set("hasMunicipalSewer", v)}
+          label="Municipal sewer connection available" />
+      </div>
+      {!inputs.hasMunicipalSewer && (
+        <div className="pl-4 border-l-2 border-[#E85D26]/30 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-4">
+            <Field label="Number of Bedrooms" note="Determines tank size and leach field area">
+              <NumberInput value={inputs.septicBedrooms} onChange={v => set("septicBedrooms", v)} placeholder="3" />
+            </Field>
+            <Field label="Septic System Type" note="Mound required when soil drainage is limited">
+              <select value={inputs.septicType} onChange={e => set("septicType", e.target.value as SepticType)}
+                className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+                <option value="gravity">Conventional — gravity / at-grade leach field</option>
+                <option value="mound">Pressure-dosed mound — raised / built-up system</option>
+              </select>
+            </Field>
+          </div>
+          {inputs.septicType === "mound" && (
+            <div className="mb-4">
+              <Toggle checked={inputs.septicSandHauledIn} onChange={v => set("septicSandHauledIn", v)}
+                label="Septic sand — import from off-site (mound fill sand not available on site)" />
+              <p className="mt-1 ml-7 text-xs text-[#AAA]">Mound systems require a large volume of imported sand; unchecked if owner already has on-site fill.</p>
+            </div>
+          )}
+          <p className="text-xs text-[#AAA]">Tank, D-box, perforated pipe, #57 stone, geotextile fabric & inspection ports calculated from bedroom count.</p>
+        </div>
+      )}
+
       {/* Info snapshot */}
-      {(lot > 0 || fp > 0) && (
+      {(lot > 0 || fp > 0 || !inputs.hasMunicipalWater || !inputs.hasMunicipalSewer) && (
         <div className="mb-6 p-4 bg-[#FFF8F5] border border-[#E85D26]/20 text-sm">
           <span className="font-bold text-[#E85D26] uppercase tracking-wider text-xs">Estimate Snapshot — </span>
           <span className="text-[#555]">
             {lot > 0 && `${lot.toLocaleString()} sqft lot`}
             {fp > 0 && ` · ${fp.toLocaleString()} sqft building pad`}
-            {fp > 0 && parseFloat(inputs.cutDepthIn) > 0 && ` · ${inputs.cutDepthIn}" cut depth`}
+            {fp > 0 && parseFloat(inputs.cutDepthIn) > 0 && ` · ${inputs.cutDepthIn}" cut`}
             {inputs.includeDriveway && driveSqft > 0 && ` · ${driveSqft.toLocaleString()} sqft ${inputs.drivewaySurface} driveway`}
+            {!inputs.hasMunicipalWater && inputs.wellDepthFt && ` · well (${inputs.wellDepthFt} ft)`}
+            {!inputs.hasMunicipalSewer && ` · ${inputs.septicType === "mound" ? "mound" : "gravity"} septic (${inputs.septicBedrooms || 3} BR)`}
           </span>
         </div>
       )}
