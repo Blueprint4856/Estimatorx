@@ -711,44 +711,44 @@ function getSiteWorkLaborItems(inputs: SiteWorkInputs): LaborItem[] {
 
   // ── Grading & earthwork ──
   if (lot > 0) {
-    items.push({ label: "Clearing & Grubbing", qty: lot, unit: "sqft", nationalAvg: 0.35 });
-    items.push({ label: "Rough Grading (machine)", qty: lot, unit: "sqft", nationalAvg: 0.45 });
-    items.push({ label: "Topsoil Respread & Fine Grade", qty: lot, unit: "sqft", nationalAvg: 0.28 });
+    items.push({ label: "Clearing & Grubbing", qty: lot, unit: "sqft", nationalAvg: 0.52 });
+    items.push({ label: "Rough Grading (machine)", qty: lot, unit: "sqft", nationalAvg: 0.68 });
+    items.push({ label: "Topsoil Respread & Fine Grade", qty: lot, unit: "sqft", nationalAvg: 0.42 });
   }
   if (fp > 0 && cut > 0) {
-    items.push({ label: "Bulk Excavation & Haul (machine)", qty: Math.ceil(fp * (cut / 12) / 27 * 1.25), unit: "CY", nationalAvg: 8.00 });
-    items.push({ label: "Fine Grading — Building Pad", qty: fp, unit: "sqft", nationalAvg: 0.65 });
+    items.push({ label: "Bulk Excavation & Haul (machine)", qty: Math.ceil(fp * (cut / 12) / 27 * 1.25), unit: "CY", nationalAvg: 12.50 });
+    items.push({ label: "Fine Grading — Building Pad", qty: fp, unit: "sqft", nationalAvg: 0.98 });
     if (backfillCY > 0) {
-      items.push({ label: "Foundation Backfill & Compact", qty: backfillCY, unit: "CY", nationalAvg: 12.50 });
+      items.push({ label: "Foundation Backfill & Compact", qty: backfillCY, unit: "CY", nationalAvg: 18.50 });
     }
   }
 
   // ── Driveway ──
   if (inputs.includeDriveway && driveSqft > 0) {
-    items.push({ label: "Driveway Base Compact & Install", qty: driveSqft, unit: "sqft", nationalAvg: 0.85 });
+    items.push({ label: "Driveway Base Compact & Install", qty: driveSqft, unit: "sqft", nationalAvg: 1.28 });
     if (inputs.drivewaySurface === "gravel") {
-      items.push({ label: "Gravel Surface Place & Compact", qty: driveSqft, unit: "sqft", nationalAvg: 0.55 });
+      items.push({ label: "Gravel Surface Place & Compact", qty: driveSqft, unit: "sqft", nationalAvg: 0.82 });
     } else if (inputs.drivewaySurface === "asphalt") {
-      items.push({ label: "Asphalt Pave & Roll", qty: driveSqft, unit: "sqft", nationalAvg: 2.85 });
+      items.push({ label: "Asphalt Pave & Roll", qty: driveSqft, unit: "sqft", nationalAvg: 4.35 });
     } else {
-      items.push({ label: "Concrete Driveway — Form, Pour & Finish", qty: driveSqft, unit: "sqft", nationalAvg: 4.50 });
+      items.push({ label: "Concrete Driveway — Form, Pour & Finish", qty: driveSqft, unit: "sqft", nationalAvg: 6.85 });
     }
   }
 
   // ── Well ──
   if (!inputs.hasMunicipalWater && wellDepth > 0) {
-    items.push({ label: "Well Drilling (incl. casing & grouting)", qty: wellDepth, unit: "LF", nationalAvg: 32.00 });
-    items.push({ label: "Submersible Pump & Pressure Tank Install", qty: 1, unit: "ea", nationalAvg: 650 });
+    items.push({ label: "Well Drilling (incl. casing & grouting)", qty: wellDepth, unit: "LF", nationalAvg: 52.00 });
+    items.push({ label: "Submersible Pump & Pressure Tank Install", qty: 1, unit: "ea", nationalAvg: 975 });
   }
 
   // ── Septic ──
   if (!inputs.hasMunicipalSewer) {
-    items.push({ label: "Septic Tank Excavation & Setting", qty: 1, unit: "ea", nationalAvg: 1850 });
-    items.push({ label: "Leach Field Trench Excavation", qty: fieldLF, unit: "LF", nationalAvg: 12.50 });
-    items.push({ label: "Drain Pipe, Stone & D-Box Install", qty: fieldLF, unit: "LF", nationalAvg: 8.50 });
-    items.push({ label: "Leach Field Backfill & Grade", qty: fieldLF * 3, unit: "sqft", nationalAvg: 0.45 });
+    items.push({ label: "Septic Tank Excavation & Setting", qty: 1, unit: "ea", nationalAvg: 2800 });
+    items.push({ label: "Leach Field Trench Excavation", qty: fieldLF, unit: "LF", nationalAvg: 19.00 });
+    items.push({ label: "Drain Pipe, Stone & D-Box Install", qty: fieldLF, unit: "LF", nationalAvg: 13.00 });
+    items.push({ label: "Leach Field Backfill & Grade", qty: fieldLF * 3, unit: "sqft", nationalAvg: 0.68 });
     if (inputs.septicType === "mound" && moundCY > 0) {
-      items.push({ label: "Mound Construction & Sand Place", qty: moundCY, unit: "CY", nationalAvg: 22.00 });
+      items.push({ label: "Mound Construction & Sand Place", qty: moundCY, unit: "CY", nationalAvg: 34.00 });
     }
   }
 
@@ -1176,10 +1176,10 @@ function getFoundationLaborItems(inputs: FoundationInputs): LaborItem[] {
 
   if (inputs.foundationType === "slab") {
     return [
-      { label: "Site Prep & Grading", qty: sqft, unit: "sqft", nationalAvg: 0.75 },
-      { label: "Gravel Base Compact", qty: sqft, unit: "sqft", nationalAvg: 0.55 },
-      { label: "Slab Pour & Finish", qty: sqft, unit: "sqft", nationalAvg: 3.13 },
-      { label: "Thickened Edge Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 11.00 },
+      { label: "Site Prep & Grading", qty: sqft, unit: "sqft", nationalAvg: 1.12 },
+      { label: "Gravel Base Compact", qty: sqft, unit: "sqft", nationalAvg: 0.82 },
+      { label: "Slab Pour & Finish", qty: sqft, unit: "sqft", nationalAvg: 4.85 },
+      { label: "Thickened Edge Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 16.50 },
     ];
   }
 
@@ -1187,19 +1187,19 @@ function getFoundationLaborItems(inputs: FoundationInputs): LaborItem[] {
     const excavCY = Math.ceil(sqft * depth / 27 * 1.25);
     const wallArea = perim * depth;
     return [
-      { label: "Excavation (machine)", qty: excavCY, unit: "CY", nationalAvg: 8.00 },
-      { label: "Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 13.00 },
-      { label: "Foundation Wall (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 18.00 },
-      { label: "Waterproofing & Drainage Install", qty: wallArea, unit: "sqft", nationalAvg: 3.13 },
-      { label: "Basement Slab Pour & Finish", qty: sqft, unit: "sqft", nationalAvg: 2.75 },
+      { label: "Excavation (machine)", qty: excavCY, unit: "CY", nationalAvg: 12.50 },
+      { label: "Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 19.50 },
+      { label: "Foundation Wall (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 27.50 },
+      { label: "Waterproofing & Drainage Install", qty: wallArea, unit: "sqft", nationalAvg: 4.75 },
+      { label: "Basement Slab Pour & Finish", qty: sqft, unit: "sqft", nationalAvg: 4.25 },
     ];
   }
 
   // crawlspace
   return [
-    { label: "Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 13.00 },
-    { label: "CMU Wall Lay & Mortar", qty: perim, unit: "LF", nationalAvg: 16.50 },
-    { label: "Vapor Barrier Install", qty: sqft, unit: "sqft", nationalAvg: 0.41 },
+    { label: "Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 19.50 },
+    { label: "CMU Wall Lay & Mortar", qty: perim, unit: "LF", nationalAvg: 25.00 },
+    { label: "Vapor Barrier Install", qty: sqft, unit: "sqft", nationalAvg: 0.62 },
   ];
 }
 
@@ -1764,7 +1764,7 @@ type AdhesiveType = "liquid" | "spray";
 interface FloorInputs { sqft: string; finish: string; includeSubfloor: boolean; adhesiveType: AdhesiveType; }
 const FLOOR_MAT_PRICES: Record<string, number> = { lvp: 2.89, carpet: 2.49, carpet_pad: 2.89, hardwood: 5.98, tile: 3.49, none: 0 };
 const FLOOR_LABELS: Record<string, string> = { lvp: "LVP — Luxury Vinyl Plank", carpet: "Carpet", carpet_pad: "Carpet w/ Pad — Mid-Grade", hardwood: "Hardwood", tile: "Ceramic / Porcelain Tile", none: "None" };
-const FLOOR_LABOR: Record<string, number> = { lvp: 2.63, carpet: 1.25, carpet_pad: 1.38, hardwood: 5.25, tile: 8.75, none: 0 };
+const FLOOR_LABOR: Record<string, number> = { lvp: 3.85, carpet: 1.85, carpet_pad: 2.05, hardwood: 7.85, tile: 12.50, none: 0 };
 const DEFAULT_FLOOR: FloorInputs = { sqft: "", finish: "lvp", includeSubfloor: true, adhesiveType: "liquid" };
 
 const ADHESIVE_CONFIG: Record<AdhesiveType, { label: string; coverage: number; unit: string; price: number }> = {
@@ -1791,7 +1791,7 @@ function getFloorMatItems(inputs: FloorInputs): MatItem[] {
 function getFloorLaborItems(inputs: FloorInputs): LaborItem[] {
   const sqft = Math.round(parseFloat(inputs.sqft) || 0);
   return [
-    ...(inputs.includeSubfloor ? [{ label: "Advantech Subfloor Install (glued & screwed)", qty: sqft, unit: "sqft", nationalAvg: 0.95 }] : []),
+    ...(inputs.includeSubfloor ? [{ label: "Advantech Subfloor Install (glued & screwed)", qty: sqft, unit: "sqft", nationalAvg: 1.45 }] : []),
     ...(inputs.finish !== "none" ? [{ label: `${FLOOR_LABELS[inputs.finish]} Installation`, qty: sqft, unit: "sqft", nationalAvg: FLOOR_LABOR[inputs.finish] ?? 0 }] : []),
   ];
 }
@@ -1888,10 +1888,10 @@ function getRoofLaborItems(inputs: RoofInputs): LaborItem[] {
   const factor = PITCH_FACTORS[inputs.pitch] ?? 1.118;
   const actual = Math.round(fp * factor);
   return [
-    ...(inputs.archShingles ? [{ label: "Shingle Installation", qty: actual, unit: "sqft", nationalAvg: 3.13 }] : []),
-    { label: "Underlayment Install", qty: actual, unit: "sqft", nationalAvg: 2.56 },
-    ...(inputs.includeDecking ? [{ label: "Advantech Roof Sheathing Install & Seam Tape", qty: actual, unit: "sqft", nationalAvg: 3.00 }] : []),
-    ...(inputs.iceWater ? [{ label: "Ice & Water Shield Install", qty: Math.round(fp * 0.25), unit: "sqft", nationalAvg: 2.37 }] : []),
+    ...(inputs.archShingles ? [{ label: "Shingle Installation", qty: actual, unit: "sqft", nationalAvg: 3.85 }] : []),
+    { label: "Underlayment & Flashing Install", qty: actual, unit: "sqft", nationalAvg: 0.95 },
+    ...(inputs.includeDecking ? [{ label: "Advantech Roof Sheathing Install & Seam Tape", qty: actual, unit: "sqft", nationalAvg: 3.85 }] : []),
+    ...(inputs.iceWater ? [{ label: "Ice & Water Shield Install", qty: Math.round(fp * 0.25), unit: "sqft", nationalAvg: 1.15 }] : []),
   ];
 }
 function RoofTab() {
@@ -1995,11 +1995,11 @@ function getPlumbingMatItems(i: PlumbingInputs): MatItem[] {
 }
 function getPlumbingLaborItems(i: PlumbingInputs): LaborItem[] {
   const items: LaborItem[] = [];
-  if (i.fullBaths > 0) items.push({ label: "Full Bathroom Rough-In", qty: i.fullBaths, unit: "ea", nationalAvg: 1080 });
-  if (i.halfBaths > 0) items.push({ label: "Half Bath / Powder Room Rough-In", qty: i.halfBaths, unit: "ea", nationalAvg: 638 });
-  if (i.hasKitchen) items.push({ label: "Kitchen Plumbing Rough-In", qty: 1, unit: "ea", nationalAvg: 395 });
-  if (i.hasLaundry) items.push({ label: "Laundry Hookup Rough-In", qty: 1, unit: "ea", nationalAvg: 361 });
-  if (i.spigots > 0) items.push({ label: "Outdoor Spigot Rough-In", qty: i.spigots, unit: "ea", nationalAvg: 126 });
+  if (i.fullBaths > 0) items.push({ label: "Full Bathroom Rough-In", qty: i.fullBaths, unit: "ea", nationalAvg: 1650 });
+  if (i.halfBaths > 0) items.push({ label: "Half Bath / Powder Room Rough-In", qty: i.halfBaths, unit: "ea", nationalAvg: 975 });
+  if (i.hasKitchen) items.push({ label: "Kitchen Plumbing Rough-In", qty: 1, unit: "ea", nationalAvg: 625 });
+  if (i.hasLaundry) items.push({ label: "Laundry Hookup Rough-In", qty: 1, unit: "ea", nationalAvg: 550 });
+  if (i.spigots > 0) items.push({ label: "Outdoor Spigot Rough-In", qty: i.spigots, unit: "ea", nationalAvg: 195 });
   return items;
 }
 function PlumbingTab() {
@@ -2112,11 +2112,11 @@ function getElectricalLaborItems(inp: ElectricalInputs): LaborItem[] {
     + (appliances.electricRange ? 1 : 0) + (appliances.electricDryer ? 1 : 0)
     + (appliances.evCharger ? 1 : 0) + (appliances.hotTub ? 1 : 0);
   const items: LaborItem[] = [
-    { label: "Panel Installation & Setup", qty: 1, unit: "ea", nationalAvg: 675 },
-    { label: "Circuit Rough-In (per circuit)", qty: totalCircuits, unit: "circuit", nationalAvg: 263 },
+    { label: "Panel Installation & Setup", qty: 1, unit: "ea", nationalAvg: 1050 },
+    { label: "Circuit Rough-In (per circuit)", qty: totalCircuits, unit: "circuit", nationalAvg: 395 },
   ];
-  if (appliances.evCharger) items.push({ label: "EV Charger Circuit (240V)", qty: 1, unit: "ea", nationalAvg: 865 });
-  if (appliances.hotTub) items.push({ label: "Hot Tub / Spa Circuit (240V, GFCI)", qty: 1, unit: "ea", nationalAvg: 865 });
+  if (appliances.evCharger) items.push({ label: "EV Charger Circuit (240V)", qty: 1, unit: "ea", nationalAvg: 1350 });
+  if (appliances.hotTub) items.push({ label: "Hot Tub / Spa Circuit (240V, GFCI)", qty: 1, unit: "ea", nationalAvg: 1350 });
   return items;
 }
 function ElectricalTab() {
@@ -2269,15 +2269,15 @@ function getHvacLaborItems(inp: HvacInputs): LaborItem[] {
   const items: LaborItem[] = [];
   if (inp.system === "mini-split") {
     const heads = Math.ceil(sqft / 500);
-    items.push({ label: "Mini-Split Installation (per head)", qty: heads, unit: "head", nationalAvg: 1025 });
-    items.push({ label: "Outdoor Unit Set & Startup", qty: 1, unit: "ea", nationalAvg: 538 });
+    items.push({ label: "Mini-Split Installation (per head)", qty: heads, unit: "head", nationalAvg: 1650 });
+    items.push({ label: "Outdoor Unit Set & Startup", qty: 1, unit: "ea", nationalAvg: 850 });
   } else if (inp.system === "on-demand-hydro") {
-    items.push({ label: "Hydronic Rough-In, Boiler Set & Startup", qty: sqft, unit: "sqft", nationalAvg: 4.63 });
+    items.push({ label: "Hydronic Rough-In, Boiler Set & Startup", qty: sqft, unit: "sqft", nationalAvg: 7.25 });
   } else {
-    items.push({ label: "HVAC Rough-In & Equipment Set", qty: sqft, unit: "sqft", nationalAvg: 2.31 });
+    items.push({ label: "HVAC Rough-In & Equipment Set", qty: sqft, unit: "sqft", nationalAvg: 3.65 });
   }
   if (inp.gasFireplace) {
-    items.push({ label: "Gas Fireplace Install & Vent", qty: 1, unit: "ea", nationalAvg: 575 });
+    items.push({ label: "Gas Fireplace Install & Vent", qty: 1, unit: "ea", nationalAvg: 925 });
   }
   return items;
 }
