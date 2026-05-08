@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { ChevronRight, Printer, RotateCcw, Link2, Trash2, Check, Plus, X } from "lucide-react";
 import { useUser, useClerk } from "@clerk/react";
 
-type Tab = "wall" | "floor" | "roof" | "plumbing" | "electrical" | "hvac" | "summary";
+type Tab = "foundation" | "wall" | "floor" | "roof" | "plumbing" | "electrical" | "hvac" | "summary";
 const WASTE = 1.10;
 
 /* ─────────────────────────────────────────────
@@ -46,6 +46,8 @@ function customLaborTotal(rows: CustomLaborRow[]): number {
 ───────────────────────────────────────────── */
 
 const SK = {
+  foundation: "ex.found", foundationRates: "ex.found.rates", foundMatPrices: "ex.found.mprices",
+  foundCMat: "ex.found.cmat", foundCLab: "ex.found.clab",
   wall: "ex.wall", wallRates: "ex.wall.rates", wallMatPrices: "ex.wall.mprices",
   floor: "ex.floor", floorRates: "ex.floor.rates", floorMatPrices: "ex.floor.mprices",
   roof: "ex.roof", roofRates: "ex.roof.rates", roofMatPrices: "ex.roof.mprices",
@@ -111,6 +113,8 @@ function readAllLocalStorage() {
     catch { return undefined; }
   };
   return {
+    foundation: get(SK.foundation), foundationRates: get(SK.foundationRates),
+    foundCMat: get(SK.foundCMat), foundCLab: get(SK.foundCLab),
     wall: get(SK.wall), wallRates: get(SK.wallRates),
     floor: get(SK.floor), floorRates: get(SK.floorRates),
     roof: get(SK.roof), roofRates: get(SK.roofRates),
@@ -139,6 +143,8 @@ function primeLocalStorageFromSnapshot(state: SnapshotState) {
   const set = (key: string, val: unknown) => {
     if (val != null) try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
   };
+  set(SK.foundation, state.foundation); set(SK.foundationRates, state.foundationRates);
+  set(SK.foundCMat, state.foundCMat);   set(SK.foundCLab, state.foundCLab);
   set(SK.wall, state.wall);             set(SK.wallRates, state.wallRates);
   set(SK.floor, state.floor);           set(SK.floorRates, state.floorRates);
   set(SK.roof, state.roof);             set(SK.roofRates, state.roofRates);
@@ -507,6 +513,404 @@ function EmptyState({ text }: { text: string }) {
 }
 function ResultNote() {
   return <p className="text-[10px] text-[#AAA]">Includes 10% material waste factor. Labor rates are RSMeans national averages — edit above. Delivery, permits, equipment rental, and tax not included.</p>;
+}
+
+/* ─────────────────────────────────────────────
+   FOUNDATION TAB
+───────────────────────────────────────────── */
+type FoundationType = "slab" | "basement" | "crawlspace";
+type FoundationClimate = "cold" | "mixed" | "hot";
+type BasementDepth = "8" | "9" | "10";
+
+interface FoundationInputs {
+  sqft: string;
+  perimeter: string;
+  perimeterOverride: boolean;
+  foundationType: FoundationType;
+  climate: FoundationClimate;
+  basementDepth: BasementDepth;
+}
+
+const DEFAULT_FOUNDATION: FoundationInputs = {
+  sqft: "",
+  perimeter: "",
+  perimeterOverride: false,
+  foundationType: "slab",
+  climate: "cold",
+  basementDepth: "8",
+};
+
+function getFoundationMatItems(inputs: FoundationInputs): MatItem[] {
+  const sqft = parseFloat(inputs.sqft) || 0;
+  const autoPerim = Math.ceil(Math.sqrt(sqft) * 4);
+  const perim = inputs.perimeterOverride ? (parseFloat(inputs.perimeter) || autoPerim) : autoPerim;
+  const depth = parseFloat(inputs.basementDepth) || 8;
+
+  if (inputs.foundationType === "slab") {
+    const items: MatItem[] = [
+      { label: "Compacted Gravel Base (4\")", qty: Math.ceil(sqft * 0.333 / 27), unit: "CY", price: 42 },
+      { label: "6-Mil Polyethylene Vapor Barrier", qty: Math.ceil(sqft * 1.1), unit: "sqft", price: 0.12 },
+      { label: "Rebar #4 (12\" OC each way)", qty: Math.ceil(sqft * 2 * 1.1), unit: "LF", price: 0.68 },
+      { label: "Ready-Mix Concrete 3,000 PSI (4\" slab)", qty: Math.ceil(sqft * (4 / 12) / 27), unit: "CY", price: 185 },
+      { label: "Form Boards 2×8 (perimeter)", qty: perim, unit: "LF", price: 2.15 },
+      { label: "Anchor Bolts (every 6')", qty: Math.ceil(perim / 6), unit: "ea", price: 1.85 },
+    ];
+    if (inputs.climate === "cold") {
+      items.splice(2, 0, { label: "2\" XPS Rigid Foam Insulation", qty: sqft, unit: "sqft", price: 0.85 });
+    }
+    return items;
+  }
+
+  if (inputs.foundationType === "basement") {
+    return [
+      { label: "Ready-Mix Concrete — Footings", qty: Math.ceil(perim * 2 * 1 / 27), unit: "CY", price: 185 },
+      { label: "Footing Rebar #5 (3 continuous bars)", qty: Math.ceil(perim * 3 * 1.1), unit: "LF", price: 0.85 },
+      { label: "Ready-Mix Concrete — Foundation Walls", qty: Math.ceil(perim * depth * (8 / 12) / 27), unit: "CY", price: 185 },
+      { label: "Wall Rebar #5 (vertical, 24\" OC)", qty: Math.ceil((perim / 2) * depth * 1.1), unit: "LF", price: 0.85 },
+      { label: "Exterior Waterproofing Membrane", qty: Math.ceil(perim * depth), unit: "sqft", price: 0.85 },
+      { label: "Dimple Drainage Board", qty: Math.ceil(perim * depth), unit: "sqft", price: 0.65 },
+      { label: "4\" Perforated Drain Tile", qty: perim, unit: "LF", price: 1.25 },
+      { label: "Drainage Gravel (perimeter trench)", qty: Math.ceil(perim * 1 * 1 / 27), unit: "CY", price: 42 },
+      { label: "Ready-Mix Concrete — Basement Slab (3.5\")", qty: Math.ceil(sqft * (3.5 / 12) / 27), unit: "CY", price: 185 },
+      { label: "6-Mil Vapor Barrier (basement floor)", qty: Math.ceil(sqft * 1.1), unit: "sqft", price: 0.12 },
+      { label: "Anchor Bolts (every 6')", qty: Math.ceil(perim / 6), unit: "ea", price: 1.85 },
+    ];
+  }
+
+  // crawlspace
+  const blocks = Math.ceil(perim * 3 / 0.89);
+  return [
+    { label: "Ready-Mix Concrete — Footings", qty: Math.ceil(perim * (16 / 12) * (8 / 12) / 27), unit: "CY", price: 185 },
+    { label: "CMU Block 8\"×8\"×16\"", qty: blocks, unit: "ea", price: 2.85 },
+    { label: "Mortar Mix", qty: Math.ceil(blocks / 35), unit: "bag", price: 8.50 },
+    { label: "Anchor Bolts (every 6')", qty: Math.ceil(perim / 6), unit: "ea", price: 1.85 },
+    { label: "6-Mil Ground Vapor Barrier", qty: Math.ceil(sqft * 1.1), unit: "sqft", price: 0.12 },
+    { label: "Foundation Vents", qty: Math.ceil(sqft / 150), unit: "ea", price: 22 },
+  ];
+}
+
+function getFoundationLaborItems(inputs: FoundationInputs): LaborItem[] {
+  const sqft = parseFloat(inputs.sqft) || 0;
+  const autoPerim = Math.ceil(Math.sqrt(sqft) * 4);
+  const perim = inputs.perimeterOverride ? (parseFloat(inputs.perimeter) || autoPerim) : autoPerim;
+  const depth = parseFloat(inputs.basementDepth) || 8;
+
+  if (inputs.foundationType === "slab") {
+    return [
+      { label: "Site Prep & Grading", qty: sqft, unit: "sqft", nationalAvg: 0.75 },
+      { label: "Gravel Base Compact", qty: sqft, unit: "sqft", nationalAvg: 0.55 },
+      { label: "Slab Pour & Finish", qty: sqft, unit: "sqft", nationalAvg: 3.13 },
+      { label: "Thickened Edge Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 11.00 },
+    ];
+  }
+
+  if (inputs.foundationType === "basement") {
+    const excavCY = Math.ceil(sqft * depth / 27 * 1.25);
+    const wallArea = perim * depth;
+    return [
+      { label: "Excavation (machine)", qty: excavCY, unit: "CY", nationalAvg: 8.00 },
+      { label: "Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 13.00 },
+      { label: "Foundation Wall (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 18.00 },
+      { label: "Waterproofing & Drainage Install", qty: wallArea, unit: "sqft", nationalAvg: 3.13 },
+      { label: "Basement Slab Pour & Finish", qty: sqft, unit: "sqft", nationalAvg: 2.75 },
+    ];
+  }
+
+  // crawlspace
+  return [
+    { label: "Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 13.00 },
+    { label: "CMU Wall Lay & Mortar", qty: perim, unit: "LF", nationalAvg: 16.50 },
+    { label: "Vapor Barrier Install", qty: sqft, unit: "sqft", nationalAvg: 0.41 },
+  ];
+}
+
+function FoundationTab() {
+  const [inputs, setInputs] = useLocalStorage<FoundationInputs>(SK.foundation, DEFAULT_FOUNDATION);
+  const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.foundationRates, {});
+  const [savedMatPrices, setSavedMatPrices] = useLocalStorage<MatPrices>(SK.foundMatPrices, {});
+  const [customMat, setCustomMat] = useLocalStorage<CustomMatRow[]>(SK.foundCMat, []);
+  const [customLab, setCustomLab] = useLocalStorage<CustomLaborRow[]>(SK.foundCLab, []);
+
+  const set = <K extends keyof FoundationInputs>(k: K, v: FoundationInputs[K]) =>
+    setInputs(prev => ({ ...prev, [k]: v }));
+
+  const sqft = parseFloat(inputs.sqft) || 0;
+  const autoPerim = sqft > 0 ? Math.ceil(Math.sqrt(sqft) * 4) : 0;
+  const effectivePerim = inputs.perimeterOverride ? (parseFloat(inputs.perimeter) || autoPerim) : autoPerim;
+
+  const matItems = getFoundationMatItems(inputs);
+  const laborItems = getFoundationLaborItems(inputs);
+
+  const rates = { ...defaultRates(laborItems), ...savedRates };
+  const matPrices = { ...defaultMatPrices(matItems), ...savedMatPrices };
+
+  const matTotal = matItems.reduce((s, r) => s + r.qty * effectiveMatPrice(r, matPrices), 0) + customMatTotal(customMat);
+  const labTotal = laborItems.reduce((s, i) => s + i.qty * effectiveRate(i, rates), 0) + customLaborTotal(customLab);
+  const grandTotal = matTotal + labTotal;
+
+  const typeLabel = inputs.foundationType === "slab" ? "Slab-on-Grade" : inputs.foundationType === "basement" ? "Full Basement" : "Crawl Space";
+
+  const concreteCY = (() => {
+    if (!sqft) return 0;
+    if (inputs.foundationType === "slab") {
+      return Math.ceil(sqft * (4 / 12) / 27);
+    }
+    if (inputs.foundationType === "basement") {
+      const depth = parseFloat(inputs.basementDepth) || 8;
+      return Math.ceil(effectivePerim * 2 * 1 / 27) + Math.ceil(effectivePerim * depth * (8 / 12) / 27) + Math.ceil(sqft * (3.5 / 12) / 27);
+    }
+    return Math.ceil(effectivePerim * (16 / 12) * (8 / 12) / 27);
+  })();
+
+  return (
+    <div>
+      <div className="mb-8">
+        <h2 className="text-2xl font-black uppercase font-serif text-[#1A1A1A] mb-1">Foundation & Concrete</h2>
+        <p className="text-sm text-[#888]">Configure your foundation type and footprint — materials and labor auto-calculate.</p>
+      </div>
+
+      {/* Inputs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <Field label="Foundation Type">
+          <select value={inputs.foundationType} onChange={e => set("foundationType", e.target.value as FoundationType)}
+            className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+            <option value="slab">Slab-on-Grade</option>
+            <option value="basement">Full Basement</option>
+            <option value="crawlspace">Crawl Space</option>
+          </select>
+        </Field>
+
+        <Field label="Footprint (sqft)">
+          <NumberInput value={inputs.sqft} onChange={v => set("sqft", v)} placeholder="e.g. 1500" />
+        </Field>
+
+        <Field label="Climate Zone" note="Affects underslab insulation for slab foundations">
+          <select value={inputs.climate} onChange={e => set("climate", e.target.value as FoundationClimate)}
+            className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+            <option value="cold">Cold (heating-dominated)</option>
+            <option value="mixed">Mixed</option>
+            <option value="hot">Hot (cooling-dominated)</option>
+          </select>
+        </Field>
+
+        {inputs.foundationType === "basement" && (
+          <Field label="Basement Depth">
+            <select value={inputs.basementDepth} onChange={e => set("basementDepth", e.target.value as BasementDepth)}
+              className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+              <option value="8">8 ft</option>
+              <option value="9">9 ft</option>
+              <option value="10">10 ft</option>
+            </select>
+          </Field>
+        )}
+
+        <div className="sm:col-span-2 lg:col-span-1">
+          <label className="block text-xs font-bold uppercase tracking-widest text-[#777] mb-1.5">Perimeter (LF)</label>
+          <div className="flex gap-2 items-center">
+            <input type="number" min="0" value={inputs.perimeterOverride ? inputs.perimeter : String(autoPerim || "")}
+              readOnly={!inputs.perimeterOverride}
+              onChange={e => set("perimeter", e.target.value)}
+              placeholder={autoPerim ? String(autoPerim) : "enter sqft first"}
+              className={`flex-1 bg-[#FAF8F5] border px-4 py-2.5 text-[#1A1A1A] focus:outline-none transition-colors ${inputs.perimeterOverride ? "border-[#E85D26] focus:border-[#E85D26]" : "border-[#DDD8D0] text-[#999]"}`} />
+            <button onClick={() => {
+              set("perimeterOverride", !inputs.perimeterOverride);
+              if (!inputs.perimeterOverride) set("perimeter", String(autoPerim));
+            }}
+              className={`px-3 py-2.5 text-xs font-bold uppercase tracking-wider border transition-colors whitespace-nowrap ${inputs.perimeterOverride ? "bg-[#E85D26] text-white border-[#E85D26]" : "bg-[#FAF8F5] text-[#888] border-[#DDD8D0] hover:border-[#E85D26] hover:text-[#E85D26]"}`}>
+              {inputs.perimeterOverride ? "Override" : "Auto"}
+            </button>
+          </div>
+          <p className="text-xs text-[#AAA] mt-1">Auto = √sqft × 4 = {autoPerim || "—"} LF. Override for non-square footprints.</p>
+        </div>
+      </div>
+
+      {/* Info box */}
+      {sqft > 0 && (
+        <div className="mb-6 p-4 bg-[#FFF8F5] border border-[#E85D26]/20 text-sm">
+          <span className="font-bold text-[#E85D26] uppercase tracking-wider text-xs">Estimate Snapshot — </span>
+          <span className="text-[#555]">
+            {typeLabel} · {sqft.toLocaleString()} sqft · {effectivePerim} LF perimeter
+            {inputs.foundationType === "basement" && ` · ${inputs.basementDepth} ft depth`}
+            {inputs.foundationType !== "crawlspace" && ` · ~${concreteCY} CY concrete`}
+            {inputs.foundationType === "crawlspace" && ` · ~${concreteCY} CY footing concrete`}
+            {inputs.climate === "cold" && inputs.foundationType === "slab" && " · XPS insulation included"}
+          </span>
+        </div>
+      )}
+
+      {/* Materials */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold uppercase tracking-widest text-xs text-[#777]">Materials</h3>
+          <button onClick={() => setSavedMatPrices({})} className="text-[10px] text-[#AAA] hover:text-[#E85D26] flex items-center gap-1 transition-colors">
+            <RotateCcw size={10} /> Reset prices
+          </button>
+        </div>
+        <div className="border border-[#DDD8D0] overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-[#F7F4F0] border-b border-[#DDD8D0]">
+              <tr>
+                <th className="text-left px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">Item</th>
+                <th className="text-right px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">Qty</th>
+                <th className="text-right px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">Unit</th>
+                <th className="text-right px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">$/Unit</th>
+                <th className="text-right px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#F0EDE8]">
+              {matItems.map(item => {
+                const price = effectiveMatPrice(item, matPrices);
+                return (
+                  <tr key={item.label} className="hover:bg-[#FAF8F5]">
+                    <td className="px-4 py-2.5 text-[#333]">{item.label}</td>
+                    <td className="px-3 py-2.5 text-right text-[#555] tabular-nums">{item.qty.toLocaleString()}</td>
+                    <td className="px-3 py-2.5 text-right text-[#888] text-xs">{item.unit}</td>
+                    <td className="px-3 py-2.5 text-right">
+                      <input type="number" min="0" step="0.01" value={matPrices[item.label] ?? String(item.price)}
+                        onChange={e => setSavedMatPrices(prev => ({ ...prev, [item.label]: e.target.value }))}
+                        className="w-20 text-right bg-transparent border-b border-transparent hover:border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-[#555] tabular-nums" />
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-medium text-[#1A1A1A] tabular-nums">${fmt(item.qty * price)}</td>
+                  </tr>
+                );
+              })}
+              {customMat.map(row => (
+                <tr key={row.id} className="bg-[#FFFDF9] hover:bg-[#FAF8F5]">
+                  <td className="px-4 py-2">
+                    <input value={row.label} onChange={e => setCustomMat(prev => prev.map(r => r.id === row.id ? { ...r, label: e.target.value } : r))}
+                      placeholder="Item name" className="w-full bg-transparent border-b border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-sm text-[#333]" />
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <input type="number" min="0" value={row.qty} onChange={e => setCustomMat(prev => prev.map(r => r.id === row.id ? { ...r, qty: e.target.value } : r))}
+                      className="w-16 text-right bg-transparent border-b border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-sm" />
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <input value={row.unit} onChange={e => setCustomMat(prev => prev.map(r => r.id === row.id ? { ...r, unit: e.target.value } : r))}
+                      className="w-12 text-right bg-transparent border-b border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-xs" />
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <input type="number" min="0" step="0.01" value={row.price} onChange={e => setCustomMat(prev => prev.map(r => r.id === row.id ? { ...r, price: e.target.value } : r))}
+                      className="w-20 text-right bg-transparent border-b border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-sm" />
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <span className="text-sm font-medium tabular-nums">${fmt((parseFloat(row.qty) || 0) * (parseFloat(row.price) || 0))}</span>
+                      <button onClick={() => setCustomMat(prev => prev.filter(r => r.id !== row.id))} className="text-[#CCC] hover:text-red-500 transition-colors"><X size={14} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot className="border-t border-[#DDD8D0] bg-[#F7F4F0]">
+              <tr>
+                <td colSpan={4} className="px-4 py-2.5 font-bold text-[#1A1A1A] text-sm uppercase tracking-wider">Materials Total</td>
+                <td className="px-4 py-2.5 text-right font-black text-[#1A1A1A]">${fmt(matTotal)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <button onClick={() => setCustomMat(prev => [...prev, { id: newId(), label: "", qty: "", unit: "ea", price: "" }])}
+          className="mt-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#E85D26] hover:text-[#c94d1f] transition-colors">
+          <Plus size={13} /> Add custom material
+        </button>
+      </div>
+
+      {/* Labor */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold uppercase tracking-widest text-xs text-[#777]">Labor <span className="font-normal text-[#AAA] normal-case tracking-normal">(RSMeans 75th percentile — edit any rate)</span></h3>
+          <button onClick={() => setSavedRates({})} className="text-[10px] text-[#AAA] hover:text-[#E85D26] flex items-center gap-1 transition-colors">
+            <RotateCcw size={10} /> Reset rates
+          </button>
+        </div>
+        <div className="border border-[#DDD8D0] overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-[#F7F4F0] border-b border-[#DDD8D0]">
+              <tr>
+                <th className="text-left px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">Task</th>
+                <th className="text-right px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">Qty</th>
+                <th className="text-right px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">Unit</th>
+                <th className="text-right px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">$/Unit</th>
+                <th className="text-right px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">Total</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-[#F0EDE8]">
+              {laborItems.map(item => {
+                const rate = effectiveRate(item, rates);
+                return (
+                  <tr key={item.label} className="hover:bg-[#FAF8F5]">
+                    <td className="px-4 py-2.5 text-[#333]">{item.label}</td>
+                    <td className="px-3 py-2.5 text-right text-[#555] tabular-nums">{item.qty.toLocaleString()}</td>
+                    <td className="px-3 py-2.5 text-right text-[#888] text-xs">{item.unit}</td>
+                    <td className="px-3 py-2.5 text-right">
+                      <input type="number" min="0" step="0.01" value={rates[item.label] ?? String(item.nationalAvg)}
+                        onChange={e => setSavedRates(prev => ({ ...prev, [item.label]: e.target.value }))}
+                        className="w-20 text-right bg-transparent border-b border-transparent hover:border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-[#555] tabular-nums" />
+                    </td>
+                    <td className="px-4 py-2.5 text-right font-medium text-[#1A1A1A] tabular-nums">${fmt(item.qty * rate)}</td>
+                  </tr>
+                );
+              })}
+              {customLab.map(row => (
+                <tr key={row.id} className="bg-[#FFFDF9] hover:bg-[#FAF8F5]">
+                  <td className="px-4 py-2">
+                    <input value={row.label} onChange={e => setCustomLab(prev => prev.map(r => r.id === row.id ? { ...r, label: e.target.value } : r))}
+                      placeholder="Task name" className="w-full bg-transparent border-b border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-sm text-[#333]" />
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <input type="number" min="0" value={row.qty} onChange={e => setCustomLab(prev => prev.map(r => r.id === row.id ? { ...r, qty: e.target.value } : r))}
+                      className="w-16 text-right bg-transparent border-b border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-sm" />
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <input value={row.unit} onChange={e => setCustomLab(prev => prev.map(r => r.id === row.id ? { ...r, unit: e.target.value } : r))}
+                      className="w-12 text-right bg-transparent border-b border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-xs" />
+                  </td>
+                  <td className="px-3 py-2 text-right">
+                    <input type="number" min="0" step="0.01" value={row.rate} onChange={e => setCustomLab(prev => prev.map(r => r.id === row.id ? { ...r, rate: e.target.value } : r))}
+                      className="w-20 text-right bg-transparent border-b border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-sm" />
+                  </td>
+                  <td className="px-4 py-2 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <span className="text-sm font-medium tabular-nums">${fmt((parseFloat(row.qty) || 0) * (parseFloat(row.rate) || 0))}</span>
+                      <button onClick={() => setCustomLab(prev => prev.filter(r => r.id !== row.id))} className="text-[#CCC] hover:text-red-500 transition-colors"><X size={14} /></button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot className="border-t border-[#DDD8D0] bg-[#F7F4F0]">
+              <tr>
+                <td colSpan={4} className="px-4 py-2.5 font-bold text-[#1A1A1A] text-sm uppercase tracking-wider">Labor Total</td>
+                <td className="px-4 py-2.5 text-right font-black text-[#1A1A1A]">${fmt(labTotal)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <button onClick={() => setCustomLab(prev => [...prev, { id: newId(), label: "", qty: "", unit: "LF", rate: "" }])}
+          className="mt-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#E85D26] hover:text-[#c94d1f] transition-colors">
+          <Plus size={13} /> Add custom labor
+        </button>
+      </div>
+
+      {/* Grand total */}
+      <div className="bg-[#1A1A1A] text-white p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex gap-8">
+          <div>
+            <div className="text-[11px] uppercase tracking-widest font-bold opacity-60 mb-0.5">Materials</div>
+            <div className="font-black text-lg">${fmt(matTotal)}</div>
+          </div>
+          <div>
+            <div className="text-[11px] uppercase tracking-widest font-bold opacity-60 mb-0.5">Labor</div>
+            <div className="font-black text-lg">${fmt(labTotal)}</div>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-[11px] uppercase tracking-widest font-bold opacity-60 mb-0.5">Foundation Total</div>
+          <div className="font-black text-4xl">${fmt(grandTotal)}</div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /* ─────────────────────────────────────────────
@@ -1228,6 +1632,12 @@ function HvacTab() {
 ───────────────────────────────────────────── */
 function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "summary">) => void; onPrint: () => void }) {
   // Read all tab states — same keys as individual tabs; fresh on every mount
+  const [foundInputs] = useLocalStorage<FoundationInputs>(SK.foundation, DEFAULT_FOUNDATION);
+  const [foundSR] = useLocalStorage<LaborRates>(SK.foundationRates, {});
+  const [foundMP] = useLocalStorage<MatPrices>(SK.foundMatPrices, {});
+  const [foundCM] = useLocalStorage<CustomMatRow[]>(SK.foundCMat, []);
+  const [foundCL] = useLocalStorage<CustomLaborRow[]>(SK.foundCLab, []);
+
   const [wallInputs] = useLocalStorage<WallInputs>(SK.wall, DEFAULT_WALL);
   const [wallSR] = useLocalStorage<LaborRates>(SK.wallRates, {});
   const [wallMP] = useLocalStorage<MatPrices>(SK.wallMatPrices, {});
@@ -1286,6 +1696,7 @@ function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "sum
   };
 
   const rows = [
+    computeTab("Foundation", "foundation", getFoundationMatItems(foundInputs), foundCM, foundMP, getFoundationLaborItems(foundInputs), foundSR, foundCL, (parseFloat(foundInputs.sqft) || 0) > 0),
     computeTab("Walls", "wall", getWallMatItems(wallInputs), wallCM, wallMP, getWallLaborItems(wallInputs), wallSR, wallCL, (parseFloat(wallInputs.linearFeet) || 0) > 0),
     computeTab("Floors", "floor", getFloorMatItems(floorInputs), floorCM, floorMP, getFloorLaborItems(floorInputs), floorSR, floorCL, (parseFloat(floorInputs.sqft) || 0) > 0),
     computeTab("Roofing", "roof", getRoofMatItems(roofInputs), roofCM, roofMP, getRoofLaborItems(roofInputs), roofSR, roofCL, (parseFloat(roofInputs.footprintSqft) || 0) > 0),
@@ -1316,9 +1727,9 @@ function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "sum
         <div className="p-10 text-center border-2 border-dashed border-[#DDD8D0]">
           <div className="text-4xl mb-4">📋</div>
           <div className="text-lg font-bold text-[#1A1A1A] mb-2">No estimate data yet</div>
-          <p className="text-sm text-[#888] mb-6 max-w-sm mx-auto">Fill in at least one tab — Walls, Floors, Roofing, Plumbing, Electrical, or HVAC — to see your project total here.</p>
-          <button onClick={() => onNavigate("wall")} className="bg-[#E85D26] text-white font-bold px-6 py-2.5 hover:bg-[#c94d1f] transition-colors text-sm">
-            Start with Walls
+          <p className="text-sm text-[#888] mb-6 max-w-sm mx-auto">Fill in at least one tab — Foundation, Walls, Floors, Roofing, Plumbing, Electrical, or HVAC — to see your project total here.</p>
+          <button onClick={() => onNavigate("foundation")} className="bg-[#E85D26] text-white font-bold px-6 py-2.5 hover:bg-[#c94d1f] transition-colors text-sm">
+            Start with Foundation
           </button>
         </div>
       ) : (
@@ -1425,6 +1836,7 @@ function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "sum
    MAIN PAGE
 ───────────────────────────────────────────── */
 const TABS: { id: Exclude<Tab, "summary">; label: string; group: "structural" | "mep" }[] = [
+  { id: "foundation", label: "Foundation", group: "structural" },
   { id: "wall", label: "Walls", group: "structural" },
   { id: "floor", label: "Floors", group: "structural" },
   { id: "roof", label: "Roofing", group: "structural" },
@@ -1532,7 +1944,7 @@ export default function Estimator() {
               <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">Quick Estimating Tool</span>
             </div>
             <h1 className="text-4xl md:text-5xl font-black font-serif uppercase mb-3">Material + Labor Estimator</h1>
-            <p className="text-gray-400 text-lg max-w-2xl">Framing, floors, roofing, plumbing, electrical, and HVAC — all with RSMeans national average labor rates built in.</p>
+            <p className="text-gray-400 text-lg max-w-2xl">Foundation, framing, floors, roofing, plumbing, electrical, and HVAC — all with RSMeans national average labor rates built in.</p>
           </div>
         </div>
 
@@ -1587,6 +1999,7 @@ export default function Estimator() {
           </div>
 
           <div key={resetKey} className="bg-white border border-[#DDD8D0] p-8 shadow-sm">
+            {tab === "foundation" && <FoundationTab />}
             {tab === "wall" && <WallTab />}
             {tab === "floor" && <FloorTab />}
             {tab === "roof" && <RoofTab />}
