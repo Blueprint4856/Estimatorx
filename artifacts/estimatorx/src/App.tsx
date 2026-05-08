@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import Home from "@/pages/Home";
 import Estimator from "@/pages/Estimator";
+import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
 
 const queryClient = new QueryClient();
@@ -336,6 +337,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/estimator" component={ProtectedEstimator} />
+      <Route path="/admin" component={Admin} />
       <Route path="/sign-in/*?" component={OTPSignInPage} />
       <Route path="/sign-up/*?" component={OTPSignInPage} />
       <Route component={NotFound} />
