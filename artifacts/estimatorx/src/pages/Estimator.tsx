@@ -1283,7 +1283,13 @@ function FoundationTab() {
    WALL TAB
 ───────────────────────────────────────────── */
 type StudSize = "2x4-16" | "2x6-16" | "2x6-24";
-interface WallInputs { linearFeet: string; ceilingHeight: string; studSize: StudSize; exteriorSheathing: boolean; insulation: boolean; drywall: boolean; }
+interface WallInputs {
+  linearFeet: string; ceilingHeight: string; studSize: StudSize;
+  exteriorSheathing: boolean; insulation: boolean; drywall: boolean;
+  interiorLF: string; interiorDrywall: boolean;
+  blockingLF: string;
+  intDoorCount: string; extDoorCount: string; windowCount: string;
+}
 
 const STUD_CONFIG: Record<StudSize, { studLabel: string; plateLabel: string; studPrice: number; platePrice: number; ocSpacing: number; insulLabel: string; insulPrice: number }> = {
   "2x4-16": { studLabel: "2×4×8 Studs (16\" OC)", plateLabel: "2×4×16 Plates (3 per run)", studPrice: 5.48, platePrice: 10.97, ocSpacing: 1.333, insulLabel: "R-13 Batt Insulation", insulPrice: 0.55 },
@@ -1312,7 +1318,13 @@ const STUD_PRICES: Record<"2x4" | "2x6", Record<string, number>> = {
 };
 
 const WALL_MAT_PRICES = { osb: 34.98, drywall: 15.98 };
-const DEFAULT_WALL: WallInputs = { linearFeet: "", ceilingHeight: "9", studSize: "2x4-16", exteriorSheathing: true, insulation: true, drywall: true };
+const DEFAULT_WALL: WallInputs = {
+  linearFeet: "", ceilingHeight: "9", studSize: "2x4-16",
+  exteriorSheathing: true, insulation: true, drywall: true,
+  interiorLF: "", interiorDrywall: true,
+  blockingLF: "",
+  intDoorCount: "", extDoorCount: "", windowCount: "",
+};
 
 function getWallMatItems(inputs: WallInputs): MatItem[] {
   const lf = parseFloat(inputs.linearFeet) || 0;
