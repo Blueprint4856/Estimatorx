@@ -1685,9 +1685,9 @@ function WallTab() {
 ───────────────────────────────────────────── */
 type AdhesiveType = "liquid" | "spray";
 interface FloorInputs { sqft: string; finish: string; includeSubfloor: boolean; adhesiveType: AdhesiveType; }
-const FLOOR_MAT_PRICES: Record<string, number> = { lvp: 2.89, carpet: 2.49, hardwood: 5.98, tile: 3.49, none: 0 };
-const FLOOR_LABELS: Record<string, string> = { lvp: "LVP — Luxury Vinyl Plank", carpet: "Carpet", hardwood: "Hardwood", tile: "Ceramic / Porcelain Tile", none: "None" };
-const FLOOR_LABOR: Record<string, number> = { lvp: 2.63, carpet: 1.25, hardwood: 5.25, tile: 8.75, none: 0 };
+const FLOOR_MAT_PRICES: Record<string, number> = { lvp: 2.89, carpet: 2.49, carpet_pad: 2.89, hardwood: 5.98, tile: 3.49, none: 0 };
+const FLOOR_LABELS: Record<string, string> = { lvp: "LVP — Luxury Vinyl Plank", carpet: "Carpet", carpet_pad: "Carpet w/ Pad — Mid-Grade", hardwood: "Hardwood", tile: "Ceramic / Porcelain Tile", none: "None" };
+const FLOOR_LABOR: Record<string, number> = { lvp: 2.63, carpet: 1.25, carpet_pad: 1.38, hardwood: 5.25, tile: 8.75, none: 0 };
 const DEFAULT_FLOOR: FloorInputs = { sqft: "", finish: "lvp", includeSubfloor: true, adhesiveType: "liquid" };
 
 const ADHESIVE_CONFIG: Record<AdhesiveType, { label: string; coverage: number; unit: string; price: number }> = {
@@ -1703,7 +1703,12 @@ function getFloorMatItems(inputs: FloorInputs): MatItem[] {
       { label: "Advantech 3/4\" Subfloor Panel (4×8)", qty: Math.ceil(sqft * WASTE / 32), unit: "sheet", price: 52.98 },
       { label: adhesive.label, qty: Math.max(1, Math.ceil(sqft * WASTE / adhesive.coverage)), unit: adhesive.unit, price: adhesive.price },
     ] : []),
-    ...(inputs.finish !== "none" ? [{ label: FLOOR_LABELS[inputs.finish], qty: Math.ceil(sqft * WASTE), unit: "sqft", price: FLOOR_MAT_PRICES[inputs.finish] ?? 0 }] : []),
+    ...(inputs.finish === "carpet_pad" ? [
+      { label: "Carpet — Mid-Grade Broadloom (26 oz face wt)", qty: Math.ceil(sqft * WASTE), unit: "sqft", price: 2.89 },
+      { label: "Carpet Pad — 6 lb Rebond 7/16\"", qty: Math.ceil(sqft * WASTE), unit: "sqft", price: 0.65 },
+    ] : inputs.finish !== "none" ? [
+      { label: FLOOR_LABELS[inputs.finish], qty: Math.ceil(sqft * WASTE), unit: "sqft", price: FLOOR_MAT_PRICES[inputs.finish] ?? 0 },
+    ] : []),
   ];
 }
 function getFloorLaborItems(inputs: FloorInputs): LaborItem[] {
@@ -1740,7 +1745,8 @@ function FloorTab() {
           <select value={inputs.finish} onChange={e => setInputs(p => ({ ...p, finish: e.target.value }))}
             className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
             <option value="lvp">LVP — Luxury Vinyl Plank</option>
-            <option value="carpet">Carpet</option>
+            <option value="carpet">Carpet (budget broadloom)</option>
+            <option value="carpet_pad">Carpet w/ Pad — Mid-Grade</option>
             <option value="hardwood">Hardwood</option>
             <option value="tile">Ceramic / Porcelain Tile</option>
             <option value="none">None (subfloor only)</option>
