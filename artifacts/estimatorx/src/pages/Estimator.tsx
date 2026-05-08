@@ -113,7 +113,7 @@ function readAllLocalStorage() {
     catch { return undefined; }
   };
   return {
-    foundation: get(SK.foundation), foundationRates: get(SK.foundationRates),
+    foundation: get(SK.foundation), foundationRates: get(SK.foundationRates), foundMatPrices: get(SK.foundMatPrices),
     foundCMat: get(SK.foundCMat), foundCLab: get(SK.foundCLab),
     wall: get(SK.wall), wallRates: get(SK.wallRates),
     floor: get(SK.floor), floorRates: get(SK.floorRates),
@@ -143,7 +143,7 @@ function primeLocalStorageFromSnapshot(state: SnapshotState) {
   const set = (key: string, val: unknown) => {
     if (val != null) try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
   };
-  set(SK.foundation, state.foundation); set(SK.foundationRates, state.foundationRates);
+  set(SK.foundation, state.foundation); set(SK.foundationRates, state.foundationRates); set(SK.foundMatPrices, state.foundMatPrices);
   set(SK.foundCMat, state.foundCMat);   set(SK.foundCLab, state.foundCLab);
   set(SK.wall, state.wall);             set(SK.wallRates, state.wallRates);
   set(SK.floor, state.floor);           set(SK.floorRates, state.floorRates);
@@ -1878,7 +1878,7 @@ export default function Estimator() {
     } catch {}
   }
 
-  const [tab, setTab] = useState<Tab>("wall");
+  const [tab, setTab] = useState<Tab>("foundation");
   const [resetKey, setResetKey] = useState(0);
   const [copied, setCopied] = useState(false);
   const [upgradeFeature, setUpgradeFeature] = useState<GatedFeature | null>(null);
@@ -1907,7 +1907,7 @@ export default function Estimator() {
     const url = new URL(window.location.href);
     url.searchParams.delete("s");
     window.history.replaceState({}, "", url.toString());
-    setTab("wall");
+    setTab("foundation");
     setResetKey(k => k + 1);
   }, []);
 
