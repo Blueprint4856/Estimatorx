@@ -1761,21 +1761,163 @@ function WallTab() {
    FLOOR TAB
 ───────────────────────────────────────────── */
 type AdhesiveType = "liquid" | "spray";
-interface FloorInputs { sqft: string; finish: string; includeSubfloor: boolean; adhesiveType: AdhesiveType; }
+type JoistType = "2x10" | "2x12" | "tji_9.5" | "tji_11.875" | "tji_14";
+type JoistSpacing = "12" | "16" | "19.2" | "24";
+type RimType = "solid" | "advantech";
+type BeamType = "none" | "triple_2x12" | "lvl_3.5x9.5" | "lvl_3.5x11.25" | "lvl_5.25x9.5" | "lvl_5.25x11.25";
+
+interface FloorInputs {
+  sqft: string;
+  finish: string;
+  includeSubfloor: boolean;
+  adhesiveType: AdhesiveType;
+  includeFraming: boolean;
+  joistSpan: string;
+  joistType: JoistType;
+  joistSpacing: JoistSpacing;
+  rimType: RimType;
+  beamType: BeamType;
+  beamCount: string;
+  includeStairs: boolean;
+  stairRisers: string;
+}
+
 const FLOOR_MAT_PRICES: Record<string, number> = { lvp: 2.89, carpet: 2.49, carpet_pad: 2.89, hardwood: 5.98, tile: 3.49, none: 0 };
 const FLOOR_LABELS: Record<string, string> = { lvp: "LVP — Luxury Vinyl Plank", carpet: "Carpet", carpet_pad: "Carpet w/ Pad — Mid-Grade", hardwood: "Hardwood", tile: "Ceramic / Porcelain Tile", none: "None" };
 const FLOOR_LABOR: Record<string, number> = { lvp: 3.85, carpet: 1.85, carpet_pad: 2.05, hardwood: 7.85, tile: 12.50, none: 0 };
-const DEFAULT_FLOOR: FloorInputs = { sqft: "", finish: "lvp", includeSubfloor: true, adhesiveType: "liquid" };
+
+const JOIST_LABEL: Record<JoistType, string> = {
+  "2x10":       '2×10 Floor Joists',
+  "2x12":       '2×12 Floor Joists',
+  "tji_9.5":    'TJI 9-1/2" Engineered I-Joists',
+  "tji_11.875": 'TJI 11-7/8" Engineered I-Joists',
+  "tji_14":     'TJI 14" Engineered I-Joists',
+};
+const JOIST_PRICE: Record<JoistType, number> = {
+  "2x10": 1.85, "2x12": 2.45,
+  "tji_9.5": 2.25, "tji_11.875": 3.15, "tji_14": 3.95,
+};
+const JOIST_SPACING_FT: Record<JoistSpacing, number> = { "12": 1.0, "16": 4 / 3, "19.2": 1.6, "24": 2.0 };
+
+const BEAM_LABEL: Record<string, string> = {
+  "triple_2x12":    'Triple 2×12 Built-Up Beam',
+  "lvl_3.5x9.5":   'LVL Beam 3-1/2"×9-1/2"',
+  "lvl_3.5x11.25":  'LVL Beam 3-1/2"×11-1/4"',
+  "lvl_5.25x9.5":  'LVL Beam 5-1/4"×9-1/2"',
+  "lvl_5.25x11.25": 'LVL Beam 5-1/4"×11-1/4"',
+};
+const BEAM_PRICE: Record<string, number> = {
+  "triple_2x12": 2.45,
+  "lvl_3.5x9.5": 8.50, "lvl_3.5x11.25": 11.00,
+  "lvl_5.25x9.5": 12.50, "lvl_5.25x11.25": 15.50,
+};
+
+const DEFAULT_FLOOR: FloorInputs = {
+  sqft: "", finish: "lvp", includeSubfloor: true, adhesiveType: "liquid",
+  includeFraming: false, joistSpan: "", joistType: "2x10", joistSpacing: "16",
+  rimType: "advantech", beamType: "none", beamCount: "1",
+  includeStairs: false, stairRisers: "13",
+};
 
 const ADHESIVE_CONFIG: Record<AdhesiveType, { label: string; coverage: number; unit: string; price: number }> = {
   liquid: { label: "Subfloor Construction Adhesive (28 oz tube)", coverage: 83,  unit: "tube", price: 8.50  },
   spray:  { label: "Subfloor Construction Adhesive (Spray)",      coverage: 365, unit: "can",  price: 28.98 },
 };
 
+function getFloorFramingMatItems(inputs: FloorInputs): MatItem[] {
+  if (!inputs.includeFraming) return [];
+  const sqft = parseFloat(inputs.sqft) || 0;
+  const span = parseFloat(inputs.joistSpan) || 0;
+  if (sqft === 0 || span === 0) return [];
+
+  const spacingFt = JOIST_SPACING_FT[inputs.joistSpacing ?? "16"] ?? (4 / 3);
+  const runLength = sqft / span;
+  const joistCount = Math.ceil(runLength / spacingFt) + 1;
+  const joistLF = Math.ceil(joistCount * (span + 1) * WASTE);
+  const rimLF = Math.ceil((2 * runLength + 2 * span) * WASTE);
+  const beamCount = Math.max(1, parseInt(inputs.beamCount) || 1);
+  const beamRunLF = Math.ceil(runLength * WASTE);
+  const isTJI = inputs.joistType.startsWith("tji");
+
+  const items: MatItem[] = [];
+
+  items.push({ label: JOIST_LABEL[inputs.joistType], qty: joistLF, unit: "LF", price: JOIST_PRICE[inputs.joistType] });
+
+  if (inputs.rimType === "advantech") {
+    items.push({ label: 'Advantech 1-1/8" Rim Board', qty: rimLF, unit: "LF", price: 4.85 });
+  } else {
+    const rimLabel = inputs.joistType === "2x10" ? '2×10 Solid Lumber Rim Joist'
+      : inputs.joistType === "2x12" ? '2×12 Solid Lumber Rim Joist'
+      : 'LVL Rim Board (matches TJI depth)';
+    const rimPrice = inputs.joistType === "2x10" ? 1.85 : inputs.joistType === "2x12" ? 2.45 : 6.50;
+    items.push({ label: rimLabel, qty: rimLF, unit: "LF", price: rimPrice });
+  }
+
+  if (inputs.beamType !== "none") {
+    const totalBeamLF = beamRunLF * beamCount;
+    if (inputs.beamType === "triple_2x12") {
+      items.push({ label: BEAM_LABEL["triple_2x12"], qty: Math.ceil(totalBeamLF * 3), unit: "LF", price: 2.45 });
+    } else {
+      items.push({ label: BEAM_LABEL[inputs.beamType], qty: totalBeamLF, unit: "LF", price: BEAM_PRICE[inputs.beamType] });
+    }
+    items.push({ label: "Beam Post Caps & Saddle Hardware", qty: beamCount * 3, unit: "ea", price: 18.50 });
+  }
+
+  const hangerQty = Math.max(0, joistCount - 2);
+  if (hangerQty > 0) {
+    items.push({
+      label: isTJI ? 'TJI Joist Hangers (IUS / ILTUS Series)' : 'Joist Hangers (LUS Series)',
+      qty: hangerQty, unit: "ea", price: isTJI ? 3.85 : 2.95,
+    });
+  }
+
+  if (!isTJI && span > 10) {
+    const blockLF = Math.ceil(joistCount * 1.5 * WASTE);
+    const blockLabel = inputs.joistType === "2x10" ? '2×10 Solid Blocking' : '2×12 Solid Blocking';
+    items.push({ label: blockLabel, qty: blockLF, unit: "LF", price: JOIST_PRICE[inputs.joistType] });
+  }
+
+  if (inputs.includeStairs) {
+    const risers = Math.max(3, parseInt(inputs.stairRisers) || 13);
+    items.push({ label: '2×12 Stair Stringers (14 ft)', qty: 3, unit: "ea", price: 52.98 });
+    items.push({ label: '2×12 Stair Treads', qty: risers - 1, unit: "ea", price: 9.80 });
+    items.push({ label: "Stair Framing Hardware & Fasteners", qty: 1, unit: "lot", price: 48.00 });
+  }
+
+  return items;
+}
+
+function getFloorFramingLaborItems(inputs: FloorInputs): LaborItem[] {
+  if (!inputs.includeFraming) return [];
+  const sqft = parseFloat(inputs.sqft) || 0;
+  const span = parseFloat(inputs.joistSpan) || 0;
+  if (sqft === 0 || span === 0) return [];
+
+  const runLength = sqft / span;
+  const rimLF = Math.ceil(2 * runLength + 2 * span);
+  const beamCount = Math.max(1, parseInt(inputs.beamCount) || 1);
+  const beamLF = Math.ceil(runLength) * beamCount;
+  const items: LaborItem[] = [];
+
+  items.push({ label: "Floor Joist Framing & Layout", qty: sqft, unit: "sqft", nationalAvg: 2.85 });
+  items.push({ label: "Rim / Band Joist Install", qty: rimLF, unit: "LF", nationalAvg: 2.25 });
+
+  if (inputs.beamType !== "none") {
+    items.push({ label: "Main Beam Set & Hardware", qty: beamLF, unit: "LF", nationalAvg: 6.50 });
+  }
+
+  if (inputs.includeStairs) {
+    items.push({ label: "Basement Stair Rough Framing", qty: 1, unit: "ea", nationalAvg: 525 });
+  }
+
+  return items;
+}
+
 function getFloorMatItems(inputs: FloorInputs): MatItem[] {
   const sqft = parseFloat(inputs.sqft) || 0;
   const adhesive = ADHESIVE_CONFIG[inputs.adhesiveType ?? "liquid"];
   return [
+    ...getFloorFramingMatItems(inputs),
     ...(inputs.includeSubfloor ? [
       { label: "Advantech 3/4\" Subfloor Panel (4×8)", qty: Math.ceil(sqft * WASTE / 32), unit: "sheet", price: 52.98 },
       { label: adhesive.label, qty: Math.max(1, Math.ceil(sqft * WASTE / adhesive.coverage)), unit: adhesive.unit, price: adhesive.price },
@@ -1791,12 +1933,17 @@ function getFloorMatItems(inputs: FloorInputs): MatItem[] {
 function getFloorLaborItems(inputs: FloorInputs): LaborItem[] {
   const sqft = Math.round(parseFloat(inputs.sqft) || 0);
   return [
+    ...getFloorFramingLaborItems(inputs),
     ...(inputs.includeSubfloor ? [{ label: "Advantech Subfloor Install (glued & screwed)", qty: sqft, unit: "sqft", nationalAvg: 1.45 }] : []),
     ...(inputs.finish !== "none" ? [{ label: `${FLOOR_LABELS[inputs.finish]} Installation`, qty: sqft, unit: "sqft", nationalAvg: FLOOR_LABOR[inputs.finish] ?? 0 }] : []),
   ];
 }
+
+const SELECT_CLS = "w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors";
+
 function FloorTab() {
   const [inputs, setInputs] = useLocalStorage<FloorInputs>(SK.floor, DEFAULT_FLOOR);
+  const set = useCallback(<K extends keyof FloorInputs>(k: K, v: FloorInputs[K]) => setInputs(p => ({ ...p, [k]: v })), [setInputs]);
   const laborItems = getFloorLaborItems(inputs);
   const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.floorRates, {});
   const [savedMatPrices, setSavedMatPrices] = useLocalStorage<MatPrices>(SK.floorMatPrices, {});
@@ -1816,15 +1963,106 @@ function FloorTab() {
   const matTotal = matItems.reduce((s, r) => s + effectiveQty(r, savedMatQtys) * effectiveMatPrice(r, matPrices), 0) + customMatTotal(customMat);
   const laborTotal = laborItems.reduce((s, i) => s + effectiveQty(i, savedLabQtys) * effectiveRate(i, rates), 0) + customLaborTotal(customLabor);
   const hasResults = (parseFloat(inputs.sqft) || 0) > 0;
+  const framingReady = inputs.includeFraming && (parseFloat(inputs.joistSpan) || 0) > 0;
+
   return (
     <div>
-      <div className="grid md:grid-cols-2 gap-6 no-print">
-        <Field label="Floor Area (sq ft)">
-          <NumberInput value={inputs.sqft} onChange={v => setInputs(p => ({ ...p, sqft: v }))} placeholder="e.g. 1200" />
-        </Field>
+      <div className="flex flex-col gap-6 no-print">
+
+        {/* ── Floor area ── */}
+        <div className="grid md:grid-cols-2 gap-6">
+          <Field label="Floor Area (sq ft)">
+            <NumberInput value={inputs.sqft} onChange={v => set("sqft", v)} placeholder="e.g. 1200" />
+          </Field>
+        </div>
+
+        {/* ── Floor system framing ── */}
+        <div className="border border-[#DDD8D0] p-4 flex flex-col gap-4">
+          <Toggle
+            checked={inputs.includeFraming}
+            onChange={v => set("includeFraming", v)}
+            label="Include Floor System Framing (joists, rim, beam, stairs)"
+          />
+          {inputs.includeFraming && (
+            <>
+              <div className="grid md:grid-cols-2 gap-4">
+                <Field label="Joist Clear Span (ft)" note="Wall-to-wall or wall-to-beam bearing distance">
+                  <NumberInput value={inputs.joistSpan} onChange={v => set("joistSpan", v)} placeholder="e.g. 14" />
+                </Field>
+                <Field label="Joist Type">
+                  <select value={inputs.joistType} onChange={e => set("joistType", e.target.value as JoistType)} className={SELECT_CLS}>
+                    <option value="2x10">2×10 Solid Lumber</option>
+                    <option value="2x12">2×12 Solid Lumber</option>
+                    <option value="tji_9.5">TJI 9-1/2" Engineered I-Joist</option>
+                    <option value="tji_11.875">TJI 11-7/8" Engineered I-Joist</option>
+                    <option value="tji_14">TJI 14" Engineered I-Joist</option>
+                  </select>
+                </Field>
+                <Field label="Joist Spacing (OC)">
+                  <select value={inputs.joistSpacing} onChange={e => set("joistSpacing", e.target.value as JoistSpacing)} className={SELECT_CLS}>
+                    <option value="12">12" O.C.</option>
+                    <option value="16">16" O.C.</option>
+                    <option value="19.2">19.2" O.C.</option>
+                    <option value="24">24" O.C.</option>
+                  </select>
+                </Field>
+                <Field label="Rim / Band Joist Type">
+                  <select value={inputs.rimType} onChange={e => set("rimType", e.target.value as RimType)} className={SELECT_CLS}>
+                    <option value="advantech">Advantech 1-1/8" Rim Board</option>
+                    <option value="solid">Solid Lumber (matches joist) / LVL Rim</option>
+                  </select>
+                </Field>
+                <Field label="Main Beam Type" note="Use for spans over 14 ft or multi-story loads">
+                  <select value={inputs.beamType} onChange={e => set("beamType", e.target.value as BeamType)} className={SELECT_CLS}>
+                    <option value="none">No Beam (joists span full width)</option>
+                    <option value="triple_2x12">Triple 2×12 Built-Up Beam</option>
+                    <option value="lvl_3.5x9.5">LVL 3-1/2"×9-1/2"</option>
+                    <option value="lvl_3.5x11.25">LVL 3-1/2"×11-1/4"</option>
+                    <option value="lvl_5.25x9.5">LVL 5-1/4"×9-1/2"</option>
+                    <option value="lvl_5.25x11.25">LVL 5-1/4"×11-1/4"</option>
+                  </select>
+                </Field>
+                {inputs.beamType !== "none" && (
+                  <Field label="Number of Beams" note="Parallel beams dividing the span">
+                    <select value={inputs.beamCount} onChange={e => set("beamCount", e.target.value)} className={SELECT_CLS}>
+                      <option value="1">1 beam</option>
+                      <option value="2">2 beams</option>
+                      <option value="3">3 beams</option>
+                    </select>
+                  </Field>
+                )}
+              </div>
+              <div className="flex flex-col gap-3">
+                <Toggle checked={inputs.includeStairs} onChange={v => set("includeStairs", v)} label="Include Basement / Crawl Space Stair System" />
+                {inputs.includeStairs && (
+                  <Field label="Number of Risers" note="Typical 8 ft basement = 13 risers">
+                    <NumberInput value={inputs.stairRisers} onChange={v => set("stairRisers", v)} placeholder="13" />
+                  </Field>
+                )}
+              </div>
+              {!framingReady && (
+                <p className="text-xs text-[#AAA]">Enter joist clear span above to generate framing quantities.</p>
+              )}
+            </>
+          )}
+        </div>
+
+        {/* ── Subfloor ── */}
+        <div className="flex flex-col gap-4">
+          <Toggle checked={inputs.includeSubfloor} onChange={v => set("includeSubfloor", v)} label={'Include Advantech 3/4" Subfloor'} />
+          {inputs.includeSubfloor && (
+            <Field label="Subfloor Adhesive Type">
+              <select value={inputs.adhesiveType ?? "liquid"} onChange={e => set("adhesiveType", e.target.value as AdhesiveType)} className={SELECT_CLS}>
+                <option value="liquid">Liquid — 28 oz tube (~83 sqft/tube)</option>
+                <option value="spray">Spray can (~365 sqft/can)</option>
+              </select>
+            </Field>
+          )}
+        </div>
+
+        {/* ── Finish flooring ── */}
         <Field label="Finish Flooring Type">
-          <select value={inputs.finish} onChange={e => setInputs(p => ({ ...p, finish: e.target.value }))}
-            className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+          <select value={inputs.finish} onChange={e => set("finish", e.target.value)} className={SELECT_CLS}>
             <option value="lvp">LVP — Luxury Vinyl Plank</option>
             <option value="carpet">Carpet (budget broadloom)</option>
             <option value="carpet_pad">Carpet w/ Pad — Mid-Grade</option>
@@ -1833,18 +2071,7 @@ function FloorTab() {
             <option value="none">None (subfloor only)</option>
           </select>
         </Field>
-        <div className="flex flex-col gap-4">
-          <Toggle checked={inputs.includeSubfloor} onChange={v => setInputs(p => ({ ...p, includeSubfloor: v }))} label={'Include Advantech 3/4" Subfloor'} />
-          {inputs.includeSubfloor && (
-            <Field label="Subfloor Adhesive Type">
-              <select value={inputs.adhesiveType ?? "liquid"} onChange={e => setInputs(p => ({ ...p, adhesiveType: e.target.value as AdhesiveType }))}
-                className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
-                <option value="liquid">Liquid — 28 oz tube (~83 sqft/tube)</option>
-                <option value="spray">Spray can (~365 sqft/can)</option>
-              </select>
-            </Field>
-          )}
-        </div>
+
       </div>
       {hasResults ? (
         <div className="mt-8 flex flex-col gap-0">
