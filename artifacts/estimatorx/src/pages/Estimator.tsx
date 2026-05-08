@@ -3,7 +3,7 @@ import { Link } from "wouter";
 import { ChevronRight, Printer, RotateCcw, Link2, Trash2, Check, Plus, X } from "lucide-react";
 import { useUser, useClerk } from "@clerk/react";
 
-type Tab = "foundation" | "wall" | "floor" | "roof" | "plumbing" | "electrical" | "hvac" | "summary";
+type Tab = "sitework" | "foundation" | "wall" | "floor" | "roof" | "plumbing" | "electrical" | "hvac" | "summary";
 const WASTE = 1.10;
 
 /* ─────────────────────────────────────────────
@@ -46,6 +46,8 @@ function customLaborTotal(rows: CustomLaborRow[]): number {
 ───────────────────────────────────────────── */
 
 const SK = {
+  sitework: "ex.site", siteworkRates: "ex.site.rates", siteMatPrices: "ex.site.mprices",
+  siteCMat: "ex.site.cmat", siteCLab: "ex.site.clab",
   foundation: "ex.found", foundationRates: "ex.found.rates", foundMatPrices: "ex.found.mprices",
   foundCMat: "ex.found.cmat", foundCLab: "ex.found.clab",
   wall: "ex.wall", wallRates: "ex.wall.rates", wallMatPrices: "ex.wall.mprices",
@@ -113,6 +115,8 @@ function readAllLocalStorage() {
     catch { return undefined; }
   };
   return {
+    sitework: get(SK.sitework), siteworkRates: get(SK.siteworkRates), siteMatPrices: get(SK.siteMatPrices),
+    siteCMat: get(SK.siteCMat), siteCLab: get(SK.siteCLab),
     foundation: get(SK.foundation), foundationRates: get(SK.foundationRates), foundMatPrices: get(SK.foundMatPrices),
     foundCMat: get(SK.foundCMat), foundCLab: get(SK.foundCLab),
     wall: get(SK.wall), wallRates: get(SK.wallRates),
@@ -143,6 +147,8 @@ function primeLocalStorageFromSnapshot(state: SnapshotState) {
   const set = (key: string, val: unknown) => {
     if (val != null) try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
   };
+  set(SK.sitework, state.sitework);     set(SK.siteworkRates, state.siteworkRates); set(SK.siteMatPrices, state.siteMatPrices);
+  set(SK.siteCMat, state.siteCMat);     set(SK.siteCLab, state.siteCLab);
   set(SK.foundation, state.foundation); set(SK.foundationRates, state.foundationRates); set(SK.foundMatPrices, state.foundMatPrices);
   set(SK.foundCMat, state.foundCMat);   set(SK.foundCLab, state.foundCLab);
   set(SK.wall, state.wall);             set(SK.wallRates, state.wallRates);
@@ -513,6 +519,366 @@ function EmptyState({ text }: { text: string }) {
 }
 function ResultNote() {
   return <p className="text-[10px] text-[#AAA]">Includes 10% material waste factor. Labor rates are RSMeans national averages — edit above. Delivery, permits, equipment rental, and tax not included.</p>;
+}
+
+/* ─────────────────────────────────────────────
+   SITE WORK TAB
+───────────────────────────────────────────── */
+type DrivewaySurface = "gravel" | "asphalt" | "concrete";
+
+interface SiteWorkInputs {
+  lotSqft: string;
+  footprintSqft: string;
+  cutDepthIn: string;
+  drivewayLength: string;
+  drivewayWidth: string;
+  drivewaySurface: DrivewaySurface;
+  includeDriveway: boolean;
+}
+
+const DEFAULT_SITEWORK: SiteWorkInputs = {
+  lotSqft: "",
+  footprintSqft: "",
+  cutDepthIn: "6",
+  drivewayLength: "",
+  drivewayWidth: "12",
+  drivewaySurface: "asphalt",
+  includeDriveway: true,
+};
+
+function getSiteWorkMatItems(inputs: SiteWorkInputs): MatItem[] {
+  const lot = parseFloat(inputs.lotSqft) || 0;
+  const fp = parseFloat(inputs.footprintSqft) || 0;
+  const cut = parseFloat(inputs.cutDepthIn) || 6;
+  const driveLF = parseFloat(inputs.drivewayLength) || 0;
+  const driveW = parseFloat(inputs.drivewayWidth) || 12;
+  const driveSqft = driveLF * driveW;
+  const lotPerim = lot > 0 ? Math.ceil(Math.sqrt(lot) * 4) : 0;
+
+  const items: MatItem[] = [];
+
+  if (lot > 0) {
+    items.push({ label: "Silt Fence — Erosion Control", qty: lotPerim, unit: "LF", price: 1.85 });
+    items.push({ label: "Topsoil Import (4\" finish layer)", qty: Math.ceil(lot * (4 / 12) / 27), unit: "CY", price: 45 });
+  }
+
+  if (fp > 0 && cut > 0) {
+    items.push({ label: "Haul-off Disposal (excavated material)", qty: Math.ceil(fp * (cut / 12) / 27 * 1.25), unit: "CY", price: 22 });
+  }
+
+  if (inputs.includeDriveway && driveSqft > 0) {
+    items.push({ label: "Driveway Aggregate Base (6\")", qty: Math.ceil(driveSqft * (6 / 12) / 27), unit: "CY", price: 42 });
+    if (inputs.drivewaySurface === "gravel") {
+      items.push({ label: "Driveway Gravel Surface (4\")", qty: Math.ceil(driveSqft * (4 / 12) / 27), unit: "CY", price: 45 });
+    } else if (inputs.drivewaySurface === "asphalt") {
+      items.push({ label: "Asphalt — 3\" Compacted", qty: Math.ceil(driveSqft * (3 / 12) / 27 * 2.025), unit: "ton", price: 95 });
+      items.push({ label: "Asphalt Tack Coat", qty: driveSqft, unit: "sqft", price: 0.08 });
+    } else {
+      items.push({ label: "Ready-Mix Concrete — Driveway (4\")", qty: Math.ceil(driveSqft * (4 / 12) / 27), unit: "CY", price: 185 });
+      items.push({ label: "Wire Mesh Reinforcement (6×6 W1.4)", qty: Math.ceil(driveSqft * WASTE / 30), unit: "roll", price: 68 });
+      items.push({ label: "Expansion Joint Material", qty: Math.ceil(driveLF / 20), unit: "ea", price: 12 });
+    }
+  }
+
+  return items;
+}
+
+function getSiteWorkLaborItems(inputs: SiteWorkInputs): LaborItem[] {
+  const lot = parseFloat(inputs.lotSqft) || 0;
+  const fp = parseFloat(inputs.footprintSqft) || 0;
+  const cut = parseFloat(inputs.cutDepthIn) || 6;
+  const driveLF = parseFloat(inputs.drivewayLength) || 0;
+  const driveW = parseFloat(inputs.drivewayWidth) || 12;
+  const driveSqft = driveLF * driveW;
+
+  const items: LaborItem[] = [];
+
+  if (lot > 0) {
+    items.push({ label: "Clearing & Grubbing", qty: lot, unit: "sqft", nationalAvg: 0.35 });
+    items.push({ label: "Rough Grading (machine)", qty: lot, unit: "sqft", nationalAvg: 0.45 });
+    items.push({ label: "Topsoil Respread & Fine Grade", qty: lot, unit: "sqft", nationalAvg: 0.28 });
+  }
+
+  if (fp > 0 && cut > 0) {
+    items.push({ label: "Bulk Excavation & Haul (machine)", qty: Math.ceil(fp * (cut / 12) / 27 * 1.25), unit: "CY", nationalAvg: 8.00 });
+    items.push({ label: "Fine Grading — Building Pad", qty: fp, unit: "sqft", nationalAvg: 0.65 });
+  }
+
+  if (inputs.includeDriveway && driveSqft > 0) {
+    items.push({ label: "Driveway Base Compact & Install", qty: driveSqft, unit: "sqft", nationalAvg: 0.85 });
+    if (inputs.drivewaySurface === "gravel") {
+      items.push({ label: "Gravel Surface Place & Compact", qty: driveSqft, unit: "sqft", nationalAvg: 0.55 });
+    } else if (inputs.drivewaySurface === "asphalt") {
+      items.push({ label: "Asphalt Pave & Roll", qty: driveSqft, unit: "sqft", nationalAvg: 2.85 });
+    } else {
+      items.push({ label: "Concrete Driveway — Form, Pour & Finish", qty: driveSqft, unit: "sqft", nationalAvg: 4.50 });
+    }
+  }
+
+  return items;
+}
+
+function SiteWorkTab() {
+  const [inputs, setInputs] = useLocalStorage<SiteWorkInputs>(SK.sitework, DEFAULT_SITEWORK);
+  const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.siteworkRates, {});
+  const [savedMatPrices, setSavedMatPrices] = useLocalStorage<MatPrices>(SK.siteMatPrices, {});
+  const [customMat, setCustomMat] = useLocalStorage<CustomMatRow[]>(SK.siteCMat, []);
+  const [customLab, setCustomLab] = useLocalStorage<CustomLaborRow[]>(SK.siteCLab, []);
+
+  const set = <K extends keyof SiteWorkInputs>(k: K, v: SiteWorkInputs[K]) =>
+    setInputs(prev => ({ ...prev, [k]: v }));
+
+  const matItems = getSiteWorkMatItems(inputs);
+  const laborItems = getSiteWorkLaborItems(inputs);
+  const rates = { ...defaultRates(laborItems), ...savedRates };
+  const matPrices = { ...defaultMatPrices(matItems), ...savedMatPrices };
+
+  const matTotal = matItems.reduce((s, r) => s + r.qty * effectiveMatPrice(r, matPrices), 0) + customMatTotal(customMat);
+  const labTotal = laborItems.reduce((s, i) => s + i.qty * effectiveRate(i, rates), 0) + customLaborTotal(customLab);
+  const grandTotal = matTotal + labTotal;
+
+  const lot = parseFloat(inputs.lotSqft) || 0;
+  const fp = parseFloat(inputs.footprintSqft) || 0;
+  const driveSqft = (parseFloat(inputs.drivewayLength) || 0) * (parseFloat(inputs.drivewayWidth) || 12);
+
+  return (
+    <div>
+      <div className="mb-8">
+        <h2 className="text-2xl font-black uppercase font-serif text-[#1A1A1A] mb-1">Site Work</h2>
+        <p className="text-sm text-[#888]">Clearing, grading, excavation, and driveway — the work that happens before the foundation goes in.</p>
+      </div>
+
+      {/* Inputs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <Field label="Lot Size (sqft)" note="Used for clearing, grading & topsoil">
+          <NumberInput value={inputs.lotSqft} onChange={v => set("lotSqft", v)} placeholder="e.g. 12000" />
+        </Field>
+        <Field label="Building Footprint (sqft)" note="Used for excavation & pad prep">
+          <NumberInput value={inputs.footprintSqft} onChange={v => set("footprintSqft", v)} placeholder="e.g. 1500" />
+        </Field>
+        <Field label="Average Site Cut Depth (in)" note="Depth of topsoil stripping & cut">
+          <NumberInput value={inputs.cutDepthIn} onChange={v => set("cutDepthIn", v)} placeholder="6" />
+        </Field>
+      </div>
+
+      {/* Driveway toggle */}
+      <div className="mb-6">
+        <Toggle checked={inputs.includeDriveway} onChange={v => set("includeDriveway", v)} label="Include driveway" />
+      </div>
+
+      {inputs.includeDriveway && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8 pl-4 border-l-2 border-[#E85D26]/30">
+          <Field label="Driveway Length (LF)">
+            <NumberInput value={inputs.drivewayLength} onChange={v => set("drivewayLength", v)} placeholder="e.g. 80" />
+          </Field>
+          <Field label="Driveway Width (ft)">
+            <NumberInput value={inputs.drivewayWidth} onChange={v => set("drivewayWidth", v)} placeholder="12" />
+          </Field>
+          <Field label="Driveway Surface">
+            <select value={inputs.drivewaySurface} onChange={e => set("drivewaySurface", e.target.value as DrivewaySurface)}
+              className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+              <option value="gravel">Gravel</option>
+              <option value="asphalt">Asphalt</option>
+              <option value="concrete">Concrete</option>
+            </select>
+          </Field>
+        </div>
+      )}
+
+      {/* Info snapshot */}
+      {(lot > 0 || fp > 0) && (
+        <div className="mb-6 p-4 bg-[#FFF8F5] border border-[#E85D26]/20 text-sm">
+          <span className="font-bold text-[#E85D26] uppercase tracking-wider text-xs">Estimate Snapshot — </span>
+          <span className="text-[#555]">
+            {lot > 0 && `${lot.toLocaleString()} sqft lot`}
+            {fp > 0 && ` · ${fp.toLocaleString()} sqft building pad`}
+            {fp > 0 && parseFloat(inputs.cutDepthIn) > 0 && ` · ${inputs.cutDepthIn}" cut depth`}
+            {inputs.includeDriveway && driveSqft > 0 && ` · ${driveSqft.toLocaleString()} sqft ${inputs.drivewaySurface} driveway`}
+          </span>
+        </div>
+      )}
+
+      {/* Materials */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold uppercase tracking-widest text-xs text-[#777]">Materials</h3>
+          <button onClick={() => setSavedMatPrices({})} className="text-[10px] text-[#AAA] hover:text-[#E85D26] flex items-center gap-1 transition-colors">
+            <RotateCcw size={10} /> Reset prices
+          </button>
+        </div>
+        {matItems.length === 0 && customMat.length === 0 ? (
+          <p className="text-sm text-[#AAA] py-4">Enter lot size, footprint, or driveway details above to see material line items.</p>
+        ) : (
+          <div className="border border-[#DDD8D0] overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-[#F7F4F0] border-b border-[#DDD8D0]">
+                <tr>
+                  <th className="text-left px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">Item</th>
+                  <th className="text-right px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">Qty</th>
+                  <th className="text-right px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">Unit</th>
+                  <th className="text-right px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">$/Unit</th>
+                  <th className="text-right px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#F0EDE8]">
+                {matItems.map(item => {
+                  const price = effectiveMatPrice(item, matPrices);
+                  return (
+                    <tr key={item.label} className="hover:bg-[#FAF8F5]">
+                      <td className="px-4 py-2.5 text-[#333]">{item.label}</td>
+                      <td className="px-3 py-2.5 text-right text-[#555] tabular-nums">{item.qty.toLocaleString()}</td>
+                      <td className="px-3 py-2.5 text-right text-[#888] text-xs">{item.unit}</td>
+                      <td className="px-3 py-2.5 text-right">
+                        <input type="number" min="0" step="0.01" value={matPrices[item.label] ?? String(item.price)}
+                          onChange={e => setSavedMatPrices(prev => ({ ...prev, [item.label]: e.target.value }))}
+                          className="w-20 text-right bg-transparent border-b border-transparent hover:border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-[#555] tabular-nums" />
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-medium text-[#1A1A1A] tabular-nums">${fmt(item.qty * price)}</td>
+                    </tr>
+                  );
+                })}
+                {customMat.map(row => (
+                  <tr key={row.id} className="bg-[#FFFDF9] hover:bg-[#FAF8F5]">
+                    <td className="px-4 py-2">
+                      <input value={row.label} onChange={e => setCustomMat(prev => prev.map(r => r.id === row.id ? { ...r, label: e.target.value } : r))}
+                        placeholder="Item name" className="w-full bg-transparent border-b border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-sm text-[#333]" />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <input type="number" min="0" value={row.qty} onChange={e => setCustomMat(prev => prev.map(r => r.id === row.id ? { ...r, qty: e.target.value } : r))}
+                        className="w-16 text-right bg-transparent border-b border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-sm" />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <input value={row.unit} onChange={e => setCustomMat(prev => prev.map(r => r.id === row.id ? { ...r, unit: e.target.value } : r))}
+                        className="w-12 text-right bg-transparent border-b border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-xs" />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <input type="number" min="0" step="0.01" value={row.price} onChange={e => setCustomMat(prev => prev.map(r => r.id === row.id ? { ...r, price: e.target.value } : r))}
+                        className="w-20 text-right bg-transparent border-b border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-sm" />
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="text-sm font-medium tabular-nums">${fmt((parseFloat(row.qty) || 0) * (parseFloat(row.price) || 0))}</span>
+                        <button onClick={() => setCustomMat(prev => prev.filter(r => r.id !== row.id))} className="text-[#CCC] hover:text-red-500 transition-colors"><X size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="border-t border-[#DDD8D0] bg-[#F7F4F0]">
+                <tr>
+                  <td colSpan={4} className="px-4 py-2.5 font-bold text-[#1A1A1A] text-sm uppercase tracking-wider">Materials Total</td>
+                  <td className="px-4 py-2.5 text-right font-black text-[#1A1A1A]">${fmt(matTotal)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+        <button onClick={() => setCustomMat(prev => [...prev, { id: newId(), label: "", qty: "", unit: "CY", price: "" }])}
+          className="mt-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#E85D26] hover:text-[#c94d1f] transition-colors">
+          <Plus size={13} /> Add custom material
+        </button>
+      </div>
+
+      {/* Labor */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-bold uppercase tracking-widest text-xs text-[#777]">Labor <span className="font-normal text-[#AAA] normal-case tracking-normal">(RSMeans 75th percentile — edit any rate)</span></h3>
+          <button onClick={() => setSavedRates({})} className="text-[10px] text-[#AAA] hover:text-[#E85D26] flex items-center gap-1 transition-colors">
+            <RotateCcw size={10} /> Reset rates
+          </button>
+        </div>
+        {laborItems.length === 0 && customLab.length === 0 ? (
+          <p className="text-sm text-[#AAA] py-4">Enter lot size, footprint, or driveway details above to see labor line items.</p>
+        ) : (
+          <div className="border border-[#DDD8D0] overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-[#F7F4F0] border-b border-[#DDD8D0]">
+                <tr>
+                  <th className="text-left px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">Task</th>
+                  <th className="text-right px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">Qty</th>
+                  <th className="text-right px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">Unit</th>
+                  <th className="text-right px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">$/Unit</th>
+                  <th className="text-right px-4 py-2 text-xs font-bold uppercase tracking-wider text-[#777]">Total</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#F0EDE8]">
+                {laborItems.map(item => {
+                  const rate = effectiveRate(item, rates);
+                  return (
+                    <tr key={item.label} className="hover:bg-[#FAF8F5]">
+                      <td className="px-4 py-2.5 text-[#333]">{item.label}</td>
+                      <td className="px-3 py-2.5 text-right text-[#555] tabular-nums">{item.qty.toLocaleString()}</td>
+                      <td className="px-3 py-2.5 text-right text-[#888] text-xs">{item.unit}</td>
+                      <td className="px-3 py-2.5 text-right">
+                        <input type="number" min="0" step="0.01" value={rates[item.label] ?? String(item.nationalAvg)}
+                          onChange={e => setSavedRates(prev => ({ ...prev, [item.label]: e.target.value }))}
+                          className="w-20 text-right bg-transparent border-b border-transparent hover:border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-[#555] tabular-nums" />
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-medium text-[#1A1A1A] tabular-nums">${fmt(item.qty * rate)}</td>
+                    </tr>
+                  );
+                })}
+                {customLab.map(row => (
+                  <tr key={row.id} className="bg-[#FFFDF9] hover:bg-[#FAF8F5]">
+                    <td className="px-4 py-2">
+                      <input value={row.label} onChange={e => setCustomLab(prev => prev.map(r => r.id === row.id ? { ...r, label: e.target.value } : r))}
+                        placeholder="Task name" className="w-full bg-transparent border-b border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-sm text-[#333]" />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <input type="number" min="0" value={row.qty} onChange={e => setCustomLab(prev => prev.map(r => r.id === row.id ? { ...r, qty: e.target.value } : r))}
+                        className="w-16 text-right bg-transparent border-b border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-sm" />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <input value={row.unit} onChange={e => setCustomLab(prev => prev.map(r => r.id === row.id ? { ...r, unit: e.target.value } : r))}
+                        className="w-12 text-right bg-transparent border-b border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-xs" />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <input type="number" min="0" step="0.01" value={row.rate} onChange={e => setCustomLab(prev => prev.map(r => r.id === row.id ? { ...r, rate: e.target.value } : r))}
+                        className="w-20 text-right bg-transparent border-b border-[#DDD8D0] focus:border-[#E85D26] focus:outline-none text-sm" />
+                    </td>
+                    <td className="px-4 py-2 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <span className="text-sm font-medium tabular-nums">${fmt((parseFloat(row.qty) || 0) * (parseFloat(row.rate) || 0))}</span>
+                        <button onClick={() => setCustomLab(prev => prev.filter(r => r.id !== row.id))} className="text-[#CCC] hover:text-red-500 transition-colors"><X size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="border-t border-[#DDD8D0] bg-[#F7F4F0]">
+                <tr>
+                  <td colSpan={4} className="px-4 py-2.5 font-bold text-[#1A1A1A] text-sm uppercase tracking-wider">Labor Total</td>
+                  <td className="px-4 py-2.5 text-right font-black text-[#1A1A1A]">${fmt(labTotal)}</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        )}
+        <button onClick={() => setCustomLab(prev => [...prev, { id: newId(), label: "", qty: "", unit: "sqft", rate: "" }])}
+          className="mt-2 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#E85D26] hover:text-[#c94d1f] transition-colors">
+          <Plus size={13} /> Add custom labor
+        </button>
+      </div>
+
+      {/* Grand total */}
+      <div className="bg-[#1A1A1A] text-white p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="flex gap-8">
+          <div>
+            <div className="text-[11px] uppercase tracking-widest font-bold opacity-60 mb-0.5">Materials</div>
+            <div className="font-black text-lg">${fmt(matTotal)}</div>
+          </div>
+          <div>
+            <div className="text-[11px] uppercase tracking-widest font-bold opacity-60 mb-0.5">Labor</div>
+            <div className="font-black text-lg">${fmt(labTotal)}</div>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-[11px] uppercase tracking-widest font-bold opacity-60 mb-0.5">Site Work Total</div>
+          <div className="font-black text-4xl">${fmt(grandTotal)}</div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 /* ─────────────────────────────────────────────
@@ -1632,6 +1998,12 @@ function HvacTab() {
 ───────────────────────────────────────────── */
 function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "summary">) => void; onPrint: () => void }) {
   // Read all tab states — same keys as individual tabs; fresh on every mount
+  const [siteInputs] = useLocalStorage<SiteWorkInputs>(SK.sitework, DEFAULT_SITEWORK);
+  const [siteSR] = useLocalStorage<LaborRates>(SK.siteworkRates, {});
+  const [siteMP] = useLocalStorage<MatPrices>(SK.siteMatPrices, {});
+  const [siteCM] = useLocalStorage<CustomMatRow[]>(SK.siteCMat, []);
+  const [siteCL] = useLocalStorage<CustomLaborRow[]>(SK.siteCLab, []);
+
   const [foundInputs] = useLocalStorage<FoundationInputs>(SK.foundation, DEFAULT_FOUNDATION);
   const [foundSR] = useLocalStorage<LaborRates>(SK.foundationRates, {});
   const [foundMP] = useLocalStorage<MatPrices>(SK.foundMatPrices, {});
@@ -1696,6 +2068,7 @@ function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "sum
   };
 
   const rows = [
+    computeTab("Site Work", "sitework", getSiteWorkMatItems(siteInputs), siteCM, siteMP, getSiteWorkLaborItems(siteInputs), siteSR, siteCL, (parseFloat(siteInputs.lotSqft) || 0) > 0 || (parseFloat(siteInputs.footprintSqft) || 0) > 0 || (siteInputs.includeDriveway && (parseFloat(siteInputs.drivewayLength) || 0) > 0)),
     computeTab("Foundation", "foundation", getFoundationMatItems(foundInputs), foundCM, foundMP, getFoundationLaborItems(foundInputs), foundSR, foundCL, (parseFloat(foundInputs.sqft) || 0) > 0),
     computeTab("Walls", "wall", getWallMatItems(wallInputs), wallCM, wallMP, getWallLaborItems(wallInputs), wallSR, wallCL, (parseFloat(wallInputs.linearFeet) || 0) > 0),
     computeTab("Floors", "floor", getFloorMatItems(floorInputs), floorCM, floorMP, getFloorLaborItems(floorInputs), floorSR, floorCL, (parseFloat(floorInputs.sqft) || 0) > 0),
@@ -1727,9 +2100,9 @@ function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "sum
         <div className="p-10 text-center border-2 border-dashed border-[#DDD8D0]">
           <div className="text-4xl mb-4">📋</div>
           <div className="text-lg font-bold text-[#1A1A1A] mb-2">No estimate data yet</div>
-          <p className="text-sm text-[#888] mb-6 max-w-sm mx-auto">Fill in at least one tab — Foundation, Walls, Floors, Roofing, Plumbing, Electrical, or HVAC — to see your project total here.</p>
-          <button onClick={() => onNavigate("foundation")} className="bg-[#E85D26] text-white font-bold px-6 py-2.5 hover:bg-[#c94d1f] transition-colors text-sm">
-            Start with Foundation
+          <p className="text-sm text-[#888] mb-6 max-w-sm mx-auto">Fill in at least one tab — Site Work, Foundation, Walls, Floors, Roofing, Plumbing, Electrical, or HVAC — to see your project total here.</p>
+          <button onClick={() => onNavigate("sitework")} className="bg-[#E85D26] text-white font-bold px-6 py-2.5 hover:bg-[#c94d1f] transition-colors text-sm">
+            Start with Site Work
           </button>
         </div>
       ) : (
@@ -1836,6 +2209,7 @@ function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "sum
    MAIN PAGE
 ───────────────────────────────────────────── */
 const TABS: { id: Exclude<Tab, "summary">; label: string; group: "structural" | "mep" }[] = [
+  { id: "sitework", label: "Site Work", group: "structural" },
   { id: "foundation", label: "Foundation", group: "structural" },
   { id: "wall", label: "Walls", group: "structural" },
   { id: "floor", label: "Floors", group: "structural" },
@@ -1878,7 +2252,7 @@ export default function Estimator() {
     } catch {}
   }
 
-  const [tab, setTab] = useState<Tab>("foundation");
+  const [tab, setTab] = useState<Tab>("sitework");
   const [resetKey, setResetKey] = useState(0);
   const [copied, setCopied] = useState(false);
   const [upgradeFeature, setUpgradeFeature] = useState<GatedFeature | null>(null);
@@ -1907,7 +2281,7 @@ export default function Estimator() {
     const url = new URL(window.location.href);
     url.searchParams.delete("s");
     window.history.replaceState({}, "", url.toString());
-    setTab("foundation");
+    setTab("sitework");
     setResetKey(k => k + 1);
   }, []);
 
@@ -1944,7 +2318,7 @@ export default function Estimator() {
               <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">Quick Estimating Tool</span>
             </div>
             <h1 className="text-4xl md:text-5xl font-black font-serif uppercase mb-3">Material + Labor Estimator</h1>
-            <p className="text-gray-400 text-lg max-w-2xl">Foundation, framing, floors, roofing, plumbing, electrical, and HVAC — all with RSMeans national average labor rates built in.</p>
+            <p className="text-gray-400 text-lg max-w-2xl">Site work, foundation, framing, floors, roofing, plumbing, electrical, and HVAC — all with RSMeans national average labor rates built in.</p>
           </div>
         </div>
 
@@ -1999,6 +2373,7 @@ export default function Estimator() {
           </div>
 
           <div key={resetKey} className="bg-white border border-[#DDD8D0] p-8 shadow-sm">
+            {tab === "sitework" && <SiteWorkTab />}
             {tab === "foundation" && <FoundationTab />}
             {tab === "wall" && <WallTab />}
             {tab === "floor" && <FloorTab />}
