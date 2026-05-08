@@ -1633,16 +1633,16 @@ function getWallLaborItems(inputs: WallInputs): LaborItem[] {
   const extDoors = parseInt(inputs.extDoorCount) || 0;
   const windows = parseInt(inputs.windowCount) || 0;
   return [
-    ...(lf > 0 ? [{ label: "Exterior Wall Framing", qty: area, unit: "sqft", nationalAvg: 2.65 }] : []),
-    ...(lf > 0 && inputs.exteriorSheathing ? [{ label: "Advantech Sheathing Install & Seam Tape", qty: area, unit: "sqft", nationalAvg: 1.33 }] : []),
-    ...(lf > 0 && inputs.insulation ? [{ label: "Insulation (Batt) Install", qty: area, unit: "sqft", nationalAvg: 1.08 }] : []),
-    ...(lf > 0 && inputs.drywall ? [{ label: "Drywall Hang & Finish — Exterior Walls", qty: area, unit: "sqft", nationalAvg: 1.88 }] : []),
-    ...(intLF > 0 ? [{ label: "Interior Wall Framing", qty: intArea, unit: "sqft", nationalAvg: 2.45 }] : []),
-    ...(intLF > 0 && inputs.interiorDrywall ? [{ label: "Drywall Hang & Finish — Interior Walls (both sides)", qty: intArea * 2, unit: "sqft", nationalAvg: 1.88 }] : []),
-    ...(intDoors > 0 ? [{ label: "Interior Door Rough Opening Framing", qty: intDoors, unit: "ea", nationalAvg: 75.00 }] : []),
-    ...(extDoors > 0 ? [{ label: "Exterior Door Rough Opening Framing", qty: extDoors, unit: "ea", nationalAvg: 95.00 }] : []),
-    ...(windows > 0 ? [{ label: "Window Rough Opening Framing", qty: windows, unit: "ea", nationalAvg: 85.00 }] : []),
-    ...(blkLF > 0 ? [{ label: "2×10 Blocking Install (cabinets, vanities, fixtures)", qty: blkLF, unit: "LF", nationalAvg: 1.85 }] : []),
+    ...(lf > 0 ? [{ label: "Exterior Wall Framing", qty: area, unit: "sqft", nationalAvg: 4.50 }] : []),
+    ...(lf > 0 && inputs.exteriorSheathing ? [{ label: "Advantech Sheathing Install & Seam Tape", qty: area, unit: "sqft", nationalAvg: 2.40 }] : []),
+    ...(lf > 0 && inputs.insulation ? [{ label: "Insulation (Batt) Install", qty: area, unit: "sqft", nationalAvg: 1.45 }] : []),
+    ...(lf > 0 && inputs.drywall ? [{ label: "Drywall Hang & Finish — Exterior Walls", qty: area, unit: "sqft", nationalAvg: 2.25 }] : []),
+    ...(intLF > 0 ? [{ label: "Interior Wall Framing", qty: intArea, unit: "sqft", nationalAvg: 3.85 }] : []),
+    ...(intLF > 0 && inputs.interiorDrywall ? [{ label: "Drywall Hang & Finish — Interior Walls (both sides)", qty: intArea * 2, unit: "sqft", nationalAvg: 2.25 }] : []),
+    ...(intDoors > 0 ? [{ label: "Interior Door Rough Opening Framing", qty: intDoors, unit: "ea", nationalAvg: 115.00 }] : []),
+    ...(extDoors > 0 ? [{ label: "Exterior Door Rough Opening Framing", qty: extDoors, unit: "ea", nationalAvg: 145.00 }] : []),
+    ...(windows > 0 ? [{ label: "Window Rough Opening Framing", qty: windows, unit: "ea", nationalAvg: 125.00 }] : []),
+    ...(blkLF > 0 ? [{ label: "2×10 Blocking Install (cabinets, vanities, fixtures)", qty: blkLF, unit: "LF", nationalAvg: 2.65 }] : []),
   ];
 }
 function WallTab() {
