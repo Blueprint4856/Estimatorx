@@ -2288,15 +2288,95 @@ function FloorTab() {
 /* ─────────────────────────────────────────────
    ROOF TAB
 ───────────────────────────────────────────── */
-interface RoofInputs { footprintSqft: string; pitch: string; archShingles: boolean; iceWater: boolean; includeDecking: boolean; }
+interface RoofInputs {
+  footprintSqft: string; pitch: string; archShingles: boolean; iceWater: boolean; includeDecking: boolean;
+  roofSystem: "truss" | "rafter";
+  buildingWidth: string;
+  buildingLength: string;
+  roofSpacing: "16" | "24";
+}
 const PITCH_FACTORS: Record<string, number> = { "4:12": 1.054, "5:12": 1.083, "6:12": 1.118, "7:12": 1.158, "8:12": 1.202, "9:12": 1.250, "10:12": 1.302, "12:12": 1.414 };
-const DEFAULT_ROOF: RoofInputs = { footprintSqft: "", pitch: "6:12", archShingles: true, iceWater: true, includeDecking: false };
+const DEFAULT_ROOF: RoofInputs = { footprintSqft: "", pitch: "6:12", archShingles: true, iceWater: true, includeDecking: false, roofSystem: "truss", buildingWidth: "", buildingLength: "", roofSpacing: "24" };
+
+// Truss price by full span
+const TRUSS_PRICE_TIERS: { maxSpan: number; price: number }[] = [
+  { maxSpan: 24, price: 175 }, { maxSpan: 32, price: 245 },
+  { maxSpan: 40, price: 330 }, { maxSpan: 48, price: 425 },
+  { maxSpan: Infinity, price: 525 },
+];
+function trussUnitPrice(span: number): number {
+  return TRUSS_PRICE_TIERS.find(t => span <= t.maxSpan)?.price ?? 525;
+}
+// Rafter / ceiling joist config by half-span
+const RAFTER_CFG: { maxHalfSpan: number; rSize: string; rPrice: number; rdgSize: string; rdgPrice: number; cjSize: string; cjPrice: number }[] = [
+  { maxHalfSpan: 14, rSize: "2×8",  rPrice: 18.98, rdgSize: "2×10", rdgPrice: 24.98, cjSize: "2×8",  cjPrice: 18.98 },
+  { maxHalfSpan: 18, rSize: "2×10", rPrice: 24.98, rdgSize: "2×12", rdgPrice: 31.98, cjSize: "2×10", cjPrice: 24.98 },
+  { maxHalfSpan: Infinity, rSize: "2×12", rPrice: 31.98, rdgSize: "2×12", rdgPrice: 31.98, cjSize: "2×12", cjPrice: 31.98 },
+];
+function rafterCfg(halfSpan: number) { return RAFTER_CFG.find(r => halfSpan <= r.maxHalfSpan) ?? RAFTER_CFG[RAFTER_CFG.length - 1]; }
+const STD_BOARD_LENGTHS = [8, 10, 12, 14, 16, 18, 20];
+function nextStdLen(lf: number): number { return STD_BOARD_LENGTHS.find(l => l >= lf) ?? 20; }
 
 function getRoofMatItems(inputs: RoofInputs): MatItem[] {
   const fp = parseFloat(inputs.footprintSqft) || 0;
   const factor = PITCH_FACTORS[inputs.pitch] ?? 1.118;
   const actual = fp * factor;
+  const bw = parseFloat(inputs.buildingWidth) || 0;
+  const bl = parseFloat(inputs.buildingLength) || 0;
+  const spacing = parseInt(inputs.roofSpacing ?? "24") || 24;
+  const spacingFt = spacing / 12;
+  const hasFraming = bw > 0 && bl > 0;
+
+  const framingItems: MatItem[] = [];
+  if (hasFraming) {
+    if (inputs.roofSystem === "truss") {
+      const trussCount = Math.ceil(bl / spacingFt) + 1;
+      const tPrice = trussUnitPrice(bw);
+      framingItems.push(
+        { label: `Prefab Gable Roof Trusses — ${bw.toFixed(0)}' Span (${spacing}" OC)`, qty: trussCount, unit: "ea", price: tPrice },
+        { label: `Gable End Trusses — Ladder Frame (${bw.toFixed(0)}' Span)`, qty: 2, unit: "ea", price: Math.round(tPrice * 1.15) },
+        { label: "Hurricane Ties — H2.5A Truss Clip (2 per truss, both bearing walls)", qty: trussCount * 2, unit: "ea", price: 1.89 },
+        { label: "Structural Screws — Truss to Top Plate (box)", qty: Math.max(1, Math.ceil(trussCount / 15)), unit: "box", price: 18.50 },
+        { label: "2×4×16 Temporary Bracing Lumber", qty: Math.max(2, Math.ceil(bl / 16) * 3), unit: "ea", price: 10.97 },
+      );
+    } else {
+      // Rafter system
+      const halfSpan = bw / 2;
+      const rc = rafterCfg(halfSpan);
+      const pf = factor;
+      const rafterRunFt = halfSpan + 2; // +2 ft rafter tail / overhang
+      const rafterBoardLen = nextStdLen(rafterRunFt * pf);
+      const raftersPerSide = Math.ceil(bl / spacingFt) + 1;
+      const totalRafters = raftersPerSide * 2;
+
+      // Ridge board
+      const ridgeLF = bl + 4;
+      const ridgeBoardLen = nextStdLen(ridgeLF <= 16 ? ridgeLF : 20);
+      const ridgeBoardCount = Math.ceil(ridgeLF / ridgeBoardLen);
+
+      // Collar ties (2×4, every 4 ft OC, length ≈ span/3)
+      const collarCount = Math.ceil(bl / 4);
+      const collarLF = bw / 3;
+      const collarBoardLen = nextStdLen(collarLF);
+
+      // Ceiling joists (same spacing, span = buildingWidth)
+      const cjCount = Math.ceil(bl / spacingFt) + 1;
+      const cjBoardLen = nextStdLen(bw + 1);
+
+      framingItems.push(
+        { label: `${rc.rSize}×${rafterBoardLen}' Common Rafters (${spacing}" OC, both sides)`, qty: Math.ceil(totalRafters * WASTE), unit: "ea", price: rc.rPrice },
+        { label: `${rc.rdgSize}×${ridgeBoardLen}' Ridge Board`, qty: ridgeBoardCount, unit: "ea", price: rc.rdgPrice },
+        { label: `2×4×${collarBoardLen}' Collar Ties (every 4' OC)`, qty: Math.ceil(collarCount * WASTE), unit: "ea", price: 5.48 },
+        { label: `${rc.cjSize}×${cjBoardLen}' Ceiling Joists (${spacing}" OC)`, qty: Math.ceil(cjCount * WASTE), unit: "ea", price: rc.cjPrice },
+        { label: "Hurricane Ties — H2.5A Rafter Clip (1 per rafter at plate)", qty: totalRafters, unit: "ea", price: 1.89 },
+        { label: "Structural Screws — Ridge & Rafter (box)", qty: Math.max(1, Math.ceil(totalRafters / 40)), unit: "box", price: 18.50 },
+        { label: "Ring Shank Nails — Ceiling Joist & Rafter (box)", qty: Math.max(1, Math.ceil(totalRafters / 50)), unit: "box", price: 14.98 },
+      );
+    }
+  }
+
   return [
+    ...framingItems,
     ...(inputs.archShingles ? [{ label: "Architectural Shingles (bundle)", qty: Math.ceil((actual / 100) * 3.33 * WASTE), unit: "bundle", price: 38.98 }] : []),
     { label: "Synthetic Underlayment", qty: Math.ceil(actual * WASTE), unit: "sqft", price: 0.12 },
     ...(inputs.includeDecking ? [
@@ -2310,7 +2390,32 @@ function getRoofLaborItems(inputs: RoofInputs): LaborItem[] {
   const fp = parseFloat(inputs.footprintSqft) || 0;
   const factor = PITCH_FACTORS[inputs.pitch] ?? 1.118;
   const actual = Math.round(fp * factor);
+  const bw = parseFloat(inputs.buildingWidth) || 0;
+  const bl = parseFloat(inputs.buildingLength) || 0;
+  const spacing = parseInt(inputs.roofSpacing ?? "24") || 24;
+  const hasFraming = bw > 0 && bl > 0;
+
+  const framingLabor: LaborItem[] = [];
+  if (hasFraming) {
+    const spacingFt = spacing / 12;
+    if (inputs.roofSystem === "truss") {
+      const trussCount = Math.ceil(bl / spacingFt) + 1;
+      // RSMeans 06 17 53 — light residential truss set, 75th %ile
+      framingLabor.push(
+        { label: "Roof Truss Delivery & Crane Set", qty: trussCount + 2, unit: "ea", nationalAvg: 58.00 },
+        { label: "Truss Bracing, Tie-Down & Sheathing Blocking", qty: actual || Math.round(bw * bl * factor), unit: "sqft", nationalAvg: 0.88 },
+      );
+    } else {
+      // RSMeans 06 11 10 — stick-built roof framing, rafters + ridge + collar ties, 75th %ile
+      framingLabor.push(
+        { label: "Roof Framing — Rafters, Ridge Board & Collar Ties", qty: actual || Math.round(bw * bl * factor), unit: "sqft", nationalAvg: 5.85 },
+        { label: "Ceiling Joist Framing", qty: fp || Math.round(bw * bl), unit: "sqft", nationalAvg: 1.95 },
+      );
+    }
+  }
+
   return [
+    ...framingLabor,
     ...(inputs.archShingles ? [{ label: "Shingle Installation", qty: actual, unit: "sqft", nationalAvg: 3.85 }] : []),
     { label: "Underlayment & Flashing Install", qty: actual, unit: "sqft", nationalAvg: 0.95 },
     ...(inputs.includeDecking ? [{ label: "Advantech Roof Sheathing Install & Seam Tape", qty: actual, unit: "sqft", nationalAvg: 3.85 }] : []),
@@ -2340,30 +2445,84 @@ function RoofTab() {
   const handleMatReset = useCallback(() => { setSavedMatPrices({}); setSavedMatQtys({}); }, [setSavedMatPrices, setSavedMatQtys]);
   const matTotal = matItems.reduce((s, r) => s + effectiveQty(r, savedMatQtys) * effectiveMatPrice(r, matPrices), 0) + customMatTotal(customMat);
   const laborTotal = laborItems.reduce((s, i) => s + effectiveQty(i, savedLabQtys) * effectiveRate(i, rates), 0) + customLaborTotal(customLabor);
+  const bwNum = parseFloat(inputs.buildingWidth) || 0;
+  const blNum = parseFloat(inputs.buildingLength) || 0;
+  const hasFramingInputs = bwNum > 0 && blNum > 0;
+  const spacingNum = parseInt(inputs.roofSpacing ?? "24") || 24;
+  const trussCountDisplay = hasFramingInputs ? Math.ceil(blNum / (spacingNum / 12)) + 1 : null;
+  const halfSpanDisplay = bwNum > 0 ? bwNum / 2 : null;
+  const rc = halfSpanDisplay ? rafterCfg(halfSpanDisplay) : null;
+
+  const SH = ({ title, note }: { title: string; note?: string }) => (
+    <div className="flex items-baseline gap-3 mb-4 mt-6 first:mt-0 pb-2 border-b border-[#E8E4DF]">
+      <span className="text-xs font-black uppercase tracking-widest text-[#E85D26]">{title}</span>
+      {note && <span className="text-xs text-[#AAA]">{note}</span>}
+    </div>
+  );
+
   return (
     <div>
-      <div className="grid md:grid-cols-2 gap-6 mb-6 no-print">
-        <Field label="Roof Footprint (sq ft)" note="Measure the floor plan area under the roof — not the actual roof surface">
-          <NumberInput value={inputs.footprintSqft} onChange={v => setInputs(p => ({ ...p, footprintSqft: v }))} placeholder="e.g. 1400" />
-        </Field>
-        <Field label="Roof Pitch">
-          <select value={inputs.pitch} onChange={e => setInputs(p => ({ ...p, pitch: e.target.value }))}
-            className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
-            {Object.keys(PITCH_FACTORS).map(p => <option key={p} value={p}>{p}</option>)}
-          </select>
-        </Field>
-        {fp > 0 && (
+      <div className="no-print">
+        {/* ── Framing System ── */}
+        <SH title="Roof Framing System" note="Trusses are factory-built; rafters are site-cut — leave dimensions blank to skip framing" />
+        <div className="grid md:grid-cols-2 gap-6">
+          <Field label="Framing System">
+            <select value={inputs.roofSystem} onChange={e => setInputs(p => ({ ...p, roofSystem: e.target.value as "truss" | "rafter", roofSpacing: e.target.value === "truss" ? "24" : "16" }))}
+              className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+              <option value="truss">Prefabricated Trusses</option>
+              <option value="rafter">Stick-Built Rafters</option>
+            </select>
+          </Field>
+          <Field label="Framing Spacing (OC)">
+            <select value={inputs.roofSpacing ?? "24"} onChange={e => setInputs(p => ({ ...p, roofSpacing: e.target.value as "16" | "24" }))}
+              className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+              <option value="16">16″ OC</option>
+              <option value="24">24″ OC</option>
+            </select>
+          </Field>
+          <Field label="Building Width (ft)" note={inputs.roofSystem === "truss" ? "Full truss span" : `Half-span ${halfSpanDisplay ? `${halfSpanDisplay.toFixed(1)}' → uses ${rc?.rSize ?? ""} rafters` : ""}`}>
+            <NumberInput value={inputs.buildingWidth} onChange={v => setInputs(p => ({ ...p, buildingWidth: v }))} placeholder="e.g. 28" />
+          </Field>
+          <Field label="Building Length (ft)" note={trussCountDisplay ? `${trussCountDisplay} ${inputs.roofSystem === "truss" ? "trusses" : "rafter pairs"} at ${spacingNum}" OC` : undefined}>
+            <NumberInput value={inputs.buildingLength} onChange={v => setInputs(p => ({ ...p, buildingLength: v }))} placeholder="e.g. 48" />
+          </Field>
+        </div>
+        {hasFramingInputs && inputs.roofSystem === "truss" && (
           <InfoBox>
-            Actual roof surface: <strong>{Math.ceil(actualArea).toLocaleString()} sqft</strong> &nbsp;·&nbsp; {(actualArea / 100).toFixed(1)} roofing squares
+            <strong>{trussCountDisplay} trusses</strong> ({spacingNum}″ OC) &nbsp;·&nbsp; {bwNum.toFixed(0)}' span &nbsp;·&nbsp; unit price: <strong>${trussUnitPrice(bwNum).toLocaleString()}/ea</strong> &nbsp;·&nbsp; + 2 gable end trusses
           </InfoBox>
         )}
-        <div className="flex flex-col gap-4">
-          <Toggle checked={inputs.archShingles} onChange={v => setInputs(p => ({ ...p, archShingles: v }))} label="Architectural Shingles" />
-          <Toggle checked={inputs.includeDecking} onChange={v => setInputs(p => ({ ...p, includeDecking: v }))} label="Include Advantech Roof Sheathing" />
-          <Toggle checked={inputs.iceWater} onChange={v => setInputs(p => ({ ...p, iceWater: v }))} label="Include Ice & Water Shield" />
+        {hasFramingInputs && inputs.roofSystem === "rafter" && rc && (
+          <InfoBox>
+            <strong>{rc.rSize} rafters</strong> &nbsp;·&nbsp; {rc.rdgSize} ridge board &nbsp;·&nbsp; {rc.cjSize} ceiling joists &nbsp;·&nbsp; {Math.ceil(blNum / (spacingNum / 12)) + 1} rafter pairs per side
+          </InfoBox>
+        )}
+
+        {/* ── Roof Surface ── */}
+        <SH title="Roof Surface" note="Shingles, decking & ice/water shield" />
+        <div className="grid md:grid-cols-2 gap-6">
+          <Field label="Roof Footprint (sq ft)" note="Floor plan area under the roof — not the sloped surface">
+            <NumberInput value={inputs.footprintSqft} onChange={v => setInputs(p => ({ ...p, footprintSqft: v }))} placeholder="e.g. 1400" />
+          </Field>
+          <Field label="Roof Pitch">
+            <select value={inputs.pitch} onChange={e => setInputs(p => ({ ...p, pitch: e.target.value }))}
+              className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+              {Object.keys(PITCH_FACTORS).map(p => <option key={p} value={p}>{p}</option>)}
+            </select>
+          </Field>
+          {fp > 0 && (
+            <InfoBox>
+              Actual roof surface: <strong>{Math.ceil(actualArea).toLocaleString()} sqft</strong> &nbsp;·&nbsp; {(actualArea / 100).toFixed(1)} roofing squares
+            </InfoBox>
+          )}
+          <div className="flex flex-col gap-4">
+            <Toggle checked={inputs.archShingles} onChange={v => setInputs(p => ({ ...p, archShingles: v }))} label="Architectural Shingles" />
+            <Toggle checked={inputs.includeDecking} onChange={v => setInputs(p => ({ ...p, includeDecking: v }))} label="Include Advantech Roof Sheathing" />
+            <Toggle checked={inputs.iceWater} onChange={v => setInputs(p => ({ ...p, iceWater: v }))} label="Include Ice & Water Shield" />
+          </div>
         </div>
       </div>
-      {fp > 0 ? (
+      {(fp > 0 || hasFramingInputs) ? (
         <div className="mt-8 flex flex-col gap-0">
           <MaterialsTable rows={matItems} prices={matPrices} onPriceChange={handleMatPriceChange} qtys={savedMatQtys} onQtyChange={handleMatQtyChange} onReset={handleMatReset} />
           <CustomMatRows items={customMat} onChange={setCustomMat} />
@@ -2374,7 +2533,7 @@ function RoofTab() {
           <GrandTotal matTotal={matTotal} laborTotal={laborTotal} />
           <div className="mt-2"><ResultNote /></div>
         </div>
-      ) : <EmptyState text="Enter your roof footprint above to see your estimate." />}
+      ) : <EmptyState text="Enter building dimensions above to see framing, or enter roof footprint for shingles & decking." />}
     </div>
   );
 }
