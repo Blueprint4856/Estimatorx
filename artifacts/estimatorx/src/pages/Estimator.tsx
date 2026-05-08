@@ -1893,10 +1893,12 @@ function getFloorFramingMatItems(inputs: FloorInputs): MatItem[] {
     if (inputs.beamType === "triple_2x12") {
       const plies = 3 * beamCount;
       const split = boardSplit(runLength, STD_LUMBER_LENGTHS, [16, 18, 20]);
-      split.forEach(len => {
+      const tally = split.reduce<Record<number, number>>((a, l) => ({ ...a, [l]: (a[l] ?? 0) + 1 }), {});
+      Object.entries(tally).forEach(([lenStr, count]) => {
+        const len = Number(lenStr);
         items.push({
           label: `Triple 2×12 Beam — 2×12×${len}' Boards`,
-          qty: plies,
+          qty: plies * count,
           unit: "ea",
           price: parseFloat((2.45 * len).toFixed(2)),
         });
@@ -1906,10 +1908,12 @@ function getFloorFramingMatItems(inputs: FloorInputs): MatItem[] {
       if (lvl) {
         const totalPlies = lvl.plies * beamCount;
         const split = boardSplit(runLength, STD_LVL_LENGTHS, [20, 18, 16]);
-        split.forEach(len => {
+        const tally = split.reduce<Record<number, number>>((a, l) => ({ ...a, [l]: (a[l] ?? 0) + 1 }), {});
+        Object.entries(tally).forEach(([lenStr, count]) => {
+          const len = Number(lenStr);
           items.push({
             label: `${lvl.pieceLabel} — ${len}' Pieces (staggered)`,
-            qty: totalPlies,
+            qty: totalPlies * count,
             unit: "ea",
             price: parseFloat((lvl.pricePerPlyLF * len).toFixed(2)),
           });
