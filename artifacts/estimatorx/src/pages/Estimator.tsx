@@ -1767,12 +1767,12 @@ type RimType = "solid" | "advantech";
 type BeamType = "none" | "triple_2x12" | "lvl_3.5x9.5" | "lvl_3.5x11.25" | "lvl_5.25x9.5" | "lvl_5.25x11.25";
 
 interface FloorInputs {
-  sqft: string;
+  buildingWidth: string;
+  buildingLength: string;
   finish: string;
   includeSubfloor: boolean;
   adhesiveType: AdhesiveType;
   includeFraming: boolean;
-  joistSpan: string;
   joistType: JoistType;
   joistSpacing: JoistSpacing;
   rimType: RimType;
@@ -1824,8 +1824,8 @@ const BEAM_PRICE: Record<string, number> = {
 };
 
 const DEFAULT_FLOOR: FloorInputs = {
-  sqft: "", finish: "lvp", includeSubfloor: true, adhesiveType: "liquid",
-  includeFraming: false, joistSpan: "", joistType: "2x10", joistSpacing: "16",
+  buildingWidth: "", buildingLength: "", finish: "lvp", includeSubfloor: true, adhesiveType: "liquid",
+  includeFraming: false, joistType: "2x10", joistSpacing: "16",
   rimType: "advantech", beamType: "none", beamCount: "1",
   stories: "1",
   includeBasementStairs: false, basementRisers: "13",
@@ -1862,12 +1862,12 @@ const LVL_CONFIG: Record<string, LVLConfig> = {
 
 function getFloorFramingMatItems(inputs: FloorInputs): MatItem[] {
   if (!inputs.includeFraming) return [];
-  const sqft = parseFloat(inputs.sqft) || 0;
-  const span = parseFloat(inputs.joistSpan) || 0;
-  if (sqft === 0 || span === 0) return [];
+  const span = parseFloat(inputs.buildingWidth) || 0;
+  const runLength = parseFloat(inputs.buildingLength) || 0;
+  if (span === 0 || runLength === 0) return [];
+  const sqft = span * runLength;
 
   const spacingFt = JOIST_SPACING_FT[inputs.joistSpacing ?? "16"] ?? (4 / 3);
-  const runLength = sqft / span;
   const joistCount = Math.ceil(runLength / spacingFt) + 1;
   const joistLF = Math.ceil(joistCount * (span + 1) * WASTE);
   const rimLF = Math.ceil((2 * runLength + 2 * span) * WASTE);
@@ -1953,11 +1953,11 @@ function getFloorFramingMatItems(inputs: FloorInputs): MatItem[] {
 
 function getFloorFramingLaborItems(inputs: FloorInputs): LaborItem[] {
   if (!inputs.includeFraming) return [];
-  const sqft = parseFloat(inputs.sqft) || 0;
-  const span = parseFloat(inputs.joistSpan) || 0;
-  if (sqft === 0 || span === 0) return [];
+  const span = parseFloat(inputs.buildingWidth) || 0;
+  const runLength = parseFloat(inputs.buildingLength) || 0;
+  if (span === 0 || runLength === 0) return [];
+  const sqft = span * runLength;
 
-  const runLength = sqft / span;
   const rimLF = Math.ceil(2 * runLength + 2 * span);
   const beamCount = Math.max(1, parseInt(inputs.beamCount) || 1);
   const beamLF = Math.ceil(runLength) * beamCount;
@@ -1982,7 +1982,7 @@ function getFloorFramingLaborItems(inputs: FloorInputs): LaborItem[] {
 }
 
 function getFloorMatItems(inputs: FloorInputs): MatItem[] {
-  const sqft = parseFloat(inputs.sqft) || 0;
+  const sqft = (parseFloat(inputs.buildingWidth) || 0) * (parseFloat(inputs.buildingLength) || 0);
   const adhesive = ADHESIVE_CONFIG[inputs.adhesiveType ?? "liquid"];
   return [
     ...getFloorFramingMatItems(inputs),
@@ -1999,7 +1999,7 @@ function getFloorMatItems(inputs: FloorInputs): MatItem[] {
   ];
 }
 function getFloorLaborItems(inputs: FloorInputs): LaborItem[] {
-  const sqft = Math.round(parseFloat(inputs.sqft) || 0);
+  const sqft = Math.round((parseFloat(inputs.buildingWidth) || 0) * (parseFloat(inputs.buildingLength) || 0));
   return [
     ...getFloorFramingLaborItems(inputs),
     ...(inputs.includeSubfloor ? [{ label: "Advantech Subfloor Install (glued & screwed)", qty: sqft, unit: "sqft", nationalAvg: 1.45 }] : []),
@@ -2030,21 +2030,36 @@ function FloorTab() {
   const handleMatReset = useCallback(() => { setSavedMatPrices({}); setSavedMatQtys({}); }, [setSavedMatPrices, setSavedMatQtys]);
   const matTotal = matItems.reduce((s, r) => s + effectiveQty(r, savedMatQtys) * effectiveMatPrice(r, matPrices), 0) + customMatTotal(customMat);
   const laborTotal = laborItems.reduce((s, i) => s + effectiveQty(i, savedLabQtys) * effectiveRate(i, rates), 0) + customLaborTotal(customLabor);
-  const hasResults = (parseFloat(inputs.sqft) || 0) > 0;
-  const spanVal = parseFloat(inputs.joistSpan) || 0;
-  const spanMissing = inputs.includeFraming && spanVal === 0;
+  const widthVal  = parseFloat(inputs.buildingWidth)  || 0;
+  const lengthVal = parseFloat(inputs.buildingLength) || 0;
+  const sqftVal   = widthVal * lengthVal;
+  const hasResults = sqftVal > 0;
+  const framingMissing = inputs.includeFraming && (widthVal === 0 || lengthVal === 0);
   const maxSpan = JOIST_MAX_SPAN[inputs.joistType]?.[inputs.joistSpacing] ?? 0;
-  const beamNeeded = spanVal > 0 && maxSpan > 0 && spanVal > maxSpan;
+  const beamNeeded = widthVal > 0 && maxSpan > 0 && widthVal > maxSpan;
 
   return (
     <div>
       <div className="flex flex-col gap-6 no-print">
 
-        {/* ── Floor area + story count ── */}
-        <div className="grid md:grid-cols-2 gap-6">
-          <Field label="Floor Area (sq ft)" note="Enter the total floor area being estimated">
-            <NumberInput value={inputs.sqft} onChange={v => set("sqft", v)} placeholder="e.g. 1200" />
+        {/* ── Building dimensions + story count ── */}
+        <div className="grid md:grid-cols-3 gap-6">
+          <Field label="Building Width (ft)" note="Clear span direction — joists run this way">
+            <NumberInput value={inputs.buildingWidth} onChange={v => set("buildingWidth", v)} placeholder="e.g. 28" />
           </Field>
+          <Field label="Building Length (ft)" note="Beam run direction — parallel to the beam">
+            <NumberInput value={inputs.buildingLength} onChange={v => set("buildingLength", v)} placeholder="e.g. 48" />
+          </Field>
+          <Field
+            label="Floor Area (sq ft)"
+            note={sqftVal > 0 ? `${widthVal} × ${lengthVal} = ${sqftVal.toLocaleString()} SF` : "Auto-calculated from width × length"}
+          >
+            <div className="w-full bg-[#F0EDE8] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] font-medium">
+              {sqftVal > 0 ? sqftVal.toLocaleString() + " SF" : "—"}
+            </div>
+          </Field>
+        </div>
+        <div className="grid md:grid-cols-2 gap-6">
           <Field label="Number of Stories">
             <select value={inputs.stories ?? "1"} onChange={e => set("stories", e.target.value as "1" | "2")} className={SELECT_CLS}>
               <option value="1">1 Story</option>
@@ -2062,14 +2077,12 @@ function FloorTab() {
           />
           {inputs.includeFraming && (
             <>
-              {/* Span — must be filled first; show a prominent alert if missing */}
-              <div className={`grid md:grid-cols-2 gap-4 p-3 ${spanMissing ? "border border-[#E85D26] bg-[#FFF8F5]" : ""}`}>
-                <Field
-                  label={spanMissing ? "⚠ Joist Clear Span (ft) — required to calculate quantities" : "Joist Clear Span (ft)"}
-                  note="Clear distance joists must span — wall-to-wall, or wall-to-beam bearing point"
-                >
-                  <NumberInput value={inputs.joistSpan} onChange={v => set("joistSpan", v)} placeholder="e.g. 14" />
-                </Field>
+              {framingMissing && (
+                <div className="border border-[#E85D26] bg-[#FFF8F5] px-3 py-2 text-sm text-[#E85D26]">
+                  ⚠ Enter Building Width and Length above to calculate framing quantities.
+                </div>
+              )}
+              <div className="grid md:grid-cols-2 gap-4">
                 <Field label="Joist Type">
                   <select value={inputs.joistType} onChange={e => set("joistType", e.target.value as JoistType)} className={SELECT_CLS}>
                     <option value="2x10">2×10 Solid Lumber</option>
@@ -2096,10 +2109,10 @@ function FloorTab() {
                 <Field
                   label="Main Beam Type"
                   note={
-                    spanVal === 0 ? "Enter span above to see if a beam is required" :
+                    widthVal === 0 ? "Enter Building Width above to see if a beam is required" :
                     beamNeeded
-                      ? `⚠ ${spanVal} ft exceeds max (${maxSpan} ft) — beam required to support joists`
-                      : `✓ ${spanVal} ft is within max span (${maxSpan} ft) — no beam needed`
+                      ? `⚠ ${widthVal} ft exceeds max (${maxSpan} ft) — beam required to support joists`
+                      : `✓ ${widthVal} ft is within max span (${maxSpan} ft) — no beam needed`
                   }
                 >
                   <select value={inputs.beamType} onChange={e => set("beamType", e.target.value as BeamType)} className={SELECT_CLS}>
@@ -2805,7 +2818,7 @@ function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "sum
     computeTab("Site Work", "sitework", getSiteWorkMatItems(siteInputs), siteCM, siteMP, siteMQtys, getSiteWorkLaborItems(siteInputs), siteSR, siteLQtys, siteCL, siteHasData),
     computeTab("Foundation", "foundation", getFoundationMatItems(foundInputs), foundCM, foundMP, foundMQtys, getFoundationLaborItems(foundInputs), foundSR, foundLQtys, foundCL, (parseFloat(foundInputs.sqft) || 0) > 0),
     computeTab("Walls", "wall", getWallMatItems(wallInputs), wallCM, wallMP, wallMQtys, getWallLaborItems(wallInputs), wallSR, wallLQtys, wallCL, (parseFloat(wallInputs.linearFeet) || 0) > 0),
-    computeTab("Floors", "floor", getFloorMatItems(floorInputs), floorCM, floorMP, floorMQtys, getFloorLaborItems(floorInputs), floorSR, floorLQtys, floorCL, (parseFloat(floorInputs.sqft) || 0) > 0),
+    computeTab("Floors", "floor", getFloorMatItems(floorInputs), floorCM, floorMP, floorMQtys, getFloorLaborItems(floorInputs), floorSR, floorLQtys, floorCL, ((parseFloat(floorInputs.buildingWidth) || 0) * (parseFloat(floorInputs.buildingLength) || 0)) > 0),
     computeTab("Roofing", "roof", getRoofMatItems(roofInputs), roofCM, roofMP, roofMQtys, getRoofLaborItems(roofInputs), roofSR, roofLQtys, roofCL, (parseFloat(roofInputs.footprintSqft) || 0) > 0),
     computeTab("Plumbing", "plumbing", getPlumbingMatItems(plumbInputs), plumbCM, plumbMP, plumbMQtys, getPlumbingLaborItems(plumbInputs), plumbSR, plumbLQtys, plumbCL, (plumbInputs.fullBaths + plumbInputs.halfBaths + plumbInputs.spigots + (plumbInputs.hasKitchen ? 1 : 0) + (plumbInputs.hasLaundry ? 1 : 0)) > 0),
     computeTab("Electrical", "electrical", getElectricalMatItems(elecInputs), elecCM, elecMP, elecMQtys, getElectricalLaborItems(elecInputs), elecSR, elecLQtys, elecCL, (parseFloat(elecInputs.sqft) || 0) > 0),
