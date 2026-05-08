@@ -1866,25 +1866,27 @@ function getFloorFramingMatItems(inputs: FloorInputs): MatItem[] {
   const runLength = parseFloat(inputs.buildingLength) || 0;
   if (span === 0 || runLength === 0) return [];
   const sqft = span * runLength;
+  const storiesCount = parseInt(inputs.stories ?? "1") || 1;
 
   const spacingFt = JOIST_SPACING_FT[inputs.joistSpacing ?? "16"] ?? (4 / 3);
   const joistCount = Math.ceil(runLength / spacingFt) + 1;
-  const joistLF = Math.ceil(joistCount * (span + 1) * WASTE);
-  const rimLF = Math.ceil((2 * runLength + 2 * span) * WASTE);
+  const joistLF = Math.ceil(joistCount * (span + 1) * WASTE) * storiesCount;
+  const rimLF = Math.ceil((2 * runLength + 2 * span) * WASTE) * storiesCount;
   const beamCount = Math.max(1, parseInt(inputs.beamCount) || 1);
   const beamRunLF = Math.ceil(runLength * WASTE);
   const isTJI = inputs.joistType.startsWith("tji");
 
+  const floorLabel = storiesCount > 1 ? " (both floors)" : "";
   const items: MatItem[] = [];
 
-  items.push({ label: JOIST_LABEL[inputs.joistType], qty: joistLF, unit: "LF", price: JOIST_PRICE[inputs.joistType] });
+  items.push({ label: JOIST_LABEL[inputs.joistType] + floorLabel, qty: joistLF, unit: "LF", price: JOIST_PRICE[inputs.joistType] });
 
   if (inputs.rimType === "advantech") {
-    items.push({ label: 'Advantech 1-1/8" Rim Board', qty: rimLF, unit: "LF", price: 4.85 });
+    items.push({ label: 'Advantech 1-1/8" Rim Board' + floorLabel, qty: rimLF, unit: "LF", price: 4.85 });
   } else {
-    const rimLabel = inputs.joistType === "2x10" ? '2×10 Solid Lumber Rim Joist'
+    const rimLabel = (inputs.joistType === "2x10" ? '2×10 Solid Lumber Rim Joist'
       : inputs.joistType === "2x12" ? '2×12 Solid Lumber Rim Joist'
-      : 'LVL Rim Board (matches TJI depth)';
+      : 'LVL Rim Board (matches TJI depth)') + floorLabel;
     const rimPrice = inputs.joistType === "2x10" ? 1.85 : inputs.joistType === "2x12" ? 2.45 : 6.50;
     items.push({ label: rimLabel, qty: rimLF, unit: "LF", price: rimPrice });
   }
@@ -1923,17 +1925,17 @@ function getFloorFramingMatItems(inputs: FloorInputs): MatItem[] {
     items.push({ label: "Beam Post Caps & Saddle Hardware", qty: beamCount * 3, unit: "ea", price: 18.50 });
   }
 
-  const hangerQty = Math.max(0, joistCount - 2);
+  const hangerQty = Math.max(0, joistCount - 2) * storiesCount;
   if (hangerQty > 0) {
     items.push({
-      label: isTJI ? 'TJI Joist Hangers (IUS / ILTUS Series)' : 'Joist Hangers (LUS Series)',
+      label: (isTJI ? 'TJI Joist Hangers (IUS / ILTUS Series)' : 'Joist Hangers (LUS Series)') + floorLabel,
       qty: hangerQty, unit: "ea", price: isTJI ? 3.85 : 2.95,
     });
   }
 
   if (!isTJI && span > 10) {
-    const blockLF = Math.ceil(joistCount * 1.5 * WASTE);
-    const blockLabel = inputs.joistType === "2x10" ? '2×10 Solid Blocking' : '2×12 Solid Blocking';
+    const blockLF = Math.ceil(joistCount * 1.5 * WASTE) * storiesCount;
+    const blockLabel = (inputs.joistType === "2x10" ? '2×10 Solid Blocking' : '2×12 Solid Blocking') + floorLabel;
     items.push({ label: blockLabel, qty: blockLF, unit: "LF", price: JOIST_PRICE[inputs.joistType] });
   }
 
@@ -1961,14 +1963,16 @@ function getFloorFramingLaborItems(inputs: FloorInputs): LaborItem[] {
   const runLength = parseFloat(inputs.buildingLength) || 0;
   if (span === 0 || runLength === 0) return [];
   const sqft = span * runLength;
+  const storiesCount = parseInt(inputs.stories ?? "1") || 1;
+  const floorLabel = storiesCount > 1 ? " (both floors)" : "";
 
-  const rimLF = Math.ceil(2 * runLength + 2 * span);
+  const rimLF = Math.ceil(2 * runLength + 2 * span) * storiesCount;
   const beamCount = Math.max(1, parseInt(inputs.beamCount) || 1);
   const beamLF = Math.ceil(runLength) * beamCount;
   const items: LaborItem[] = [];
 
-  items.push({ label: "Floor Joist Framing & Layout", qty: sqft, unit: "sqft", nationalAvg: 2.85 });
-  items.push({ label: "Rim / Band Joist Install", qty: rimLF, unit: "LF", nationalAvg: 2.25 });
+  items.push({ label: "Floor Joist Framing & Layout" + floorLabel, qty: sqft * storiesCount, unit: "sqft", nationalAvg: 2.85 });
+  items.push({ label: "Rim / Band Joist Install" + floorLabel, qty: rimLF, unit: "LF", nationalAvg: 2.25 });
 
   if (inputs.beamType !== "none") {
     items.push({ label: "Main Beam Set & Hardware", qty: beamLF, unit: "LF", nationalAvg: 6.50 });
@@ -1987,27 +1991,33 @@ function getFloorFramingLaborItems(inputs: FloorInputs): LaborItem[] {
 
 function getFloorMatItems(inputs: FloorInputs): MatItem[] {
   const sqft = (parseFloat(inputs.buildingWidth) || 0) * (parseFloat(inputs.buildingLength) || 0);
+  const storiesCount = parseInt(inputs.stories ?? "1") || 1;
+  const totalSqft = sqft * storiesCount;
+  const floorLabel = storiesCount > 1 ? " (both floors)" : "";
   const adhesive = ADHESIVE_CONFIG[inputs.adhesiveType ?? "liquid"];
   return [
     ...getFloorFramingMatItems(inputs),
     ...(inputs.includeSubfloor ? [
-      { label: "Advantech 3/4\" Subfloor Panel (4×8)", qty: Math.ceil(sqft * WASTE / 32), unit: "sheet", price: 52.98 },
-      { label: adhesive.label, qty: Math.max(1, Math.ceil(sqft * WASTE / adhesive.coverage)), unit: adhesive.unit, price: adhesive.price },
+      { label: `Advantech 3/4" Subfloor Panel (4×8)${floorLabel}`, qty: Math.ceil(totalSqft * WASTE / 32), unit: "sheet", price: 52.98 },
+      { label: adhesive.label + floorLabel, qty: Math.max(1, Math.ceil(totalSqft * WASTE / adhesive.coverage)), unit: adhesive.unit, price: adhesive.price },
     ] : []),
     ...(inputs.finish === "carpet_pad" ? [
-      { label: "Carpet — Mid-Grade Broadloom (26 oz face wt)", qty: Math.ceil(sqft * WASTE), unit: "sqft", price: 2.89 },
-      { label: "Carpet Pad — 6 lb Rebond 7/16\"", qty: Math.ceil(sqft * WASTE), unit: "sqft", price: 0.65 },
+      { label: `Carpet — Mid-Grade Broadloom (26 oz face wt)${floorLabel}`, qty: Math.ceil(totalSqft * WASTE), unit: "sqft", price: 2.89 },
+      { label: `Carpet Pad — 6 lb Rebond 7/16"${floorLabel}`, qty: Math.ceil(totalSqft * WASTE), unit: "sqft", price: 0.65 },
     ] : inputs.finish !== "none" ? [
-      { label: FLOOR_LABELS[inputs.finish], qty: Math.ceil(sqft * WASTE), unit: "sqft", price: FLOOR_MAT_PRICES[inputs.finish] ?? 0 },
+      { label: FLOOR_LABELS[inputs.finish] + floorLabel, qty: Math.ceil(totalSqft * WASTE), unit: "sqft", price: FLOOR_MAT_PRICES[inputs.finish] ?? 0 },
     ] : []),
   ];
 }
 function getFloorLaborItems(inputs: FloorInputs): LaborItem[] {
   const sqft = Math.round((parseFloat(inputs.buildingWidth) || 0) * (parseFloat(inputs.buildingLength) || 0));
+  const storiesCount = parseInt(inputs.stories ?? "1") || 1;
+  const totalSqft = sqft * storiesCount;
+  const floorLabel = storiesCount > 1 ? " (both floors)" : "";
   return [
     ...getFloorFramingLaborItems(inputs),
-    ...(inputs.includeSubfloor ? [{ label: "Advantech Subfloor Install (glued & screwed)", qty: sqft, unit: "sqft", nationalAvg: 1.45 }] : []),
-    ...(inputs.finish !== "none" ? [{ label: `${FLOOR_LABELS[inputs.finish]} Installation`, qty: sqft, unit: "sqft", nationalAvg: FLOOR_LABOR[inputs.finish] ?? 0 }] : []),
+    ...(inputs.includeSubfloor ? [{ label: `Advantech Subfloor Install (glued & screwed)${floorLabel}`, qty: totalSqft, unit: "sqft", nationalAvg: 1.45 }] : []),
+    ...(inputs.finish !== "none" ? [{ label: `${FLOOR_LABELS[inputs.finish]} Installation${floorLabel}`, qty: totalSqft, unit: "sqft", nationalAvg: FLOOR_LABOR[inputs.finish] ?? 0 }] : []),
   ];
 }
 
