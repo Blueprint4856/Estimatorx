@@ -1145,8 +1145,10 @@ function getFoundationMatItems(inputs: FoundationInputs): MatItem[] {
 
   if (inputs.foundationType === "basement") {
     // Spread footing: 24" wide × 6" stone bed at bottom of excavation
+    const excavCY = Math.ceil(sqft * depth / 27 * 1.25);
     const footingStoneCY = Math.ceil(perim * (24 / 12) * (6 / 12) / 27);
     return [
+      { label: "Haul-off Disposal — Excavated Basement Spoil", qty: excavCY, unit: "CY", price: 22 },
       { label: "#57 Crushed Stone — Footing Bed (6\", 24\" wide)", qty: footingStoneCY, unit: "CY", price: 42 },
       { label: "Ready-Mix Concrete — Footings (24\" wide × 12\" deep)", qty: Math.ceil(perim * (24 / 12) * (12 / 12) / 27), unit: "CY", price: 185 },
       { label: "Footing Rebar #5 (3 continuous bars)", qty: Math.ceil(perim * 3 * 1.1), unit: "LF", price: 0.85 },
@@ -1163,9 +1165,13 @@ function getFoundationMatItems(inputs: FoundationInputs): MatItem[] {
   }
 
   // crawlspace — continuous footing: 16" wide × 4" stone bed
+  const frostDepthFtMat: Record<FoundationClimate, number> = { cold: 3.5, mixed: 1.5, hot: 1.0 };
+  const frostFtMat = frostDepthFtMat[inputs.climate] ?? 1.5;
+  const trenchCYMat = Math.ceil(perim * (24 / 12) * frostFtMat / 27);
   const footingStoneCY = Math.ceil(perim * (16 / 12) * (4 / 12) / 27);
   const blocks = Math.ceil(perim * 3 / 0.89);
   return [
+    { label: "Haul-off Disposal — Footing Trench Spoil", qty: trenchCYMat, unit: "CY", price: 22 },
     { label: "#57 Crushed Stone — Footing Bed (4\", 16\" wide)", qty: footingStoneCY, unit: "CY", price: 42 },
     { label: "Ready-Mix Concrete — Footings (16\" wide × 8\" deep)", qty: Math.ceil(perim * (16 / 12) * (8 / 12) / 27), unit: "CY", price: 185 },
     { label: "CMU Block 8\"×8\"×16\"", qty: blocks, unit: "ea", price: 2.85 },
