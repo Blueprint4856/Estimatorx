@@ -68,6 +68,7 @@ const SK = {
   elecCMat: "ex.elec.cmat", elecCLab: "ex.elec.clab",
   hvacCMat: "ex.hvac.cmat", hvacCLab: "ex.hvac.clab",
   markup: "ex.markup",
+  project: "ex.project",
   siteMatQtys: "ex.site.mqtys", siteLabQtys: "ex.site.lqtys",
   foundMatQtys: "ex.found.mqtys", foundLabQtys: "ex.found.lqtys",
   wallMatQtys: "ex.wall.mqtys", wallLabQtys: "ex.wall.lqtys",
@@ -94,6 +95,101 @@ function useLocalStorage<T>(key: string, defaultValue: T): [T, React.Dispatch<Re
     });
   }, [key]);
   return [value, setValue];
+}
+
+const SELECT_CLS = "w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors";
+
+interface ProjectInputs {
+  sqft: string;
+  footprintSqft: string;
+  stories: string;
+  buildingWidth: string;
+  buildingLength: string;
+  roofPitch: string;
+  linearFeet: string;
+}
+const DEFAULT_PROJECT: ProjectInputs = {
+  sqft: "", footprintSqft: "", stories: "", buildingWidth: "", buildingLength: "", roofPitch: "", linearFeet: "",
+};
+
+function useProject(): [ProjectInputs, React.Dispatch<React.SetStateAction<ProjectInputs>>] {
+  const [raw, set] = useLocalStorage<ProjectInputs>(SK.project, DEFAULT_PROJECT);
+  return [{ ...DEFAULT_PROJECT, ...raw }, set];
+}
+
+function ProjectBadge({ label }: { label?: string }) {
+  return (
+    <span className="block text-[10px] font-semibold uppercase tracking-wider text-[#E85D26]/70 mt-0.5">
+      ↑ {label ?? "from project"}
+    </span>
+  );
+}
+
+function ProjectSetupCard() {
+  const [project, setProject] = useProject();
+  const [open, setOpen] = useLocalStorage<boolean>("ex.project.open", true);
+  const setp = (k: keyof ProjectInputs, v: string) => setProject(prev => ({ ...prev, [k]: v }));
+  const autoPerim = project.sqft ? String(Math.ceil(Math.sqrt(parseFloat(project.sqft)) * 4)) : "";
+  const effectiveFp = project.footprintSqft || project.sqft;
+  return (
+    <div className="no-print mb-4 border border-[#E85D26]/40 bg-[#FFF8F5]">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-5 py-3 hover:bg-[#FFF0EA] transition-colors"
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-black uppercase tracking-widest text-[#E85D26]">Project Setup</span>
+          <span className="text-xs text-[#888] hidden sm:inline">Enter house details once — all tabs pick them up automatically</span>
+        </div>
+        <span className="text-[10px] uppercase font-bold tracking-wider text-[#AAA]">{open ? "▲ collapse" : "▼ expand"}</span>
+      </button>
+      {open && (
+        <div className="px-5 pb-5 border-t border-[#E85D26]/20">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-6 gap-y-3 mt-4">
+            <Field label="Gross Living Area (sqft)">
+              <NumberInput value={project.sqft} onChange={v => setp("sqft", v)} placeholder="e.g. 2000" />
+            </Field>
+            <Field label="Foundation Footprint (sqft)" note={project.sqft && !project.footprintSqft ? `Defaults to living area (${project.sqft} sqft)` : "If different from living area"}>
+              <NumberInput value={project.footprintSqft} onChange={v => setp("footprintSqft", v)} placeholder={project.sqft || "e.g. 2000"} />
+            </Field>
+            <Field label="Exterior Perimeter (LF)" note={autoPerim && !project.linearFeet ? `Auto: ~${autoPerim} LF` : "Total ext. wall linear feet"}>
+              <NumberInput value={project.linearFeet} onChange={v => setp("linearFeet", v)} placeholder={autoPerim || "e.g. 180"} />
+            </Field>
+            <Field label="Stories">
+              <select value={project.stories} onChange={e => setp("stories", e.target.value)} className={SELECT_CLS}>
+                <option value="">— not set —</option>
+                <option value="1">1 story</option>
+                <option value="2">2 stories</option>
+              </select>
+            </Field>
+            <Field label="Building Width (ft)" note="Narrow dimension (truss/rafter span)">
+              <NumberInput value={project.buildingWidth} onChange={v => setp("buildingWidth", v)} placeholder="e.g. 28" />
+            </Field>
+            <Field label="Building Length (ft)" note="Long dimension">
+              <NumberInput value={project.buildingLength} onChange={v => setp("buildingLength", v)} placeholder="e.g. 48" />
+            </Field>
+            <Field label="Roof Pitch">
+              <select value={project.roofPitch} onChange={e => setp("roofPitch", e.target.value)} className={SELECT_CLS}>
+                <option value="">— not set —</option>
+                {["4:12","5:12","6:12","7:12","8:12","9:12","10:12","12:12"].map(p => (
+                  <option key={p} value={p}>{p}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+          {effectiveFp && (
+            <p className="mt-3 text-[11px] text-[#AAA]">
+              {project.sqft && `${parseFloat(project.sqft).toLocaleString()} sqft`}
+              {project.stories && ` · ${project.stories}-story`}
+              {project.linearFeet ? ` · ${project.linearFeet} LF perimeter` : autoPerim ? ` · ~${autoPerim} LF (auto)` : ""}
+              {project.buildingWidth && project.buildingLength && ` · ${project.buildingWidth}′ × ${project.buildingLength}′`}
+              {project.roofPitch && ` · ${project.roofPitch} pitch`}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ── Feature gate — paywall integration point ──────────────────────────────
@@ -758,7 +854,13 @@ function getSiteWorkLaborItems(inputs: SiteWorkInputs): LaborItem[] {
 }
 
 function SiteWorkTab() {
-  const [inputs, setInputs] = useLocalStorage<SiteWorkInputs>(SK.sitework, DEFAULT_SITEWORK);
+  const [rawInputs, setInputs] = useLocalStorage<SiteWorkInputs>(SK.sitework, DEFAULT_SITEWORK);
+  const [project] = useProject();
+  const tabInputs: SiteWorkInputs = { ...DEFAULT_SITEWORK, ...rawInputs };
+  const inputs: SiteWorkInputs = {
+    ...tabInputs,
+    footprintSqft: tabInputs.footprintSqft || project.footprintSqft || project.sqft,
+  };
   const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.siteworkRates, {});
   const [savedMatPrices, setSavedMatPrices] = useLocalStorage<MatPrices>(SK.siteMatPrices, {});
   const [savedMatQtys, setSavedMatQtys] = useLocalStorage<QtyOverrides>(SK.siteMatQtys, {});
@@ -804,6 +906,7 @@ function SiteWorkTab() {
         </Field>
         <Field label="Building Footprint (sqft)" note="Excavation & pad prep">
           <NumberInput value={inputs.footprintSqft} onChange={v => set("footprintSqft", v)} placeholder="e.g. 1500" />
+          {!tabInputs.footprintSqft && (project.footprintSqft || project.sqft) && <ProjectBadge />}
         </Field>
         <Field label="Average Site Cut Depth (in)" note="Topsoil stripping & excavation depth">
           <NumberInput value={inputs.cutDepthIn} onChange={v => set("cutDepthIn", v)} placeholder="6" />
@@ -1231,7 +1334,14 @@ function getFoundationLaborItems(inputs: FoundationInputs): LaborItem[] {
 }
 
 function FoundationTab() {
-  const [inputs, setInputs] = useLocalStorage<FoundationInputs>(SK.foundation, DEFAULT_FOUNDATION);
+  const [rawInputs, setInputs] = useLocalStorage<FoundationInputs>(SK.foundation, DEFAULT_FOUNDATION);
+  const [project] = useProject();
+  const tabInputs: FoundationInputs = { ...DEFAULT_FOUNDATION, ...rawInputs };
+  const inputs: FoundationInputs = {
+    ...tabInputs,
+    sqft: tabInputs.sqft || project.sqft,
+    perimeter: tabInputs.perimeter || (tabInputs.perimeterOverride ? project.linearFeet : ""),
+  };
   const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.foundationRates, {});
   const [savedMatPrices, setSavedMatPrices] = useLocalStorage<MatPrices>(SK.foundMatPrices, {});
   const [savedMatQtys, setSavedMatQtys] = useLocalStorage<QtyOverrides>(SK.foundMatQtys, {});
@@ -1290,6 +1400,7 @@ function FoundationTab() {
 
         <Field label="Footprint (sqft)">
           <NumberInput value={inputs.sqft} onChange={v => set("sqft", v)} placeholder="e.g. 1500" />
+          {!tabInputs.sqft && project.sqft && <ProjectBadge />}
         </Field>
 
         <Field label="Climate Zone" note="Affects underslab insulation for slab foundations">
@@ -1541,7 +1652,7 @@ interface WallInputs {
   interiorLF: string; interiorDrywall: boolean;
   blockingLF: string;
   intDoorCount: string; extDoorCount: string; windowCount: string;
-  stories: "1" | "2";
+  stories: string;
   buildingWidth: string;
   roofPitch: string;
 }
@@ -1579,7 +1690,7 @@ const DEFAULT_WALL: WallInputs = {
   interiorLF: "", interiorDrywall: true,
   blockingLF: "",
   intDoorCount: "", extDoorCount: "", windowCount: "",
-  stories: "1", buildingWidth: "", roofPitch: "6",
+  stories: "", buildingWidth: "", roofPitch: "",
 };
 
 function getWallMatItems(inputs: WallInputs): MatItem[] {
@@ -1707,7 +1818,15 @@ function getWallLaborItems(inputs: WallInputs): LaborItem[] {
 }
 function WallTab() {
   const [rawInputs, setInputs] = useLocalStorage<WallInputs>(SK.wall, DEFAULT_WALL);
-  const inputs: WallInputs = { ...DEFAULT_WALL, ...rawInputs, studSize: migrateStudSize(rawInputs?.studSize) };
+  const [project] = useProject();
+  const tabInputs: WallInputs = { ...DEFAULT_WALL, ...rawInputs, studSize: migrateStudSize(rawInputs?.studSize) };
+  const inputs: WallInputs = {
+    ...tabInputs,
+    linearFeet: tabInputs.linearFeet || project.linearFeet,
+    stories: tabInputs.stories || project.stories || "1",
+    buildingWidth: tabInputs.buildingWidth || project.buildingWidth,
+    roofPitch: tabInputs.roofPitch || (project.roofPitch ? project.roofPitch.split(":")[0] : ""),
+  };
   const laborItems = getWallLaborItems(inputs);
   const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.wallRates, {});
   const [savedMatPrices, setSavedMatPrices] = useLocalStorage<MatPrices>(SK.wallMatPrices, {});
@@ -1749,14 +1868,18 @@ function WallTab() {
         <SectionHeader title="Exterior Walls" note="Choose stud size, sheathing, insulation & drywall" />
         <div className="grid md:grid-cols-2 gap-6">
           <Field label="Number of Stories">
-            <select value={inputs.stories ?? "1"} onChange={e => setInputs(p => ({ ...p, stories: e.target.value as "1" | "2" }))}
+            <select value={tabInputs.stories} onChange={e => setInputs(p => ({ ...p, stories: e.target.value }))}
               className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+              {!tabInputs.stories && project.stories && <option value="">↑ from project ({project.stories === "1" ? "1 story" : "2 stories"})</option>}
+              {!tabInputs.stories && !project.stories && <option value="">— select —</option>}
               <option value="1">1 story</option>
               <option value="2">2 stories</option>
             </select>
+            {!tabInputs.stories && project.stories && <ProjectBadge label={`from project: ${project.stories === "1" ? "1 story" : "2 stories"}`} />}
           </Field>
           <Field label="Exterior Wall Linear Feet" note={storiesCount > 1 ? "Enter perimeter for one floor — quantities auto-doubled" : undefined}>
             <NumberInput value={inputs.linearFeet} onChange={v => setInputs(p => ({ ...p, linearFeet: v }))} placeholder="e.g. 180" />
+            {!tabInputs.linearFeet && project.linearFeet && <ProjectBadge />}
           </Field>
           <Field label="Ceiling Height (ft)" note={storiesCount > 1 ? "Per floor" : undefined}>
             <select value={inputs.ceilingHeight} onChange={e => setInputs(p => ({ ...p, ceilingHeight: e.target.value }))}
@@ -1784,12 +1907,16 @@ function WallTab() {
         <div className="grid md:grid-cols-2 gap-6">
           <Field label="Building Width (ft)" note="Gable span — the narrow dimension of the building">
             <NumberInput value={inputs.buildingWidth} onChange={v => setInputs(p => ({ ...p, buildingWidth: v }))} placeholder="e.g. 28" />
+            {!tabInputs.buildingWidth && project.buildingWidth && <ProjectBadge />}
           </Field>
           <Field label="Roof Pitch (rise per 12)" note={gableHeightDisplay ? `Gable height: ${gableHeightDisplay} ft` : "e.g. 6 = 6:12 pitch"}>
-            <select value={inputs.roofPitch ?? "6"} onChange={e => setInputs(p => ({ ...p, roofPitch: e.target.value }))}
+            <select value={tabInputs.roofPitch} onChange={e => setInputs(p => ({ ...p, roofPitch: e.target.value }))}
               className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+              {!tabInputs.roofPitch && project.roofPitch && <option value="">↑ from project ({project.roofPitch})</option>}
+              {!tabInputs.roofPitch && !project.roofPitch && <option value="">— select —</option>}
               {["4","5","6","7","8","9","10","12"].map(p => <option key={p} value={p}>{p}:12</option>)}
             </select>
+            {!tabInputs.roofPitch && project.roofPitch && <ProjectBadge label={`from project: ${project.roofPitch}`} />}
           </Field>
         </div>
         {!inputs.buildingWidth && (
@@ -1867,7 +1994,7 @@ interface FloorInputs {
   rimType: RimType;
   beamType: BeamType;
   beamCount: string;
-  stories: "1" | "2";
+  stories: string;
   includeBasementStairs: boolean;
   basementRisers: string;
   includeInteriorStairs: boolean;
@@ -1916,7 +2043,7 @@ const DEFAULT_FLOOR: FloorInputs = {
   buildingWidth: "", buildingLength: "", finish: "lvp", includeSubfloor: true, adhesiveType: "liquid",
   includeFraming: false, joistType: "2x10", joistSpacing: "16",
   rimType: "advantech", beamType: "none", beamCount: "1",
-  stories: "1",
+  stories: "",
   includeBasementStairs: false, basementRisers: "13",
   includeInteriorStairs: false, interiorRisers: "14",
 };
@@ -2110,10 +2237,16 @@ function getFloorLaborItems(inputs: FloorInputs): LaborItem[] {
   ];
 }
 
-const SELECT_CLS = "w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors";
-
 function FloorTab() {
-  const [inputs, setInputs] = useLocalStorage<FloorInputs>(SK.floor, DEFAULT_FLOOR);
+  const [rawInputs, setInputs] = useLocalStorage<FloorInputs>(SK.floor, DEFAULT_FLOOR);
+  const [project] = useProject();
+  const tabInputs: FloorInputs = { ...DEFAULT_FLOOR, ...rawInputs };
+  const inputs: FloorInputs = {
+    ...tabInputs,
+    buildingWidth: tabInputs.buildingWidth || project.buildingWidth,
+    buildingLength: tabInputs.buildingLength || project.buildingLength,
+    stories: tabInputs.stories || project.stories || "1",
+  };
   const set = useCallback(<K extends keyof FloorInputs>(k: K, v: FloorInputs[K]) => setInputs(p => ({ ...p, [k]: v })), [setInputs]);
   const laborItems = getFloorLaborItems(inputs);
   const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.floorRates, {});
@@ -2149,9 +2282,11 @@ function FloorTab() {
         <div className="grid md:grid-cols-3 gap-6">
           <Field label="Building Width (ft)" note="Clear span direction — joists run this way">
             <NumberInput value={inputs.buildingWidth} onChange={v => set("buildingWidth", v)} placeholder="e.g. 28" />
+            {!tabInputs.buildingWidth && project.buildingWidth && <ProjectBadge />}
           </Field>
           <Field label="Building Length (ft)" note="Beam run direction — parallel to the beam">
             <NumberInput value={inputs.buildingLength} onChange={v => set("buildingLength", v)} placeholder="e.g. 48" />
+            {!tabInputs.buildingLength && project.buildingLength && <ProjectBadge />}
           </Field>
           <Field
             label="Floor Area (sq ft)"
@@ -2164,10 +2299,13 @@ function FloorTab() {
         </div>
         <div className="grid md:grid-cols-2 gap-6">
           <Field label="Number of Stories">
-            <select value={inputs.stories ?? "1"} onChange={e => set("stories", e.target.value as "1" | "2")} className={SELECT_CLS}>
+            <select value={tabInputs.stories} onChange={e => set("stories", e.target.value)} className={SELECT_CLS}>
+              {!tabInputs.stories && project.stories && <option value="">↑ from project ({project.stories === "1" ? "1 story" : "2 stories"})</option>}
+              {!tabInputs.stories && !project.stories && <option value="">— select —</option>}
               <option value="1">1 Story</option>
               <option value="2">2 Stories</option>
             </select>
+            {!tabInputs.stories && project.stories && <ProjectBadge label={`from project: ${project.stories === "1" ? "1 story" : "2 stories"}`} />}
           </Field>
         </div>
 
@@ -2323,7 +2461,7 @@ interface RoofInputs {
   roofSpacing: "16" | "24";
 }
 const PITCH_FACTORS: Record<string, number> = { "4:12": 1.054, "5:12": 1.083, "6:12": 1.118, "7:12": 1.158, "8:12": 1.202, "9:12": 1.250, "10:12": 1.302, "12:12": 1.414 };
-const DEFAULT_ROOF: RoofInputs = { footprintSqft: "", pitch: "6:12", archShingles: true, iceWater: true, includeDecking: false, roofSystem: "truss", buildingWidth: "", buildingLength: "", roofSpacing: "24" };
+const DEFAULT_ROOF: RoofInputs = { footprintSqft: "", pitch: "", archShingles: true, iceWater: true, includeDecking: false, roofSystem: "truss", buildingWidth: "", buildingLength: "", roofSpacing: "24" };
 
 // Truss price by full span
 const TRUSS_PRICE_TIERS: { maxSpan: number; price: number }[] = [
@@ -2452,7 +2590,15 @@ function getRoofLaborItems(inputs: RoofInputs): LaborItem[] {
 }
 function RoofTab() {
   const [rawInputs, setInputs] = useLocalStorage<RoofInputs>(SK.roof, DEFAULT_ROOF);
-  const inputs: RoofInputs = { ...DEFAULT_ROOF, ...rawInputs };
+  const [project] = useProject();
+  const tabInputs: RoofInputs = { ...DEFAULT_ROOF, ...rawInputs };
+  const inputs: RoofInputs = {
+    ...tabInputs,
+    footprintSqft: tabInputs.footprintSqft || project.footprintSqft || project.sqft,
+    buildingWidth: tabInputs.buildingWidth || project.buildingWidth,
+    buildingLength: tabInputs.buildingLength || project.buildingLength,
+    pitch: tabInputs.pitch || project.roofPitch || "",
+  };
   const laborItems = getRoofLaborItems(inputs);
   const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.roofRates, {});
   const [savedMatPrices, setSavedMatPrices] = useLocalStorage<MatPrices>(SK.roofMatPrices, {});
@@ -2511,9 +2657,11 @@ function RoofTab() {
           </Field>
           <Field label="Building Width (ft)" note={inputs.roofSystem === "truss" ? "Full truss span" : `Half-span ${halfSpanDisplay ? `${halfSpanDisplay.toFixed(1)}' → uses ${rc?.rSize ?? ""} rafters` : ""}`}>
             <NumberInput value={inputs.buildingWidth} onChange={v => setInputs(p => ({ ...p, buildingWidth: v }))} placeholder="e.g. 28" />
+            {!tabInputs.buildingWidth && project.buildingWidth && <ProjectBadge />}
           </Field>
           <Field label="Building Length (ft)" note={trussCountDisplay ? `${trussCountDisplay} ${inputs.roofSystem === "truss" ? "trusses" : "rafter pairs"} at ${spacingNum}" OC` : undefined}>
             <NumberInput value={inputs.buildingLength} onChange={v => setInputs(p => ({ ...p, buildingLength: v }))} placeholder="e.g. 48" />
+            {!tabInputs.buildingLength && project.buildingLength && <ProjectBadge />}
           </Field>
         </div>
         {hasFramingInputs && inputs.roofSystem === "truss" && (
@@ -2532,12 +2680,16 @@ function RoofTab() {
         <div className="grid md:grid-cols-2 gap-6">
           <Field label="Roof Footprint (sq ft)" note="Floor plan area under the roof — not the sloped surface">
             <NumberInput value={inputs.footprintSqft} onChange={v => setInputs(p => ({ ...p, footprintSqft: v }))} placeholder="e.g. 1400" />
+            {!tabInputs.footprintSqft && (project.footprintSqft || project.sqft) && <ProjectBadge />}
           </Field>
           <Field label="Roof Pitch">
-            <select value={inputs.pitch} onChange={e => setInputs(p => ({ ...p, pitch: e.target.value }))}
+            <select value={tabInputs.pitch} onChange={e => setInputs(p => ({ ...p, pitch: e.target.value }))}
               className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+              {!tabInputs.pitch && project.roofPitch && <option value="">↑ from project ({project.roofPitch})</option>}
+              {!tabInputs.pitch && !project.roofPitch && <option value="">— select pitch —</option>}
               {Object.keys(PITCH_FACTORS).map(p => <option key={p} value={p}>{p}</option>)}
             </select>
+            {!tabInputs.pitch && project.roofPitch && <ProjectBadge label={`from project: ${project.roofPitch}`} />}
           </Field>
           {fp > 0 && (
             <InfoBox>
@@ -2614,7 +2766,13 @@ function getPlumbingLaborItems(i: PlumbingInputs): LaborItem[] {
   return items;
 }
 function PlumbingTab() {
-  const [inputs, setInputs] = useLocalStorage<PlumbingInputs>(SK.plumbing, DEFAULT_PLUMBING);
+  const [rawInputs, setInputs] = useLocalStorage<PlumbingInputs>(SK.plumbing, DEFAULT_PLUMBING);
+  const [project] = useProject();
+  const tabInputs: PlumbingInputs = { ...DEFAULT_PLUMBING, ...rawInputs };
+  const inputs: PlumbingInputs = {
+    ...tabInputs,
+    homeSqft: tabInputs.homeSqft || project.sqft,
+  };
   const laborItems = getPlumbingLaborItems(inputs);
   const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.plumbingRates, {});
   const [savedMatPrices, setSavedMatPrices] = useLocalStorage<MatPrices>(SK.plumbMatPrices, {});
@@ -2644,6 +2802,7 @@ function PlumbingTab() {
           <input type="number" min={0} placeholder="e.g. 2000" value={inputs.homeSqft}
             onChange={e => setInputs(p => ({ ...p, homeSqft: e.target.value }))}
             className="w-full border border-[#DDD8D0] px-4 py-3 text-base focus:outline-none focus:border-[#E85D26]" />
+          {!tabInputs.homeSqft && project.sqft && <ProjectBadge />}
         </Field>
         {sqftVal > 0 && <div className="mt-2 text-xs text-[#888]">Pipe run distance factor: <strong>{pf.toFixed(2)}×</strong></div>}
       </div>
@@ -2731,7 +2890,13 @@ function getElectricalLaborItems(inp: ElectricalInputs): LaborItem[] {
   return items;
 }
 function ElectricalTab() {
-  const [inputs, setInputs] = useLocalStorage<ElectricalInputs>(SK.electrical, DEFAULT_ELECTRICAL);
+  const [rawInputs, setInputs] = useLocalStorage<ElectricalInputs>(SK.electrical, DEFAULT_ELECTRICAL);
+  const [project] = useProject();
+  const tabInputs: ElectricalInputs = { ...DEFAULT_ELECTRICAL, ...rawInputs };
+  const inputs: ElectricalInputs = {
+    ...tabInputs,
+    sqft: tabInputs.sqft || project.sqft,
+  };
   const setApp = useCallback((key: keyof ElectricalInputs["appliances"], val: boolean) =>
     setInputs(p => ({ ...p, appliances: { ...p.appliances, [key]: val } })), [setInputs]);
   const laborItems = getElectricalLaborItems(inputs);
@@ -2758,7 +2923,7 @@ function ElectricalTab() {
     <div>
       <p className="text-sm text-[#666] mb-6 no-print">Tell us about your home — we handle the circuit math.</p>
       <div className="grid sm:grid-cols-3 gap-8 mb-8 no-print">
-        <div className="sm:col-span-1"><Field label="Home Size (sq ft)"><NumberInput value={inputs.sqft} onChange={v => setInputs(p => ({ ...p, sqft: v }))} placeholder="e.g. 2000" /></Field></div>
+        <div className="sm:col-span-1"><Field label="Home Size (sq ft)"><NumberInput value={inputs.sqft} onChange={v => setInputs(p => ({ ...p, sqft: v }))} placeholder="e.g. 2000" />{!tabInputs.sqft && project.sqft && <ProjectBadge />}</Field></div>
         <Stepper label="Bedrooms" value={inputs.bedrooms} onChange={v => setInputs(p => ({ ...p, bedrooms: v }))} min={1} max={8} />
         <Stepper label="Bathrooms" value={inputs.bathrooms} onChange={v => setInputs(p => ({ ...p, bathrooms: v }))} min={1} max={8} />
       </div>
@@ -2792,7 +2957,7 @@ function ElectricalTab() {
    HVAC TAB
 ───────────────────────────────────────────── */
 interface HvacInputs { sqft: string; stories: string; climate: string; system: string; gasFireplace: boolean; }
-const DEFAULT_HVAC: HvacInputs = { sqft: "", stories: "1", climate: "mixed", system: "gas-central", gasFireplace: false };
+const DEFAULT_HVAC: HvacInputs = { sqft: "", stories: "", climate: "mixed", system: "gas-central", gasFireplace: false };
 const HEATING_BTU: Record<string, number> = { cold: 45, mixed: 35, hot: 25 };
 const COOLING_BTU: Record<string, number> = { cold: 20, mixed: 25, hot: 35 };
 
@@ -2893,7 +3058,14 @@ function getHvacLaborItems(inp: HvacInputs): LaborItem[] {
   return items;
 }
 function HvacTab() {
-  const [inputs, setInputs] = useLocalStorage<HvacInputs>(SK.hvac, DEFAULT_HVAC);
+  const [rawInputs, setInputs] = useLocalStorage<HvacInputs>(SK.hvac, DEFAULT_HVAC);
+  const [project] = useProject();
+  const tabInputs: HvacInputs = { ...DEFAULT_HVAC, ...rawInputs };
+  const inputs: HvacInputs = {
+    ...tabInputs,
+    sqft: tabInputs.sqft || project.sqft,
+    stories: tabInputs.stories || project.stories || "1",
+  };
   const laborItems = getHvacLaborItems(inputs);
   const [savedRates, setSavedRates] = useLocalStorage<LaborRates>(SK.hvacRates, {});
   const [savedMatPrices, setSavedMatPrices] = useLocalStorage<MatPrices>(SK.hvacMatPrices, {});
@@ -2920,12 +3092,15 @@ function HvacTab() {
     <div>
       <p className="text-sm text-[#666] mb-6 no-print">Tell us about your home — we calculate the equipment size you need.</p>
       <div className="grid md:grid-cols-2 gap-6 mb-6 no-print">
-        <Field label="Home Size (sq ft)"><NumberInput value={inputs.sqft} onChange={v => setInputs(p => ({ ...p, sqft: v }))} placeholder="e.g. 2000" /></Field>
+        <Field label="Home Size (sq ft)"><NumberInput value={inputs.sqft} onChange={v => setInputs(p => ({ ...p, sqft: v }))} placeholder="e.g. 2000" />{!tabInputs.sqft && project.sqft && <ProjectBadge />}</Field>
         <Field label="Number of Stories">
-          <select value={inputs.stories} onChange={e => setInputs(p => ({ ...p, stories: e.target.value }))}
+          <select value={tabInputs.stories} onChange={e => setInputs(p => ({ ...p, stories: e.target.value }))}
             className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+            {!tabInputs.stories && project.stories && <option value="">↑ from project ({project.stories === "1" ? "1 story" : "2 stories"})</option>}
+            {!tabInputs.stories && !project.stories && <option value="">— select —</option>}
             <option value="1">1 story</option><option value="2">2 stories</option><option value="3">3 stories</option>
           </select>
+          {!tabInputs.stories && project.stories && <ProjectBadge label={`from project: ${project.stories === "1" ? "1 story" : "2 stories"}`} />}
         </Field>
         <Field label="Climate / Region">
           <select value={inputs.climate} onChange={e => setInputs(p => ({ ...p, climate: e.target.value }))}
@@ -3383,6 +3558,7 @@ export default function Estimator() {
             </div>
           </div>
 
+          <ProjectSetupCard />
           <div key={resetKey} className="bg-white border border-[#DDD8D0] p-8 shadow-sm">
             {tab === "sitework" && <SiteWorkTab />}
             {tab === "foundation" && <FoundationTab />}
