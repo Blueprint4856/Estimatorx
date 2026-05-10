@@ -593,7 +593,6 @@ interface SiteWorkInputs {
   wellDepthFt: string;
   septicBedrooms: string;
   septicType: SepticType;
-  septicSandHauledIn: boolean;
 }
 
 const DEFAULT_SITEWORK: SiteWorkInputs = {
@@ -611,7 +610,6 @@ const DEFAULT_SITEWORK: SiteWorkInputs = {
   wellDepthFt: "200",
   septicBedrooms: "3",
   septicType: "gravity",
-  septicSandHauledIn: true,
 };
 
 function septicTankSpec(br: number): { label: string; price: number } {
@@ -685,8 +683,8 @@ function getSiteWorkMatItems(inputs: SiteWorkInputs): MatItem[] {
     items.push({ label: "#57 Stone Septic Media", qty: Math.ceil(fieldLF * 1.5 / 27), unit: "CY", price: 52 });
     items.push({ label: "Geotextile Filter Fabric", qty: Math.ceil(fieldLF * 3 * WASTE), unit: "sqft", price: 0.35 });
     items.push({ label: "Inspection Ports", qty: 2, unit: "ea", price: 45 });
-    if (inputs.septicType === "mound" && inputs.septicSandHauledIn && moundCY > 0) {
-      items.push({ label: "Septic Sand Import — Mound Fill", qty: moundCY, unit: "CY", price: 42 });
+    if (inputs.septicType === "mound" && moundCY > 0) {
+      items.push({ label: "Certified Septic Sand — Mound Fill (env. grade, imported)", qty: moundCY, unit: "CY", price: 42 });
     }
   }
 
@@ -876,11 +874,7 @@ function SiteWorkTab() {
             </Field>
           </div>
           {inputs.septicType === "mound" && (
-            <div className="mb-4">
-              <Toggle checked={inputs.septicSandHauledIn} onChange={v => set("septicSandHauledIn", v)}
-                label="Septic sand — import from off-site (mound fill sand not available on site)" />
-              <p className="mt-1 ml-7 text-xs text-[#AAA]">Mound systems require a large volume of imported sand; unchecked if owner already has on-site fill.</p>
-            </div>
+            <p className="mb-3 text-xs text-[#AAA]">Mound systems require certified environmental-grade sand — always included. Adjust qty if owner has pre-approved on-site fill.</p>
           )}
           <p className="text-xs text-[#AAA]">Tank, D-box, perforated pipe, #57 stone, geotextile fabric & inspection ports calculated from bedroom count.</p>
         </div>
@@ -1158,8 +1152,9 @@ function getFoundationMatItems(inputs: FoundationInputs): MatItem[] {
       { label: "Dimple Drainage Board", qty: Math.ceil(perim * depth), unit: "sqft", price: 0.65 },
       { label: "4\" Perforated Drain Tile", qty: perim, unit: "LF", price: 1.25 },
       { label: "Drainage Gravel (perimeter trench)", qty: Math.ceil(perim * 1 * 1 / 27), unit: "CY", price: 42 },
-      { label: "Ready-Mix Concrete — Basement Slab (3.5\")", qty: Math.ceil(sqft * (3.5 / 12) / 27), unit: "CY", price: 185 },
+      { label: "Compacted Gravel Base — Basement Slab (4\")", qty: Math.ceil(sqft * (4 / 12) / 27), unit: "CY", price: 42 },
       { label: "6-Mil Vapor Barrier (basement floor)", qty: Math.ceil(sqft * 1.1), unit: "sqft", price: 0.12 },
+      { label: "Ready-Mix Concrete — Basement Slab (3.5\")", qty: Math.ceil(sqft * (3.5 / 12) / 27), unit: "CY", price: 185 },
       { label: "Anchor Bolts (every 6')", qty: Math.ceil(perim / 6), unit: "ea", price: 1.85 },
     ];
   }
@@ -1212,6 +1207,7 @@ function getFoundationLaborItems(inputs: FoundationInputs): LaborItem[] {
       { label: "Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 19.50 },
       { label: "Foundation Wall (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 27.50 },
       { label: "Waterproofing & Drainage Install", qty: wallArea, unit: "sqft", nationalAvg: 4.75 },
+      { label: "Gravel Base Compact — Basement Slab", qty: sqft, unit: "sqft", nationalAvg: 0.82 },
       { label: "Basement Slab Pour & Finish", qty: sqft, unit: "sqft", nationalAvg: 4.25 },
     ];
   }
