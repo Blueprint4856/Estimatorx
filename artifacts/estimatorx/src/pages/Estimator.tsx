@@ -1669,6 +1669,19 @@ interface WallInputs {
   stories: string;
   buildingWidth: string;
   roofPitch: string;
+  includeWindowUnits: boolean;
+  windowType: string;
+  includeExtDoorUnits: boolean;
+  extDoorEntryCount: string;
+  extDoorSliderCount: string;
+  extDoorFrenchCount: string;
+  extDoorGarSingleCount: string;
+  extDoorGarDoubleCount: string;
+  includeIntDoorUnits: boolean;
+  intDoorType: string;
+  includeTrim: boolean;
+  trimStyle: string;
+  baseMoldingLF: string;
 }
 
 const STUD_CONFIG: Record<StudSize, { studLabel: string; plateLabel: string; studPrice: number; platePrice: number; ocSpacing: number; insulLabel: string; insulPrice: number }> = {
@@ -1705,6 +1718,35 @@ const DEFAULT_WALL: WallInputs = {
   blockingLF: "",
   intDoorCount: "", extDoorCount: "", windowCount: "",
   stories: "", buildingWidth: "", roofPitch: "",
+  includeWindowUnits: false, windowType: "single_hung",
+  includeExtDoorUnits: false,
+  extDoorEntryCount: "", extDoorSliderCount: "", extDoorFrenchCount: "",
+  extDoorGarSingleCount: "", extDoorGarDoubleCount: "",
+  includeIntDoorUnits: false, intDoorType: "hollow_prehung",
+  includeTrim: false, trimStyle: "craftsman", baseMoldingLF: "",
+};
+
+const WINDOW_TYPES: Record<string, { label: string; price: number }> = {
+  single_hung:  { label: "Single-Hung Window",          price: 350 },
+  double_hung:  { label: "Double-Hung Window",           price: 425 },
+  casement:     { label: "Casement Window",              price: 485 },
+  sliding:      { label: "Horizontal Sliding Window",    price: 375 },
+  picture:      { label: "Picture Window",               price: 295 },
+  egress:       { label: "Egress Window (below-grade)",  price: 625 },
+};
+
+const INT_DOOR_TYPES: Record<string, { label: string; price: number; laborAvg: number; laborLabel: string }> = {
+  hollow_prehung: { label: 'Hollow-Core Prehung Door (2\'6″×6\'8″)', price: 89,  laborAvg: 95,  laborLabel: "Interior Door Hang & Hardware — Hollow-Core" },
+  solid_prehung:  { label: "Solid-Core Prehung Door",               price: 165, laborAvg: 115, laborLabel: "Interior Door Hang & Hardware — Solid-Core" },
+  pocket:         { label: "Pocket Door Kit",                        price: 295, laborAvg: 195, laborLabel: "Pocket Door Install & Hardware" },
+  bifold:         { label: "Bifold Door (closet, pair)",             price: 125, laborAvg: 75,  laborLabel: "Bifold Door Install & Hardware" },
+  barn:           { label: "Barn Door & Hardware Kit",               price: 385, laborAvg: 165, laborLabel: "Barn Door Install & Hardware" },
+};
+
+const TRIM_STYLES: Record<string, { label: string; basePrice: number; casingPrice: number }> = {
+  basic:     { label: "Basic Colonial",    basePrice: 0.75, casingPrice: 0.85 },
+  craftsman: { label: "Craftsman",         basePrice: 1.35, casingPrice: 1.65 },
+  premium:   { label: "Premium / Custom",  basePrice: 2.15, casingPrice: 2.65 },
 };
 
 function getWallMatItems(inputs: WallInputs): MatItem[] {
@@ -1729,9 +1771,21 @@ function getWallMatItems(inputs: WallInputs): MatItem[] {
   const blkLF = parseFloat(inputs.blockingLF) || 0;
 
   const intDoors = parseInt(inputs.intDoorCount) || 0;
-  const extDoors = parseInt(inputs.extDoorCount) || 0;
+  const extDoorEntryN    = parseInt(inputs.extDoorEntryCount) || 0;
+  const extDoorSliderN   = parseInt(inputs.extDoorSliderCount) || 0;
+  const extDoorFrenchN   = parseInt(inputs.extDoorFrenchCount) || 0;
+  const extDoorGarSingleN= parseInt(inputs.extDoorGarSingleCount) || 0;
+  const extDoorGarDoubleN= parseInt(inputs.extDoorGarDoubleCount) || 0;
+  const extDoors = inputs.includeExtDoorUnits
+    ? extDoorEntryN + extDoorSliderN + extDoorFrenchN + extDoorGarSingleN + extDoorGarDoubleN
+    : parseInt(inputs.extDoorCount) || 0;
   const windows = parseInt(inputs.windowCount) || 0;
   const totalRO = intDoors + extDoors + windows;
+
+  const winCfg = WINDOW_TYPES[inputs.windowType] ?? WINDOW_TYPES.single_hung;
+  const intDoorCfg = INT_DOOR_TYPES[inputs.intDoorType] ?? INT_DOOR_TYPES.hollow_prehung;
+  const trimCfg = TRIM_STYLES[inputs.trimStyle] ?? TRIM_STYLES.craftsman;
+  const baseMoldingLF = parseFloat(inputs.baseMoldingLF) || 0;
 
   // ── Gable ends ──
   const bw = parseFloat(inputs.buildingWidth) || 0;
@@ -1795,6 +1849,35 @@ function getWallMatItems(inputs: WallInputs): MatItem[] {
     ...(gableArea > 0 && inputs.insulation ? [
       { label: `Gable End Insulation — ${sc.insulLabel}`, qty: Math.ceil(gableArea * WASTE), unit: "sqft", price: sc.insulPrice },
     ] : []),
+
+    // ── Window units & flashing ──
+    ...(inputs.includeWindowUnits && windows > 0 ? [
+      { label: winCfg.label, qty: windows, unit: "ea", price: winCfg.price } as MatItem,
+      { label: 'Window Flashing Tape (3″×75 LF roll)', qty: Math.max(1, Math.ceil(windows / 6)), unit: "roll", price: 28.98 },
+      { label: "Flexible Sill Pan Flashing (LF)", qty: Math.ceil(windows * 2.5), unit: "LF", price: 1.85 },
+    ] : []),
+
+    // ── Exterior door units & flashing ──
+    ...(inputs.includeExtDoorUnits ? [
+      ...(extDoorEntryN  > 0 ? [{ label: "Entry Door — Prehung, Insulated Steel",  qty: extDoorEntryN,   unit: "ea", price: 485  } as MatItem] : []),
+      ...(extDoorFrenchN > 0 ? [{ label: "French Door Pair — Prehung",              qty: extDoorFrenchN,  unit: "ea", price: 1250 } as MatItem] : []),
+      ...(extDoorSliderN > 0 ? [{ label: "Sliding Glass Door (6 ft, prehung)",       qty: extDoorSliderN,  unit: "ea", price: 895  } as MatItem] : []),
+      ...(extDoorGarSingleN > 0 ? [{ label: "Garage Door — Single (9×7)",           qty: extDoorGarSingleN, unit: "ea", price: 850  } as MatItem] : []),
+      ...(extDoorGarDoubleN > 0 ? [{ label: "Garage Door — Double (16×7)",          qty: extDoorGarDoubleN, unit: "ea", price: 1350 } as MatItem] : []),
+      ...(extDoors > 0 ? [{ label: "Exterior Door Flashing / Z-Bar (per opening)",  qty: extDoors, unit: "ea", price: 12.50 } as MatItem] : []),
+    ] : []),
+
+    // ── Interior door units ──
+    ...(inputs.includeIntDoorUnits && intDoors > 0 ? [
+      { label: intDoorCfg.label, qty: intDoors, unit: "ea", price: intDoorCfg.price } as MatItem,
+    ] : []),
+
+    // ── Interior trim ──
+    ...(inputs.includeTrim ? [
+      ...(baseMoldingLF > 0 ? [{ label: `Base Molding — ${trimCfg.label}`, qty: baseMoldingLF, unit: "LF", price: trimCfg.basePrice } as MatItem] : []),
+      ...(inputs.includeIntDoorUnits && intDoors > 0 ? [{ label: `Door Casing — ${trimCfg.label} (both sides, ~18 LF/door)`, qty: Math.ceil(intDoors * 18), unit: "LF", price: trimCfg.casingPrice } as MatItem] : []),
+      ...(inputs.includeWindowUnits && windows > 0 ? [{ label: `Window Casing — ${trimCfg.label} (~12 LF/window)`, qty: Math.ceil(windows * 12), unit: "LF", price: trimCfg.casingPrice } as MatItem] : []),
+    ] : []),
   ];
 }
 function getWallLaborItems(inputs: WallInputs): LaborItem[] {
@@ -1806,9 +1889,20 @@ function getWallLaborItems(inputs: WallInputs): LaborItem[] {
   const intArea = Math.round(intLF * h * storiesCount);
   const blkLF = parseFloat(inputs.blockingLF) || 0;
   const intDoors = parseInt(inputs.intDoorCount) || 0;
-  const extDoors = parseInt(inputs.extDoorCount) || 0;
+  const extDoorEntryN    = parseInt(inputs.extDoorEntryCount) || 0;
+  const extDoorSliderN   = parseInt(inputs.extDoorSliderCount) || 0;
+  const extDoorFrenchN   = parseInt(inputs.extDoorFrenchCount) || 0;
+  const extDoorGarSingleN= parseInt(inputs.extDoorGarSingleCount) || 0;
+  const extDoorGarDoubleN= parseInt(inputs.extDoorGarDoubleCount) || 0;
+  const extDoors = inputs.includeExtDoorUnits
+    ? extDoorEntryN + extDoorSliderN + extDoorFrenchN + extDoorGarSingleN + extDoorGarDoubleN
+    : parseInt(inputs.extDoorCount) || 0;
   const windows = parseInt(inputs.windowCount) || 0;
   const floorSfx = storiesCount > 1 ? " (both floors)" : "";
+  const winCfg = WINDOW_TYPES[inputs.windowType] ?? WINDOW_TYPES.single_hung;
+  const intDoorCfg = INT_DOOR_TYPES[inputs.intDoorType] ?? INT_DOOR_TYPES.hollow_prehung;
+  const trimCfg = TRIM_STYLES[inputs.trimStyle] ?? TRIM_STYLES.craftsman;
+  const baseMoldingLF = parseFloat(inputs.baseMoldingLF) || 0;
 
   const bw = parseFloat(inputs.buildingWidth) || 0;
   const pitch = parseFloat(inputs.roofPitch) || 0;
@@ -1828,6 +1922,30 @@ function getWallLaborItems(inputs: WallInputs): LaborItem[] {
     ...(blkLF > 0 ? [{ label: "2×10 Blocking Install (cabinets, vanities, fixtures)", qty: blkLF, unit: "LF", nationalAvg: 2.65 }] : []),
     ...(gableArea > 0 ? [{ label: "Gable End Framing (both ends)", qty: gableArea, unit: "sqft", nationalAvg: 4.50 }] : []),
     ...(gableArea > 0 && inputs.exteriorSheathing ? [{ label: "Gable End Sheathing Install", qty: gableArea, unit: "sqft", nationalAvg: 2.40 }] : []),
+
+    // ── Window install ──
+    ...(inputs.includeWindowUnits && windows > 0 ? [
+      { label: "Window Install, Flash & Seal", qty: windows, unit: "ea", nationalAvg: 185.00 },
+    ] : []),
+
+    // ── Exterior door install ──
+    ...(inputs.includeExtDoorUnits ? [
+      ...((extDoorEntryN + extDoorFrenchN) > 0 ? [{ label: "Entry / French Door — Install, Flash & Weather-Seal", qty: extDoorEntryN + extDoorFrenchN, unit: "ea", nationalAvg: 225.00 }] : []),
+      ...(extDoorSliderN > 0 ? [{ label: "Sliding Glass Door — Install, Flash & Seal", qty: extDoorSliderN, unit: "ea", nationalAvg: 285.00 }] : []),
+      ...((extDoorGarSingleN + extDoorGarDoubleN) > 0 ? [{ label: "Garage Door — Install, Springs & Opener Rough-In", qty: extDoorGarSingleN + extDoorGarDoubleN, unit: "ea", nationalAvg: 350.00 }] : []),
+    ] : []),
+
+    // ── Interior door install ──
+    ...(inputs.includeIntDoorUnits && intDoors > 0 ? [
+      { label: intDoorCfg.laborLabel, qty: intDoors, unit: "ea", nationalAvg: intDoorCfg.laborAvg },
+    ] : []),
+
+    // ── Trim install ──
+    ...(inputs.includeTrim ? [
+      ...(baseMoldingLF > 0 ? [{ label: "Base Molding Install", qty: baseMoldingLF, unit: "LF", nationalAvg: 3.50 }] : []),
+      ...(inputs.includeIntDoorUnits && intDoors > 0 ? [{ label: "Door Casing Install (both sides)", qty: Math.ceil(intDoors * 18), unit: "LF", nationalAvg: 4.25 }] : []),
+      ...(inputs.includeWindowUnits && windows > 0 ? [{ label: "Window Casing Install", qty: Math.ceil(windows * 12), unit: "LF", nationalAvg: 4.25 }] : []),
+    ] : []),
   ];
 }
 function WallTab() {
@@ -1937,9 +2055,71 @@ function WallTab() {
           <p className="text-xs text-[#AAA] mt-2">Leave Building Width blank to skip gable end materials.</p>
         )}
 
+        {/* ── Windows & Exterior Doors ── */}
+        <SectionHeader title="Windows & Exterior Doors" note="Toggle to add unit costs, flashing & install labor" />
+
+        {/* Windows panel */}
+        <div className="mb-4">
+          <Toggle checked={inputs.includeWindowUnits} onChange={v => setInputs(p => ({ ...p, includeWindowUnits: v }))} label="Price window units, flashing & install" />
+          {inputs.includeWindowUnits && (
+            <div className="mt-3 pl-4 border-l-2 border-[#E85D26]/30 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Window Count" note="Drives rough opening framing + unit cost">
+                <NumberInput value={inputs.windowCount} onChange={v => setInputs(p => ({ ...p, windowCount: v }))} placeholder="e.g. 18" />
+              </Field>
+              <Field label="Window Type" note={`$${(WINDOW_TYPES[inputs.windowType] ?? WINDOW_TYPES.single_hung).price.toLocaleString()} / unit — override in table`}>
+                <select value={inputs.windowType} onChange={e => setInputs(p => ({ ...p, windowType: e.target.value }))}
+                  className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+                  {Object.entries(WINDOW_TYPES).map(([k, v]) => <option key={k} value={k}>{v.label} — ${v.price.toLocaleString()}/ea</option>)}
+                </select>
+              </Field>
+            </div>
+          )}
+          {!inputs.includeWindowUnits && (
+            <div className="mt-2 pl-4">
+              <Field label="Window Count" note="King + jack + cripple studs + 2×10 header + sill">
+                <NumberInput value={inputs.windowCount} onChange={v => setInputs(p => ({ ...p, windowCount: v }))} placeholder="e.g. 18" />
+              </Field>
+            </div>
+          )}
+        </div>
+
+        {/* Exterior Doors panel */}
+        <div className="mb-4">
+          <Toggle checked={inputs.includeExtDoorUnits} onChange={v => setInputs(p => ({ ...p, includeExtDoorUnits: v }))} label="Price exterior door units, flashing & install" />
+          {inputs.includeExtDoorUnits && (
+            <div className="mt-3 pl-4 border-l-2 border-[#E85D26]/30">
+              <p className="text-xs text-[#AAA] mb-3">Enter count per type — totals drive rough opening framing automatically</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                <Field label="Entry Door" note="$485/ea">
+                  <NumberInput value={inputs.extDoorEntryCount} onChange={v => setInputs(p => ({ ...p, extDoorEntryCount: v }))} placeholder="0" />
+                </Field>
+                <Field label="French Pair" note="$1,250/ea">
+                  <NumberInput value={inputs.extDoorFrenchCount} onChange={v => setInputs(p => ({ ...p, extDoorFrenchCount: v }))} placeholder="0" />
+                </Field>
+                <Field label="Sliding Glass" note="$895/ea">
+                  <NumberInput value={inputs.extDoorSliderCount} onChange={v => setInputs(p => ({ ...p, extDoorSliderCount: v }))} placeholder="0" />
+                </Field>
+                <Field label="Garage Single" note="$850/ea (9×7)">
+                  <NumberInput value={inputs.extDoorGarSingleCount} onChange={v => setInputs(p => ({ ...p, extDoorGarSingleCount: v }))} placeholder="0" />
+                </Field>
+                <Field label="Garage Double" note="$1,350/ea (16×7)">
+                  <NumberInput value={inputs.extDoorGarDoubleCount} onChange={v => setInputs(p => ({ ...p, extDoorGarDoubleCount: v }))} placeholder="0" />
+                </Field>
+              </div>
+            </div>
+          )}
+          {!inputs.includeExtDoorUnits && (
+            <div className="mt-2 pl-4">
+              <Field label="Exterior Door Count" note="King + jack studs + 2×10 header + spacer">
+                <NumberInput value={inputs.extDoorCount} onChange={v => setInputs(p => ({ ...p, extDoorCount: v }))} placeholder="e.g. 3" />
+              </Field>
+            </div>
+          )}
+        </div>
+
         {/* ── Interior Walls ── */}
         <SectionHeader title="Interior Walls" note="Always 2×4 @ 16″ OC — drywall applied both sides" />
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-2 gap-6 mb-4">
           <Field label="Interior Wall Linear Feet">
             <NumberInput value={inputs.interiorLF} onChange={v => setInputs(p => ({ ...p, interiorLF: v }))} placeholder="e.g. 120" />
           </Field>
@@ -1948,18 +2128,53 @@ function WallTab() {
           </div>
         </div>
 
-        {/* ── Rough Openings ── */}
-        <SectionHeader title="Rough Openings" note="King studs, jack studs & doubled headers auto-calculated per opening" />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-          <Field label="Interior Doors" note="King + jack studs + 2×10 header">
-            <NumberInput value={inputs.intDoorCount} onChange={v => setInputs(p => ({ ...p, intDoorCount: v }))} placeholder="e.g. 12" />
-          </Field>
-          <Field label="Exterior Doors" note="King + jack studs + 2×10 header + spacer">
-            <NumberInput value={inputs.extDoorCount} onChange={v => setInputs(p => ({ ...p, extDoorCount: v }))} placeholder="e.g. 3" />
-          </Field>
-          <Field label="Windows" note="King + jack + cripple studs + 2×10 header + sill">
-            <NumberInput value={inputs.windowCount} onChange={v => setInputs(p => ({ ...p, windowCount: v }))} placeholder="e.g. 18" />
-          </Field>
+        {/* Interior Doors panel */}
+        <div className="mb-4">
+          <Toggle checked={inputs.includeIntDoorUnits} onChange={v => setInputs(p => ({ ...p, includeIntDoorUnits: v }))} label="Price interior door units & install" />
+          {inputs.includeIntDoorUnits && (
+            <div className="mt-3 pl-4 border-l-2 border-[#E85D26]/30 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Interior Door Count" note="Drives rough opening framing + unit cost">
+                <NumberInput value={inputs.intDoorCount} onChange={v => setInputs(p => ({ ...p, intDoorCount: v }))} placeholder="e.g. 12" />
+              </Field>
+              <Field label="Door Type" note={`$${(INT_DOOR_TYPES[inputs.intDoorType] ?? INT_DOOR_TYPES.hollow_prehung).price}/unit — override in table`}>
+                <select value={inputs.intDoorType} onChange={e => setInputs(p => ({ ...p, intDoorType: e.target.value }))}
+                  className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+                  {Object.entries(INT_DOOR_TYPES).map(([k, v]) => <option key={k} value={k}>{v.label} — ${v.price}/ea</option>)}
+                </select>
+              </Field>
+            </div>
+          )}
+          {!inputs.includeIntDoorUnits && (
+            <div className="mt-2 pl-4">
+              <Field label="Interior Door Count" note="King + jack studs + 2×10 header">
+                <NumberInput value={inputs.intDoorCount} onChange={v => setInputs(p => ({ ...p, intDoorCount: v }))} placeholder="e.g. 12" />
+              </Field>
+            </div>
+          )}
+        </div>
+
+        {/* Trim panel */}
+        <div className="mb-4">
+          <Toggle checked={inputs.includeTrim} onChange={v => setInputs(p => ({ ...p, includeTrim: v }))} label="Include interior trim (base molding & door/window casing)" />
+          {inputs.includeTrim && (
+            <div className="mt-3 pl-4 border-l-2 border-[#E85D26]/30 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Field label="Trim Style" note="Applies to base molding & all casing">
+                <select value={inputs.trimStyle} onChange={e => setInputs(p => ({ ...p, trimStyle: e.target.value }))}
+                  className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+                  {Object.entries(TRIM_STYLES).map(([k, v]) => <option key={k} value={k}>{v.label} — base ${v.basePrice}/LF, casing ${v.casingPrice}/LF</option>)}
+                </select>
+              </Field>
+              <Field label="Base Molding (LF)" note="Measure total perimeter of all finished rooms">
+                <NumberInput value={inputs.baseMoldingLF} onChange={v => setInputs(p => ({ ...p, baseMoldingLF: v }))} placeholder="e.g. 480" />
+              </Field>
+              {(inputs.includeIntDoorUnits || inputs.includeWindowUnits) && (
+                <div className="sm:col-span-2 text-xs text-[#888] bg-[#FAF8F5] border border-[#E8E4DF] px-3 py-2">
+                  Door casing auto-computed: {(parseInt(inputs.intDoorCount)||0)} doors × 18 LF = {(parseInt(inputs.intDoorCount)||0)*18} LF
+                  {inputs.includeWindowUnits && ` · Window casing: ${(parseInt(inputs.windowCount)||0)} windows × 12 LF = ${(parseInt(inputs.windowCount)||0)*12} LF`}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── Wall Blocking ── */}
