@@ -1209,6 +1209,7 @@ interface FoundationInputs {
   foundationType: FoundationType;
   climate: FoundationClimate;
   basementDepth: BasementDepth;
+  haulSpoil: boolean;
 }
 
 const DEFAULT_FOUNDATION: FoundationInputs = {
@@ -1218,6 +1219,7 @@ const DEFAULT_FOUNDATION: FoundationInputs = {
   foundationType: "slab",
   climate: "cold",
   basementDepth: "8",
+  haulSpoil: true,
 };
 
 function getFoundationMatItems(inputs: FoundationInputs): MatItem[] {
@@ -1249,7 +1251,7 @@ function getFoundationMatItems(inputs: FoundationInputs): MatItem[] {
     const excavCY = Math.ceil(sqft * depth / 27 * 1.25);
     const footingStoneCY = Math.ceil(perim * (24 / 12) * (6 / 12) / 27);
     return [
-      { label: "Haul-off Disposal — Excavated Basement Spoil", qty: excavCY, unit: "CY", price: 22 },
+      ...(inputs.haulSpoil ? [{ label: "Haul-off Disposal — Excavated Basement Spoil", qty: excavCY, unit: "CY", price: 22 } as MatItem] : []),
       { label: "#57 Crushed Stone — Footing Bed (6\", 24\" wide)", qty: footingStoneCY, unit: "CY", price: 42 },
       { label: "Ready-Mix Concrete — Footings (24\" wide × 12\" deep)", qty: Math.ceil(perim * (24 / 12) * (12 / 12) / 27), unit: "CY", price: 185 },
       { label: "Footing Rebar #5 (3 continuous bars)", qty: Math.ceil(perim * 3 * 1.1), unit: "LF", price: 0.85 },
@@ -1273,7 +1275,7 @@ function getFoundationMatItems(inputs: FoundationInputs): MatItem[] {
   const footingStoneCY = Math.ceil(perim * (16 / 12) * (4 / 12) / 27);
   const blocks = Math.ceil(perim * 3 / 0.89);
   return [
-    { label: "Haul-off Disposal — Footing Trench Spoil", qty: trenchCYMat, unit: "CY", price: 22 },
+    ...(inputs.haulSpoil ? [{ label: "Haul-off Disposal — Footing Trench Spoil", qty: trenchCYMat, unit: "CY", price: 22 } as MatItem] : []),
     { label: "#57 Crushed Stone — Footing Bed (4\", 16\" wide)", qty: footingStoneCY, unit: "CY", price: 42 },
     { label: "Ready-Mix Concrete — Footings (16\" wide × 8\" deep)", qty: Math.ceil(perim * (16 / 12) * (8 / 12) / 27), unit: "CY", price: 185 },
     { label: "CMU Block 8\"×8\"×16\"", qty: blocks, unit: "ea", price: 2.85 },
@@ -1309,7 +1311,7 @@ function getFoundationLaborItems(inputs: FoundationInputs): LaborItem[] {
     const footingStoneCY = Math.ceil(perim * (24 / 12) * (6 / 12) / 27);
     const wallArea = perim * depth;
     return [
-      { label: "Full Basement Excavation (machine, incl. haul)", qty: excavCY, unit: "CY", nationalAvg: 12.50 },
+      { label: inputs.haulSpoil ? "Full Basement Excavation (machine, incl. haul)" : "Full Basement Excavation (machine — spoil stockpiled on-site)", qty: excavCY, unit: "CY", nationalAvg: inputs.haulSpoil ? 12.50 : 9.50 },
       { label: "#57 Stone Footing Bed — Place & Compact (bottom of hole)", qty: footingStoneCY, unit: "CY", nationalAvg: 18.50 },
       { label: "Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 19.50 },
       { label: "Foundation Wall (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 27.50 },
@@ -1325,7 +1327,7 @@ function getFoundationLaborItems(inputs: FoundationInputs): LaborItem[] {
   const trenchCY = Math.ceil(perim * (24 / 12) * frostFt / 27); // 24" wide trench × frost depth
   const footingStoneCY = Math.ceil(perim * (16 / 12) * (4 / 12) / 27);
   return [
-    { label: `Footing Trench Excavation — ${frostFt * 12}" frost depth (machine)`, qty: trenchCY, unit: "CY", nationalAvg: 12.50 },
+    { label: inputs.haulSpoil ? `Footing Trench Excavation — ${frostFt * 12}" frost depth (machine, incl. haul)` : `Footing Trench Excavation — ${frostFt * 12}" frost depth (machine — spoil stockpiled on-site)`, qty: trenchCY, unit: "CY", nationalAvg: inputs.haulSpoil ? 12.50 : 9.50 },
     { label: "#57 Stone Footing Bed — Place & Compact", qty: footingStoneCY, unit: "CY", nationalAvg: 18.50 },
     { label: "Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 19.50 },
     { label: "CMU Wall Lay & Mortar", qty: perim, unit: "LF", nationalAvg: 25.00 },
@@ -1421,6 +1423,18 @@ function FoundationTab() {
               <option value="10">10 ft</option>
             </select>
           </Field>
+        )}
+
+        {(inputs.foundationType === "basement" || inputs.foundationType === "crawlspace") && (
+          <div className="flex items-start gap-3 pt-1 sm:col-span-2 lg:col-span-1">
+            <input type="checkbox" id="haulSpoil" checked={inputs.haulSpoil}
+              onChange={e => set("haulSpoil", e.target.checked)}
+              className="mt-0.5 accent-[#E85D26] w-4 h-4 shrink-0 cursor-pointer" />
+            <label htmlFor="haulSpoil" className="text-sm text-[#333] cursor-pointer leading-snug">
+              <span className="font-semibold">Haul off excavated spoil</span>
+              <span className="block text-xs text-[#888] mt-0.5">Uncheck if spoil is reused on-site for backfill &amp; regrading — removes disposal cost and drops excavation rate to $9.50/CY</span>
+            </label>
+          </div>
         )}
 
         <div className="sm:col-span-2 lg:col-span-1">
