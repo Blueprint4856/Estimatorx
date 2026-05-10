@@ -685,6 +685,10 @@ function getSiteWorkMatItems(inputs: SiteWorkInputs): MatItem[] {
     items.push({ label: "Inspection Ports", qty: 2, unit: "ea", price: 45 });
     if (inputs.septicType === "mound" && moundCY > 0) {
       items.push({ label: "Certified Septic Sand — Mound Fill (env. grade, imported)", qty: moundCY, unit: "CY", price: 42 });
+    } else {
+      // Conventional / at-grade trench: 6" sand bed in a 24"-wide trench under the perforated pipe
+      const trenchSandCY = Math.ceil(fieldLF * (24 / 12) * (6 / 12) / 27);
+      items.push({ label: "Certified Septic Sand — Leach Field Bed (env. grade, 6\" in trench)", qty: trenchSandCY, unit: "CY", price: 42 });
     }
   }
 
