@@ -1126,23 +1126,29 @@ function getFoundationMatItems(inputs: FoundationInputs): MatItem[] {
   const depth = parseFloat(inputs.basementDepth) || 8;
 
   if (inputs.foundationType === "slab") {
+    // Thickened-edge footing: 16" wide × 4" stone bed
+    const footingStoneCY = Math.ceil(perim * (16 / 12) * (4 / 12) / 27);
     const items: MatItem[] = [
-      { label: "Compacted Gravel Base (4\")", qty: Math.ceil(sqft * 0.333 / 27), unit: "CY", price: 42 },
+      { label: "#57 Crushed Stone — Footing Bed (4\", 16\" wide)", qty: footingStoneCY, unit: "CY", price: 42 },
+      { label: "Compacted Gravel Base — Slab Field (4\")", qty: Math.ceil(sqft * (4 / 12) / 27), unit: "CY", price: 42 },
       { label: "6-Mil Polyethylene Vapor Barrier", qty: Math.ceil(sqft * 1.1), unit: "sqft", price: 0.12 },
       { label: "Rebar #4 (12\" OC each way)", qty: Math.ceil(sqft * 2 * 1.1), unit: "LF", price: 0.68 },
-      { label: "Ready-Mix Concrete 3,000 PSI (4\" slab)", qty: Math.ceil(sqft * (4 / 12) / 27), unit: "CY", price: 185 },
+      { label: "Ready-Mix Concrete 3,000 PSI (4\" slab + thickened edge)", qty: Math.ceil((sqft * (4 / 12) / 27) + (perim * (16 / 12) * (8 / 12) / 27)), unit: "CY", price: 185 },
       { label: "Form Boards 2×8 (perimeter)", qty: perim, unit: "LF", price: 2.15 },
       { label: "Anchor Bolts (every 6')", qty: Math.ceil(perim / 6), unit: "ea", price: 1.85 },
     ];
     if (inputs.climate === "cold") {
-      items.splice(2, 0, { label: "2\" XPS Rigid Foam Insulation", qty: sqft, unit: "sqft", price: 0.85 });
+      items.splice(3, 0, { label: "2\" XPS Rigid Foam Insulation (under slab)", qty: sqft, unit: "sqft", price: 0.85 });
     }
     return items;
   }
 
   if (inputs.foundationType === "basement") {
+    // Spread footing: 24" wide × 6" stone bed at bottom of excavation
+    const footingStoneCY = Math.ceil(perim * (24 / 12) * (6 / 12) / 27);
     return [
-      { label: "Ready-Mix Concrete — Footings", qty: Math.ceil(perim * 2 * 1 / 27), unit: "CY", price: 185 },
+      { label: "#57 Crushed Stone — Footing Bed (6\", 24\" wide)", qty: footingStoneCY, unit: "CY", price: 42 },
+      { label: "Ready-Mix Concrete — Footings (24\" wide × 12\" deep)", qty: Math.ceil(perim * (24 / 12) * (12 / 12) / 27), unit: "CY", price: 185 },
       { label: "Footing Rebar #5 (3 continuous bars)", qty: Math.ceil(perim * 3 * 1.1), unit: "LF", price: 0.85 },
       { label: "Ready-Mix Concrete — Foundation Walls", qty: Math.ceil(perim * depth * (8 / 12) / 27), unit: "CY", price: 185 },
       { label: "Wall Rebar #5 (vertical, 24\" OC)", qty: Math.ceil((perim / 2) * depth * 1.1), unit: "LF", price: 0.85 },
@@ -1156,10 +1162,12 @@ function getFoundationMatItems(inputs: FoundationInputs): MatItem[] {
     ];
   }
 
-  // crawlspace
+  // crawlspace — continuous footing: 16" wide × 4" stone bed
+  const footingStoneCY = Math.ceil(perim * (16 / 12) * (4 / 12) / 27);
   const blocks = Math.ceil(perim * 3 / 0.89);
   return [
-    { label: "Ready-Mix Concrete — Footings", qty: Math.ceil(perim * (16 / 12) * (8 / 12) / 27), unit: "CY", price: 185 },
+    { label: "#57 Crushed Stone — Footing Bed (4\", 16\" wide)", qty: footingStoneCY, unit: "CY", price: 42 },
+    { label: "Ready-Mix Concrete — Footings (16\" wide × 8\" deep)", qty: Math.ceil(perim * (16 / 12) * (8 / 12) / 27), unit: "CY", price: 185 },
     { label: "CMU Block 8\"×8\"×16\"", qty: blocks, unit: "ea", price: 2.85 },
     { label: "Mortar Mix", qty: Math.ceil(blocks / 35), unit: "bag", price: 8.50 },
     { label: "Anchor Bolts (every 6')", qty: Math.ceil(perim / 6), unit: "ea", price: 1.85 },
@@ -1175,19 +1183,26 @@ function getFoundationLaborItems(inputs: FoundationInputs): LaborItem[] {
   const depth = parseFloat(inputs.basementDepth) || 8;
 
   if (inputs.foundationType === "slab") {
+    // Footing trench is the thickened-edge perimeter — machine trim after bulk grade
+    const footingStoneCY = Math.ceil(perim * (16 / 12) * (4 / 12) / 27);
     return [
-      { label: "Site Prep & Grading", qty: sqft, unit: "sqft", nationalAvg: 1.12 },
-      { label: "Gravel Base Compact", qty: sqft, unit: "sqft", nationalAvg: 0.82 },
-      { label: "Slab Pour & Finish", qty: sqft, unit: "sqft", nationalAvg: 4.85 },
+      { label: "Site Prep & Bulk Grading (machine)", qty: sqft, unit: "sqft", nationalAvg: 1.12 },
+      { label: "Footing Trench Trim & Level (machine)", qty: perim, unit: "LF", nationalAvg: 4.85 },
+      { label: "#57 Stone Footing Bed — Place & Compact", qty: footingStoneCY, unit: "CY", nationalAvg: 18.50 },
+      { label: "Gravel Base Compact — Slab Field", qty: sqft, unit: "sqft", nationalAvg: 0.82 },
       { label: "Thickened Edge Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 16.50 },
+      { label: "Slab Pour & Finish", qty: sqft, unit: "sqft", nationalAvg: 4.85 },
     ];
   }
 
   if (inputs.foundationType === "basement") {
+    // Full hole excavation + footing stone bed at bottom of hole
     const excavCY = Math.ceil(sqft * depth / 27 * 1.25);
+    const footingStoneCY = Math.ceil(perim * (24 / 12) * (6 / 12) / 27);
     const wallArea = perim * depth;
     return [
-      { label: "Excavation (machine)", qty: excavCY, unit: "CY", nationalAvg: 12.50 },
+      { label: "Full Basement Excavation (machine, incl. haul)", qty: excavCY, unit: "CY", nationalAvg: 12.50 },
+      { label: "#57 Stone Footing Bed — Place & Compact (bottom of hole)", qty: footingStoneCY, unit: "CY", nationalAvg: 18.50 },
       { label: "Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 19.50 },
       { label: "Foundation Wall (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 27.50 },
       { label: "Waterproofing & Drainage Install", qty: wallArea, unit: "sqft", nationalAvg: 4.75 },
@@ -1195,8 +1210,14 @@ function getFoundationLaborItems(inputs: FoundationInputs): LaborItem[] {
     ];
   }
 
-  // crawlspace
+  // crawlspace — must excavate footing trenches to frost depth, then place stone
+  const frostDepthFt: Record<FoundationClimate, number> = { cold: 3.5, mixed: 1.5, hot: 1.0 };
+  const frostFt = frostDepthFt[inputs.climate] ?? 1.5;
+  const trenchCY = Math.ceil(perim * (24 / 12) * frostFt / 27); // 24" wide trench × frost depth
+  const footingStoneCY = Math.ceil(perim * (16 / 12) * (4 / 12) / 27);
   return [
+    { label: `Footing Trench Excavation — ${frostFt * 12}" frost depth (machine)`, qty: trenchCY, unit: "CY", nationalAvg: 12.50 },
+    { label: "#57 Stone Footing Bed — Place & Compact", qty: footingStoneCY, unit: "CY", nationalAvg: 18.50 },
     { label: "Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 19.50 },
     { label: "CMU Wall Lay & Mortar", qty: perim, unit: "LF", nationalAvg: 25.00 },
     { label: "Vapor Barrier Install", qty: sqft, unit: "sqft", nationalAvg: 0.62 },
