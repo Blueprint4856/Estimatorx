@@ -149,7 +149,7 @@ function ProjectSetupCard() {
             <Field label="Gross Living Area (sqft)">
               <NumberInput value={project.sqft} onChange={v => setp("sqft", v)} placeholder="e.g. 2000" />
             </Field>
-            <Field label="Foundation Footprint (sqft)" note={project.sqft && !project.footprintSqft ? `Defaults to living area (${project.sqft} sqft)` : "If different from living area"}>
+            <Field label="Footprint (sqft)" note={project.sqft && !project.footprintSqft ? `Defaults to living area (${project.sqft} sqft)` : "If different from living area"}>
               <NumberInput value={project.footprintSqft} onChange={v => setp("footprintSqft", v)} placeholder={project.sqft || "e.g. 2000"} />
             </Field>
             <Field label="Exterior Perimeter (LF)" note={autoPerim && !project.linearFeet ? `Auto: ~${autoPerim} LF` : "Total ext. wall linear feet"}>
