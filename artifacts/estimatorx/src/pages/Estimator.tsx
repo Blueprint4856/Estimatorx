@@ -1160,7 +1160,7 @@ function getFoundationMatItems(inputs: FoundationInputs): MatItem[] {
   }
 
   // crawlspace — continuous footing: 16" wide × 4" stone bed
-  const frostDepthFtMat: Record<FoundationClimate, number> = { cold: 3.5, mixed: 1.5, hot: 1.0 };
+  const frostDepthFtMat: Record<FoundationClimate, number> = { cold: 4.5, mixed: 4.0, hot: 4.0 };
   const frostFtMat = frostDepthFtMat[inputs.climate] ?? 1.5;
   const trenchCYMat = Math.ceil(perim * (24 / 12) * frostFtMat / 27);
   const footingStoneCY = Math.ceil(perim * (16 / 12) * (4 / 12) / 27);
@@ -1213,7 +1213,7 @@ function getFoundationLaborItems(inputs: FoundationInputs): LaborItem[] {
   }
 
   // crawlspace — must excavate footing trenches to frost depth, then place stone
-  const frostDepthFt: Record<FoundationClimate, number> = { cold: 3.5, mixed: 1.5, hot: 1.0 };
+  const frostDepthFt: Record<FoundationClimate, number> = { cold: 4.5, mixed: 4.0, hot: 4.0 };
   const frostFt = frostDepthFt[inputs.climate] ?? 1.5;
   const trenchCY = Math.ceil(perim * (24 / 12) * frostFt / 27); // 24" wide trench × frost depth
   const footingStoneCY = Math.ceil(perim * (16 / 12) * (4 / 12) / 27);
