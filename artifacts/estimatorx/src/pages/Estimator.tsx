@@ -709,10 +709,10 @@ const DEFAULT_SITEWORK: SiteWorkInputs = {
 };
 
 function septicTankSpec(br: number): { label: string; price: number } {
-  if (br <= 2) return { label: "Precast Concrete Septic Tank — 1,000 gal", price: 2400 };
-  if (br === 3) return { label: "Precast Concrete Septic Tank — 1,250 gal", price: 2850 };
-  if (br === 4) return { label: "Precast Concrete Septic Tank — 1,500 gal", price: 3400 };
-  return { label: "Precast Concrete Septic Tank — 2,000 gal", price: 4150 };
+  if (br <= 2) return { label: "Precast Concrete Septic Tank — 1,000 gal", price: 2950 };
+  if (br === 3) return { label: "Precast Concrete Septic Tank — 1,250 gal", price: 3450 };
+  if (br === 4) return { label: "Precast Concrete Septic Tank — 1,500 gal", price: 4150 };
+  return { label: "Precast Concrete Septic Tank — 2,000 gal", price: 5250 };
 }
 
 function getSiteWorkMatItems(inputs: SiteWorkInputs): MatItem[] {
@@ -735,56 +735,56 @@ function getSiteWorkMatItems(inputs: SiteWorkInputs): MatItem[] {
 
   // ── Grading & earthwork ──
   if (lot > 0) {
-    items.push({ label: "Silt Fence — Erosion Control", qty: lotPerim, unit: "LF", price: 1.85 });
+    items.push({ label: "Silt Fence — Erosion Control", qty: lotPerim, unit: "LF", price: 2.15 });
     if (inputs.topsoilHauledIn) {
-      items.push({ label: "Topsoil Import — 4\" finish layer", qty: Math.ceil(lot * (4 / 12) / 27), unit: "CY", price: 45 });
+      items.push({ label: "Topsoil Import — 4\" finish layer", qty: Math.ceil(lot * (4 / 12) / 27), unit: "CY", price: 52 });
     }
   }
   if (fp > 0 && cut > 0) {
-    items.push({ label: "Haul-off Disposal (excavated material)", qty: Math.ceil(fp * (cut / 12) / 27 * 1.25), unit: "CY", price: 22 });
+    items.push({ label: "Haul-off Disposal (excavated material)", qty: Math.ceil(fp * (cut / 12) / 27 * 1.25), unit: "CY", price: 28 });
     if (inputs.backfillHauledIn && backfillCY > 0) {
-      items.push({ label: "Foundation Backfill Sand — imported clean fill", qty: backfillCY, unit: "CY", price: 38 });
+      items.push({ label: "Foundation Backfill Sand — imported clean fill", qty: backfillCY, unit: "CY", price: 42 });
     }
   }
 
   // ── Driveway ──
   if (inputs.includeDriveway && driveSqft > 0) {
-    items.push({ label: "Driveway Aggregate Base (6\")", qty: Math.ceil(driveSqft * (6 / 12) / 27), unit: "CY", price: 42 });
+    items.push({ label: "Driveway Aggregate Base (6\")", qty: Math.ceil(driveSqft * (6 / 12) / 27), unit: "CY", price: 48 });
     if (inputs.drivewaySurface === "gravel") {
-      items.push({ label: "Driveway Gravel Surface (4\")", qty: Math.ceil(driveSqft * (4 / 12) / 27), unit: "CY", price: 45 });
+      items.push({ label: "Driveway Gravel Surface (4\")", qty: Math.ceil(driveSqft * (4 / 12) / 27), unit: "CY", price: 52 });
     } else if (inputs.drivewaySurface === "asphalt") {
-      items.push({ label: "Asphalt — 3\" Compacted", qty: Math.ceil(driveSqft * (3 / 12) / 27 * 2.025), unit: "ton", price: 95 });
-      items.push({ label: "Asphalt Tack Coat", qty: driveSqft, unit: "sqft", price: 0.08 });
+      items.push({ label: "Asphalt — 3\" Compacted", qty: Math.ceil(driveSqft * (3 / 12) / 27 * 2.025), unit: "ton", price: 115 });
+      items.push({ label: "Asphalt Tack Coat", qty: driveSqft, unit: "sqft", price: 0.12 });
     } else {
-      items.push({ label: "Ready-Mix Concrete — Driveway (4\")", qty: Math.ceil(driveSqft * (4 / 12) / 27), unit: "CY", price: 185 });
-      items.push({ label: "Wire Mesh Reinforcement (6×6 W1.4)", qty: Math.ceil(driveSqft * WASTE / 30), unit: "roll", price: 68 });
-      items.push({ label: "Expansion Joint Material", qty: Math.ceil(driveLF / 20), unit: "ea", price: 12 });
+      items.push({ label: "Ready-Mix Concrete — Driveway (4\")", qty: Math.ceil(driveSqft * (4 / 12) / 27), unit: "CY", price: 198 });
+      items.push({ label: "Wire Mesh Reinforcement (6×6 W1.4)", qty: Math.ceil(driveSqft * WASTE / 30), unit: "roll", price: 78 });
+      items.push({ label: "Expansion Joint Material", qty: Math.ceil(driveLF / 20), unit: "ea", price: 15 });
     }
   }
 
   // ── Well ──
   if (!inputs.hasMunicipalWater && wellDepth > 0) {
-    items.push({ label: "Well Casing & Grouting Materials (per LF)", qty: wellDepth, unit: "LF", price: 12.50 });
-    items.push({ label: "Submersible Well Pump (1 HP)", qty: 1, unit: "ea", price: 1195 });
-    items.push({ label: "Pressure Tank (34 gal)", qty: 1, unit: "ea", price: 485 });
-    items.push({ label: "Pitless Adapter & Well Cap", qty: 1, unit: "ea", price: 195 });
-    items.push({ label: "1\" Poly Water Supply Line to House", qty: 100, unit: "LF", price: 1.25 });
+    items.push({ label: "Well Casing & Grouting Materials (per LF)", qty: wellDepth, unit: "LF", price: 18.50 });
+    items.push({ label: "Submersible Well Pump (1 HP)", qty: 1, unit: "ea", price: 1485 });
+    items.push({ label: "Pressure Tank (34 gal)", qty: 1, unit: "ea", price: 545 });
+    items.push({ label: "Pitless Adapter & Well Cap", qty: 1, unit: "ea", price: 225 });
+    items.push({ label: "1\" Poly Water Supply Line to House", qty: 100, unit: "LF", price: 1.85 });
   }
 
   // ── Septic ──
   if (!inputs.hasMunicipalSewer) {
     items.push({ label: tank.label, qty: 1, unit: "ea", price: tank.price });
-    items.push({ label: "Distribution Box (D-box)", qty: 1, unit: "ea", price: 185 });
-    items.push({ label: "4\" Perforated PVC Drain Pipe — Leach Field", qty: fieldLF, unit: "LF", price: 1.85 });
-    items.push({ label: "#57 Stone Septic Media", qty: Math.ceil(fieldLF * 1.5 / 27), unit: "CY", price: 52 });
-    items.push({ label: "Geotextile Filter Fabric", qty: Math.ceil(fieldLF * 3 * WASTE), unit: "sqft", price: 0.35 });
-    items.push({ label: "Inspection Ports", qty: 2, unit: "ea", price: 45 });
+    items.push({ label: "Distribution Box (D-box)", qty: 1, unit: "ea", price: 225 });
+    items.push({ label: "4\" Perforated PVC Drain Pipe — Leach Field", qty: fieldLF, unit: "LF", price: 2.25 });
+    items.push({ label: "#57 Stone Septic Media", qty: Math.ceil(fieldLF * 1.5 / 27), unit: "CY", price: 58 });
+    items.push({ label: "Geotextile Filter Fabric", qty: Math.ceil(fieldLF * 3 * WASTE), unit: "sqft", price: 0.42 });
+    items.push({ label: "Inspection Ports", qty: 2, unit: "ea", price: 55 });
     if (inputs.septicType === "mound" && moundCY > 0) {
-      items.push({ label: "Certified Septic Sand — Mound Fill (env. grade, imported)", qty: moundCY, unit: "CY", price: 42 });
+      items.push({ label: "Certified Septic Sand — Mound Fill (env. grade, imported)", qty: moundCY, unit: "CY", price: 52 });
     } else {
       // Conventional / at-grade trench: 6" sand bed in a 24"-wide trench under the perforated pipe
       const trenchSandCY = Math.ceil(fieldLF * (24 / 12) * (6 / 12) / 27);
-      items.push({ label: "Certified Septic Sand — Leach Field Bed (env. grade, 6\" in trench)", qty: trenchSandCY, unit: "CY", price: 42 });
+      items.push({ label: "Certified Septic Sand — Leach Field Bed (env. grade, 6\" in trench)", qty: trenchSandCY, unit: "CY", price: 52 });
     }
   }
 
@@ -809,44 +809,44 @@ function getSiteWorkLaborItems(inputs: SiteWorkInputs): LaborItem[] {
 
   // ── Grading & earthwork ──
   if (lot > 0) {
-    items.push({ label: "Clearing & Grubbing", qty: lot, unit: "sqft", nationalAvg: 0.52 });
-    items.push({ label: "Rough Grading (machine)", qty: lot, unit: "sqft", nationalAvg: 0.68 });
-    items.push({ label: "Topsoil Respread & Fine Grade", qty: lot, unit: "sqft", nationalAvg: 0.42 });
+    items.push({ label: "Clearing & Grubbing", qty: lot, unit: "sqft", nationalAvg: 0.68 });
+    items.push({ label: "Rough Grading (machine)", qty: lot, unit: "sqft", nationalAvg: 0.85 });
+    items.push({ label: "Topsoil Respread & Fine Grade", qty: lot, unit: "sqft", nationalAvg: 0.55 });
   }
   if (fp > 0 && cut > 0) {
-    items.push({ label: "Bulk Excavation & Haul (machine)", qty: Math.ceil(fp * (cut / 12) / 27 * 1.25), unit: "CY", nationalAvg: 12.50 });
-    items.push({ label: "Fine Grading — Building Pad", qty: fp, unit: "sqft", nationalAvg: 0.98 });
+    items.push({ label: "Bulk Excavation & Haul (machine)", qty: Math.ceil(fp * (cut / 12) / 27 * 1.25), unit: "CY", nationalAvg: 18.50 });
+    items.push({ label: "Fine Grading — Building Pad", qty: fp, unit: "sqft", nationalAvg: 1.15 });
     if (backfillCY > 0) {
-      items.push({ label: "Foundation Backfill & Compact", qty: backfillCY, unit: "CY", nationalAvg: 18.50 });
+      items.push({ label: "Foundation Backfill & Compact", qty: backfillCY, unit: "CY", nationalAvg: 24.50 });
     }
   }
 
   // ── Driveway ──
   if (inputs.includeDriveway && driveSqft > 0) {
-    items.push({ label: "Driveway Base Compact & Install", qty: driveSqft, unit: "sqft", nationalAvg: 1.28 });
+    items.push({ label: "Driveway Base Compact & Install", qty: driveSqft, unit: "sqft", nationalAvg: 1.65 });
     if (inputs.drivewaySurface === "gravel") {
-      items.push({ label: "Gravel Surface Place & Compact", qty: driveSqft, unit: "sqft", nationalAvg: 0.82 });
+      items.push({ label: "Gravel Surface Place & Compact", qty: driveSqft, unit: "sqft", nationalAvg: 1.05 });
     } else if (inputs.drivewaySurface === "asphalt") {
-      items.push({ label: "Asphalt Pave & Roll", qty: driveSqft, unit: "sqft", nationalAvg: 4.35 });
+      items.push({ label: "Asphalt Pave & Roll", qty: driveSqft, unit: "sqft", nationalAvg: 5.85 });
     } else {
-      items.push({ label: "Concrete Driveway — Form, Pour & Finish", qty: driveSqft, unit: "sqft", nationalAvg: 6.85 });
+      items.push({ label: "Concrete Driveway — Form, Pour & Finish", qty: driveSqft, unit: "sqft", nationalAvg: 8.50 });
     }
   }
 
   // ── Well ──
   if (!inputs.hasMunicipalWater && wellDepth > 0) {
-    items.push({ label: "Well Drilling (incl. casing & grouting)", qty: wellDepth, unit: "LF", nationalAvg: 52.00 });
-    items.push({ label: "Submersible Pump & Pressure Tank Install", qty: 1, unit: "ea", nationalAvg: 975 });
+    items.push({ label: "Well Drilling (incl. casing & grouting)", qty: wellDepth, unit: "LF", nationalAvg: 68.00 });
+    items.push({ label: "Submersible Pump & Pressure Tank Install", qty: 1, unit: "ea", nationalAvg: 1250 });
   }
 
   // ── Septic ──
   if (!inputs.hasMunicipalSewer) {
-    items.push({ label: "Septic Tank Excavation & Setting", qty: 1, unit: "ea", nationalAvg: 2800 });
-    items.push({ label: "Leach Field Trench Excavation", qty: fieldLF, unit: "LF", nationalAvg: 19.00 });
-    items.push({ label: "Drain Pipe, Stone & D-Box Install", qty: fieldLF, unit: "LF", nationalAvg: 13.00 });
-    items.push({ label: "Leach Field Backfill & Grade", qty: fieldLF * 3, unit: "sqft", nationalAvg: 0.68 });
+    items.push({ label: "Septic Tank Excavation & Setting", qty: 1, unit: "ea", nationalAvg: 3200 });
+    items.push({ label: "Leach Field Trench Excavation", qty: fieldLF, unit: "LF", nationalAvg: 24.00 });
+    items.push({ label: "Drain Pipe, Stone & D-Box Install", qty: fieldLF, unit: "LF", nationalAvg: 16.50 });
+    items.push({ label: "Leach Field Backfill & Grade", qty: fieldLF * 3, unit: "sqft", nationalAvg: 0.85 });
     if (inputs.septicType === "mound" && moundCY > 0) {
-      items.push({ label: "Mound Construction & Sand Place", qty: moundCY, unit: "CY", nationalAvg: 34.00 });
+      items.push({ label: "Mound Construction & Sand Place", qty: moundCY, unit: "CY", nationalAvg: 42.00 });
     }
   }
 
@@ -1232,16 +1232,16 @@ function getFoundationMatItems(inputs: FoundationInputs): MatItem[] {
     // Thickened-edge footing: 16" wide × 4" stone bed
     const footingStoneCY = Math.ceil(perim * (16 / 12) * (4 / 12) / 27);
     const items: MatItem[] = [
-      { label: "#57 Crushed Stone — Footing Bed (4\", 16\" wide)", qty: footingStoneCY, unit: "CY", price: 42 },
-      { label: "Compacted Gravel Base — Slab Field (4\")", qty: Math.ceil(sqft * (4 / 12) / 27), unit: "CY", price: 42 },
-      { label: "6-Mil Polyethylene Vapor Barrier", qty: Math.ceil(sqft * 1.1), unit: "sqft", price: 0.12 },
-      { label: "Rebar #4 (12\" OC each way)", qty: Math.ceil(sqft * 2 * 1.1), unit: "LF", price: 0.68 },
-      { label: "Ready-Mix Concrete 3,000 PSI (4\" slab + thickened edge)", qty: Math.ceil((sqft * (4 / 12) / 27) + (perim * (16 / 12) * (8 / 12) / 27)), unit: "CY", price: 185 },
-      { label: "Form Boards 2×8 (perimeter)", qty: perim, unit: "LF", price: 2.15 },
-      { label: "Anchor Bolts (every 6')", qty: Math.ceil(perim / 6), unit: "ea", price: 1.85 },
+      { label: "#57 Crushed Stone — Footing Bed (4\", 16\" wide)", qty: footingStoneCY, unit: "CY", price: 48 },
+      { label: "Compacted Gravel Base — Slab Field (4\")", qty: Math.ceil(sqft * (4 / 12) / 27), unit: "CY", price: 48 },
+      { label: "6-Mil Polyethylene Vapor Barrier", qty: Math.ceil(sqft * 1.1), unit: "sqft", price: 0.14 },
+      { label: "Rebar #4 (12\" OC each way)", qty: Math.ceil(sqft * 2 * 1.1), unit: "LF", price: 0.82 },
+      { label: "Ready-Mix Concrete 3,000 PSI (4\" slab + thickened edge)", qty: Math.ceil((sqft * (4 / 12) / 27) + (perim * (16 / 12) * (8 / 12) / 27)), unit: "CY", price: 195 },
+      { label: "Form Boards 2×8 (perimeter)", qty: perim, unit: "LF", price: 2.45 },
+      { label: "Anchor Bolts (every 6')", qty: Math.ceil(perim / 6), unit: "ea", price: 2.25 },
     ];
     if (inputs.climate === "cold") {
-      items.splice(3, 0, { label: "2\" XPS Rigid Foam Insulation (under slab)", qty: sqft, unit: "sqft", price: 0.85 });
+      items.splice(3, 0, { label: "2\" XPS Rigid Foam Insulation (under slab)", qty: sqft, unit: "sqft", price: 1.15 });
     }
     return items;
   }
@@ -1251,20 +1251,20 @@ function getFoundationMatItems(inputs: FoundationInputs): MatItem[] {
     const excavCY = Math.ceil(sqft * depth / 27 * 1.25);
     const footingStoneCY = Math.ceil(perim * (24 / 12) * (6 / 12) / 27);
     return [
-      ...(inputs.haulSpoil ? [{ label: "Haul-off Disposal — Excavated Basement Spoil", qty: excavCY, unit: "CY", price: 22 } as MatItem] : []),
-      { label: "#57 Crushed Stone — Footing Bed (6\", 24\" wide)", qty: footingStoneCY, unit: "CY", price: 42 },
-      { label: "Ready-Mix Concrete — Footings (24\" wide × 12\" deep)", qty: Math.ceil(perim * (24 / 12) * (12 / 12) / 27), unit: "CY", price: 185 },
-      { label: "Footing Rebar #5 (3 continuous bars)", qty: Math.ceil(perim * 3 * 1.1), unit: "LF", price: 0.85 },
-      { label: "Ready-Mix Concrete — Foundation Walls", qty: Math.ceil(perim * depth * (8 / 12) / 27), unit: "CY", price: 185 },
-      { label: "Wall Rebar #5 (vertical, 24\" OC)", qty: Math.ceil((perim / 2) * depth * 1.1), unit: "LF", price: 0.85 },
-      { label: "Exterior Waterproofing Membrane", qty: Math.ceil(perim * depth), unit: "sqft", price: 0.85 },
-      { label: "Dimple Drainage Board", qty: Math.ceil(perim * depth), unit: "sqft", price: 0.65 },
-      { label: "4\" Perforated Drain Tile", qty: perim, unit: "LF", price: 1.25 },
-      { label: "Drainage Gravel (perimeter trench)", qty: Math.ceil(perim * 1 * 1 / 27), unit: "CY", price: 42 },
-      { label: "Compacted Gravel Base — Basement Slab (4\")", qty: Math.ceil(sqft * (4 / 12) / 27), unit: "CY", price: 42 },
-      { label: "6-Mil Vapor Barrier (basement floor)", qty: Math.ceil(sqft * 1.1), unit: "sqft", price: 0.12 },
-      { label: "Ready-Mix Concrete — Basement Slab (3.5\")", qty: Math.ceil(sqft * (3.5 / 12) / 27), unit: "CY", price: 185 },
-      { label: "Anchor Bolts (every 6')", qty: Math.ceil(perim / 6), unit: "ea", price: 1.85 },
+      ...(inputs.haulSpoil ? [{ label: "Haul-off Disposal — Excavated Basement Spoil", qty: excavCY, unit: "CY", price: 28 } as MatItem] : []),
+      { label: "#57 Crushed Stone — Footing Bed (6\", 24\" wide)", qty: footingStoneCY, unit: "CY", price: 48 },
+      { label: "Ready-Mix Concrete — Footings (24\" wide × 12\" deep)", qty: Math.ceil(perim * (24 / 12) * (12 / 12) / 27), unit: "CY", price: 195 },
+      { label: "Footing Rebar #5 (3 continuous bars)", qty: Math.ceil(perim * 3 * 1.1), unit: "LF", price: 0.98 },
+      { label: "Ready-Mix Concrete — Foundation Walls", qty: Math.ceil(perim * depth * (8 / 12) / 27), unit: "CY", price: 195 },
+      { label: "Wall Rebar #5 (vertical, 24\" OC)", qty: Math.ceil((perim / 2) * depth * 1.1), unit: "LF", price: 0.98 },
+      { label: "Exterior Waterproofing Membrane", qty: Math.ceil(perim * depth), unit: "sqft", price: 1.15 },
+      { label: "Dimple Drainage Board", qty: Math.ceil(perim * depth), unit: "sqft", price: 0.82 },
+      { label: "4\" Perforated Drain Tile", qty: perim, unit: "LF", price: 1.65 },
+      { label: "Drainage Gravel (perimeter trench)", qty: Math.ceil(perim * 1 * 1 / 27), unit: "CY", price: 48 },
+      { label: "Compacted Gravel Base — Basement Slab (4\")", qty: Math.ceil(sqft * (4 / 12) / 27), unit: "CY", price: 48 },
+      { label: "6-Mil Vapor Barrier (basement floor)", qty: Math.ceil(sqft * 1.1), unit: "sqft", price: 0.14 },
+      { label: "Ready-Mix Concrete — Basement Slab (3.5\")", qty: Math.ceil(sqft * (3.5 / 12) / 27), unit: "CY", price: 195 },
+      { label: "Anchor Bolts (every 6')", qty: Math.ceil(perim / 6), unit: "ea", price: 2.25 },
     ];
   }
 
@@ -1275,14 +1275,14 @@ function getFoundationMatItems(inputs: FoundationInputs): MatItem[] {
   const footingStoneCY = Math.ceil(perim * (16 / 12) * (4 / 12) / 27);
   const blocks = Math.ceil(perim * 3 / 0.89);
   return [
-    ...(inputs.haulSpoil ? [{ label: "Haul-off Disposal — Footing Trench Spoil", qty: trenchCYMat, unit: "CY", price: 22 } as MatItem] : []),
-    { label: "#57 Crushed Stone — Footing Bed (4\", 16\" wide)", qty: footingStoneCY, unit: "CY", price: 42 },
-    { label: "Ready-Mix Concrete — Footings (16\" wide × 8\" deep)", qty: Math.ceil(perim * (16 / 12) * (8 / 12) / 27), unit: "CY", price: 185 },
-    { label: "CMU Block 8\"×8\"×16\"", qty: blocks, unit: "ea", price: 2.85 },
-    { label: "Mortar Mix", qty: Math.ceil(blocks / 35), unit: "bag", price: 8.50 },
-    { label: "Anchor Bolts (every 6')", qty: Math.ceil(perim / 6), unit: "ea", price: 1.85 },
-    { label: "6-Mil Ground Vapor Barrier", qty: Math.ceil(sqft * 1.1), unit: "sqft", price: 0.12 },
-    { label: "Foundation Vents", qty: Math.ceil(sqft / 150), unit: "ea", price: 22 },
+    ...(inputs.haulSpoil ? [{ label: "Haul-off Disposal — Footing Trench Spoil", qty: trenchCYMat, unit: "CY", price: 28 } as MatItem] : []),
+    { label: "#57 Crushed Stone — Footing Bed (4\", 16\" wide)", qty: footingStoneCY, unit: "CY", price: 48 },
+    { label: "Ready-Mix Concrete — Footings (16\" wide × 8\" deep)", qty: Math.ceil(perim * (16 / 12) * (8 / 12) / 27), unit: "CY", price: 195 },
+    { label: "CMU Block 8\"×8\"×16\"", qty: blocks, unit: "ea", price: 3.25 },
+    { label: "Mortar Mix", qty: Math.ceil(blocks / 35), unit: "bag", price: 9.85 },
+    { label: "Anchor Bolts (every 6')", qty: Math.ceil(perim / 6), unit: "ea", price: 2.25 },
+    { label: "6-Mil Ground Vapor Barrier", qty: Math.ceil(sqft * 1.1), unit: "sqft", price: 0.14 },
+    { label: "Foundation Vents", qty: Math.ceil(sqft / 150), unit: "ea", price: 28 },
   ];
 }
 
@@ -1296,12 +1296,12 @@ function getFoundationLaborItems(inputs: FoundationInputs): LaborItem[] {
     // Footing trench is the thickened-edge perimeter — machine trim after bulk grade
     const footingStoneCY = Math.ceil(perim * (16 / 12) * (4 / 12) / 27);
     return [
-      { label: "Site Prep & Bulk Grading (machine)", qty: sqft, unit: "sqft", nationalAvg: 1.12 },
-      { label: "Footing Trench Trim & Level (machine)", qty: perim, unit: "LF", nationalAvg: 4.85 },
-      { label: "#57 Stone Footing Bed — Place & Compact", qty: footingStoneCY, unit: "CY", nationalAvg: 18.50 },
-      { label: "Gravel Base Compact — Slab Field", qty: sqft, unit: "sqft", nationalAvg: 0.82 },
-      { label: "Thickened Edge Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 16.50 },
-      { label: "Slab Pour & Finish", qty: sqft, unit: "sqft", nationalAvg: 4.85 },
+      { label: "Site Prep & Bulk Grading (machine)", qty: sqft, unit: "sqft", nationalAvg: 1.45 },
+      { label: "Footing Trench Trim & Level (machine)", qty: perim, unit: "LF", nationalAvg: 6.25 },
+      { label: "#57 Stone Footing Bed — Place & Compact", qty: footingStoneCY, unit: "CY", nationalAvg: 24.50 },
+      { label: "Gravel Base Compact — Slab Field", qty: sqft, unit: "sqft", nationalAvg: 1.05 },
+      { label: "Thickened Edge Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 22.50 },
+      { label: "Slab Pour & Finish", qty: sqft, unit: "sqft", nationalAvg: 6.25 },
     ];
   }
 
@@ -1311,13 +1311,13 @@ function getFoundationLaborItems(inputs: FoundationInputs): LaborItem[] {
     const footingStoneCY = Math.ceil(perim * (24 / 12) * (6 / 12) / 27);
     const wallArea = perim * depth;
     return [
-      { label: inputs.haulSpoil ? "Full Basement Excavation (machine, incl. haul)" : "Full Basement Excavation (machine — spoil stockpiled on-site)", qty: excavCY, unit: "CY", nationalAvg: inputs.haulSpoil ? 12.50 : 9.50 },
-      { label: "#57 Stone Footing Bed — Place & Compact (bottom of hole)", qty: footingStoneCY, unit: "CY", nationalAvg: 18.50 },
-      { label: "Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 19.50 },
-      { label: "Foundation Wall (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 27.50 },
-      { label: "Waterproofing & Drainage Install", qty: wallArea, unit: "sqft", nationalAvg: 4.75 },
-      { label: "Gravel Base Compact — Basement Slab", qty: sqft, unit: "sqft", nationalAvg: 0.82 },
-      { label: "Basement Slab Pour & Finish", qty: sqft, unit: "sqft", nationalAvg: 4.25 },
+      { label: inputs.haulSpoil ? "Full Basement Excavation (machine, incl. haul)" : "Full Basement Excavation (machine — spoil stockpiled on-site)", qty: excavCY, unit: "CY", nationalAvg: inputs.haulSpoil ? 18.50 : 14.50 },
+      { label: "#57 Stone Footing Bed — Place & Compact (bottom of hole)", qty: footingStoneCY, unit: "CY", nationalAvg: 24.50 },
+      { label: "Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 26.50 },
+      { label: "Foundation Wall (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 38.50 },
+      { label: "Waterproofing & Drainage Install", qty: wallArea, unit: "sqft", nationalAvg: 6.25 },
+      { label: "Gravel Base Compact — Basement Slab", qty: sqft, unit: "sqft", nationalAvg: 1.05 },
+      { label: "Basement Slab Pour & Finish", qty: sqft, unit: "sqft", nationalAvg: 5.85 },
     ];
   }
 
@@ -1327,11 +1327,11 @@ function getFoundationLaborItems(inputs: FoundationInputs): LaborItem[] {
   const trenchCY = Math.ceil(perim * (24 / 12) * frostFt / 27); // 24" wide trench × frost depth
   const footingStoneCY = Math.ceil(perim * (16 / 12) * (4 / 12) / 27);
   return [
-    { label: inputs.haulSpoil ? `Footing Trench Excavation — ${frostFt * 12}" frost depth (machine, incl. haul)` : `Footing Trench Excavation — ${frostFt * 12}" frost depth (machine — spoil stockpiled on-site)`, qty: trenchCY, unit: "CY", nationalAvg: inputs.haulSpoil ? 12.50 : 9.50 },
-    { label: "#57 Stone Footing Bed — Place & Compact", qty: footingStoneCY, unit: "CY", nationalAvg: 18.50 },
-    { label: "Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 19.50 },
-    { label: "CMU Wall Lay & Mortar", qty: perim, unit: "LF", nationalAvg: 25.00 },
-    { label: "Vapor Barrier Install", qty: sqft, unit: "sqft", nationalAvg: 0.62 },
+    { label: inputs.haulSpoil ? `Footing Trench Excavation — ${frostFt * 12}" frost depth (machine, incl. haul)` : `Footing Trench Excavation — ${frostFt * 12}" frost depth (machine — spoil stockpiled on-site)`, qty: trenchCY, unit: "CY", nationalAvg: inputs.haulSpoil ? 18.50 : 14.50 },
+    { label: "#57 Stone Footing Bed — Place & Compact", qty: footingStoneCY, unit: "CY", nationalAvg: 24.50 },
+    { label: "Footing (form, pour & strip)", qty: perim, unit: "LF", nationalAvg: 26.50 },
+    { label: "CMU Wall Lay & Mortar", qty: perim, unit: "LF", nationalAvg: 34.50 },
+    { label: "Vapor Barrier Install", qty: sqft, unit: "sqft", nationalAvg: 0.82 },
   ];
 }
 
@@ -1710,7 +1710,7 @@ const STUD_PRICES: Record<"2x4" | "2x6", Record<string, number>> = {
   "2x6": { "8": 8.98, "9": 10.48, "10": 11.98, "11": 13.48, "12": 14.98 },
 };
 
-const WALL_MAT_PRICES = { osb: 34.98, drywall: 15.98 };
+const WALL_MAT_PRICES = { osb: 38.98, drywall: 17.98 };
 const DEFAULT_WALL: WallInputs = {
   linearFeet: "", ceilingHeight: "9", studSize: "2x4-16",
   exteriorSheathing: true, insulation: true, drywall: true,
@@ -1727,26 +1727,26 @@ const DEFAULT_WALL: WallInputs = {
 };
 
 const WINDOW_TYPES: Record<string, { label: string; price: number }> = {
-  single_hung:  { label: "Single-Hung Window",          price: 350 },
-  double_hung:  { label: "Double-Hung Window",           price: 425 },
-  casement:     { label: "Casement Window",              price: 485 },
-  sliding:      { label: "Horizontal Sliding Window",    price: 375 },
-  picture:      { label: "Picture Window",               price: 295 },
-  egress:       { label: "Egress Window (below-grade)",  price: 625 },
+  single_hung:  { label: "Single-Hung Window",          price: 425 },
+  double_hung:  { label: "Double-Hung Window",           price: 525 },
+  casement:     { label: "Casement Window",              price: 595 },
+  sliding:      { label: "Horizontal Sliding Window",    price: 465 },
+  picture:      { label: "Picture Window",               price: 385 },
+  egress:       { label: "Egress Window (below-grade)",  price: 795 },
 };
 
 const INT_DOOR_TYPES: Record<string, { label: string; price: number; laborAvg: number; laborLabel: string }> = {
-  hollow_prehung: { label: 'Hollow-Core Prehung Door (2\'6″×6\'8″)', price: 89,  laborAvg: 95,  laborLabel: "Interior Door Hang & Hardware — Hollow-Core" },
-  solid_prehung:  { label: "Solid-Core Prehung Door",               price: 165, laborAvg: 115, laborLabel: "Interior Door Hang & Hardware — Solid-Core" },
-  pocket:         { label: "Pocket Door Kit",                        price: 295, laborAvg: 195, laborLabel: "Pocket Door Install & Hardware" },
-  bifold:         { label: "Bifold Door (closet, pair)",             price: 125, laborAvg: 75,  laborLabel: "Bifold Door Install & Hardware" },
-  barn:           { label: "Barn Door & Hardware Kit",               price: 385, laborAvg: 165, laborLabel: "Barn Door Install & Hardware" },
+  hollow_prehung: { label: 'Hollow-Core Prehung Door (2\'6″×6\'8″)', price: 118, laborAvg: 118, laborLabel: "Interior Door Hang & Hardware — Hollow-Core" },
+  solid_prehung:  { label: "Solid-Core Prehung Door",               price: 215, laborAvg: 138, laborLabel: "Interior Door Hang & Hardware — Solid-Core" },
+  pocket:         { label: "Pocket Door Kit",                        price: 375, laborAvg: 235, laborLabel: "Pocket Door Install & Hardware" },
+  bifold:         { label: "Bifold Door (closet, pair)",             price: 158, laborAvg: 95,  laborLabel: "Bifold Door Install & Hardware" },
+  barn:           { label: "Barn Door & Hardware Kit",               price: 485, laborAvg: 198, laborLabel: "Barn Door Install & Hardware" },
 };
 
 const TRIM_STYLES: Record<string, { label: string; basePrice: number; casingPrice: number }> = {
-  basic:     { label: "Basic Colonial",    basePrice: 0.75, casingPrice: 0.85 },
-  craftsman: { label: "Craftsman",         basePrice: 1.35, casingPrice: 1.65 },
-  premium:   { label: "Premium / Custom",  basePrice: 2.15, casingPrice: 2.65 },
+  basic:     { label: "Basic Colonial",    basePrice: 0.95, casingPrice: 1.10 },
+  craftsman: { label: "Craftsman",         basePrice: 1.75, casingPrice: 2.10 },
+  premium:   { label: "Premium / Custom",  basePrice: 2.85, casingPrice: 3.45 },
 };
 
 function getWallMatItems(inputs: WallInputs): MatItem[] {
@@ -1801,7 +1801,7 @@ function getWallMatItems(inputs: WallInputs): MatItem[] {
     ] : []),
     ...(lf > 0 && inputs.exteriorSheathing ? [
       { label: `Advantech Wall Sheathing 7/16" (4×8)${floorSfx}`, qty: Math.ceil(area * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.osb },
-      { label: `Advantech Seam Tape (75 LF roll)${floorSfx}`, qty: Math.max(1, Math.ceil(area * WASTE / 300)), unit: "roll", price: 24.98 },
+      { label: `Advantech Seam Tape (75 LF roll)${floorSfx}`, qty: Math.max(1, Math.ceil(area * WASTE / 300)), unit: "roll", price: 27.98 },
     ] : []),
     ...(lf > 0 && inputs.insulation ? [{ label: sc.insulLabel + floorSfx, qty: Math.ceil(area * WASTE), unit: "sqft", price: sc.insulPrice }] : []),
     ...(lf > 0 && inputs.drywall ? [{ label: `½" Drywall — Exterior Walls (4×8)${floorSfx}`, qty: Math.ceil(area * WASTE / 32), unit: "sheet", price: WALL_MAT_PRICES.drywall }] : []),
@@ -1818,25 +1818,25 @@ function getWallMatItems(inputs: WallInputs): MatItem[] {
     // ── Door & window rough opening framing (user enters total for all floors) ──
     ...(intDoors > 0 ? [
       { label: "King & Jack Studs — Interior Door RO (4 per opening)", qty: intDoors * 4, unit: "ea", price: STUD_PRICES["2x4"][inputs.ceilingHeight] ?? 5.48 },
-      { label: "2×10×8 Header Boards — Interior Door (2 per opening)", qty: Math.ceil(intDoors * 2 * WASTE), unit: "ea", price: 16.98 },
+      { label: "2×10×8 Header Boards — Interior Door (2 per opening)", qty: Math.ceil(intDoors * 2 * WASTE), unit: "ea", price: 19.98 },
     ] : []),
     ...(extDoors > 0 ? [
       { label: "King & Jack Studs — Exterior Door RO (4 per opening)", qty: extDoors * 4, unit: "ea", price: studPrice },
-      { label: "2×10×8 Header Boards — Exterior Door (2 per opening)", qty: Math.ceil(extDoors * 2 * WASTE), unit: "ea", price: 16.98 },
-      { label: "½\" Plywood Header Spacer — Exterior Door", qty: extDoors, unit: "ea", price: 4.50 },
+      { label: "2×10×8 Header Boards — Exterior Door (2 per opening)", qty: Math.ceil(extDoors * 2 * WASTE), unit: "ea", price: 19.98 },
+      { label: "½\" Plywood Header Spacer — Exterior Door", qty: extDoors, unit: "ea", price: 5.25 },
     ] : []),
     ...(windows > 0 ? [
       { label: "King, Jack & Cripple Studs — Window RO (6 per opening)", qty: windows * 6, unit: "ea", price: studPrice },
-      { label: "2×10×8 Header Boards — Window (2 per opening)", qty: Math.ceil(windows * 2 * WASTE), unit: "ea", price: 16.98 },
+      { label: "2×10×8 Header Boards — Window (2 per opening)", qty: Math.ceil(windows * 2 * WASTE), unit: "ea", price: 19.98 },
       { label: "Rough Sill Lumber — Window (1 per opening)", qty: windows, unit: "ea", price: 5.48 },
     ] : []),
     ...(totalRO > 0 ? [
-      { label: "LVL Header Nails / Structural Screws (box)", qty: Math.ceil(totalRO / 8), unit: "box", price: 18.50 },
+      { label: "LVL Header Nails / Structural Screws (box)", qty: Math.ceil(totalRO / 8), unit: "box", price: 21.98 },
     ] : []),
 
     // ── 2×10 blocking ──
     ...(blkLF > 0 ? [
-      { label: "2×10×8 Blocking Boards (cabinets, vanities, fixtures)", qty: Math.ceil(blkLF * WASTE / 8), unit: "ea", price: 16.98 },
+      { label: "2×10×8 Blocking Boards (cabinets, vanities, fixtures)", qty: Math.ceil(blkLF * WASTE / 8), unit: "ea", price: 19.98 },
     ] : []),
 
     // ── Gable end framing (2 ends, triangular — independent of story count) ──
@@ -1853,18 +1853,18 @@ function getWallMatItems(inputs: WallInputs): MatItem[] {
     // ── Window units & flashing ──
     ...(inputs.includeWindowUnits && windows > 0 ? [
       { label: winCfg.label, qty: windows, unit: "ea", price: winCfg.price } as MatItem,
-      { label: 'Window Flashing Tape (3″×75 LF roll)', qty: Math.max(1, Math.ceil(windows / 6)), unit: "roll", price: 28.98 },
-      { label: "Flexible Sill Pan Flashing (LF)", qty: Math.ceil(windows * 2.5), unit: "LF", price: 1.85 },
+      { label: 'Window Flashing Tape (3″×75 LF roll)', qty: Math.max(1, Math.ceil(windows / 6)), unit: "roll", price: 32.98 },
+      { label: "Flexible Sill Pan Flashing (LF)", qty: Math.ceil(windows * 2.5), unit: "LF", price: 2.35 },
     ] : []),
 
     // ── Exterior door units & flashing ──
     ...(inputs.includeExtDoorUnits ? [
-      ...(extDoorEntryN  > 0 ? [{ label: "Entry Door — Prehung, Insulated Steel",  qty: extDoorEntryN,   unit: "ea", price: 485  } as MatItem] : []),
-      ...(extDoorFrenchN > 0 ? [{ label: "French Door Pair — Prehung",              qty: extDoorFrenchN,  unit: "ea", price: 1250 } as MatItem] : []),
-      ...(extDoorSliderN > 0 ? [{ label: "Sliding Glass Door (6 ft, prehung)",       qty: extDoorSliderN,  unit: "ea", price: 895  } as MatItem] : []),
-      ...(extDoorGarSingleN > 0 ? [{ label: "Garage Door — Single (9×7)",           qty: extDoorGarSingleN, unit: "ea", price: 850  } as MatItem] : []),
-      ...(extDoorGarDoubleN > 0 ? [{ label: "Garage Door — Double (16×7)",          qty: extDoorGarDoubleN, unit: "ea", price: 1350 } as MatItem] : []),
-      ...(extDoors > 0 ? [{ label: "Exterior Door Flashing / Z-Bar (per opening)",  qty: extDoors, unit: "ea", price: 12.50 } as MatItem] : []),
+      ...(extDoorEntryN  > 0 ? [{ label: "Entry Door — Prehung, Insulated Steel",  qty: extDoorEntryN,   unit: "ea", price: 595  } as MatItem] : []),
+      ...(extDoorFrenchN > 0 ? [{ label: "French Door Pair — Prehung",              qty: extDoorFrenchN,  unit: "ea", price: 1485 } as MatItem] : []),
+      ...(extDoorSliderN > 0 ? [{ label: "Sliding Glass Door (6 ft, prehung)",       qty: extDoorSliderN,  unit: "ea", price: 1050 } as MatItem] : []),
+      ...(extDoorGarSingleN > 0 ? [{ label: "Garage Door — Single (9×7)",           qty: extDoorGarSingleN, unit: "ea", price: 985  } as MatItem] : []),
+      ...(extDoorGarDoubleN > 0 ? [{ label: "Garage Door — Double (16×7)",          qty: extDoorGarDoubleN, unit: "ea", price: 1595 } as MatItem] : []),
+      ...(extDoors > 0 ? [{ label: "Exterior Door Flashing / Z-Bar (per opening)",  qty: extDoors, unit: "ea", price: 16.50 } as MatItem] : []),
     ] : []),
 
     // ── Interior door units ──
@@ -1910,29 +1910,29 @@ function getWallLaborItems(inputs: WallInputs): LaborItem[] {
   const gableArea = Math.round(bw * gableHeight);
 
   return [
-    ...(lf > 0 ? [{ label: `Exterior Wall Framing${floorSfx}`, qty: area, unit: "sqft", nationalAvg: 4.50 }] : []),
-    ...(lf > 0 && inputs.exteriorSheathing ? [{ label: `Advantech Sheathing Install & Seam Tape${floorSfx}`, qty: area, unit: "sqft", nationalAvg: 2.40 }] : []),
-    ...(lf > 0 && inputs.insulation ? [{ label: `Insulation (Batt) Install${floorSfx}`, qty: area, unit: "sqft", nationalAvg: 1.45 }] : []),
-    ...(lf > 0 && inputs.drywall ? [{ label: `Drywall Hang & Finish — Exterior Walls${floorSfx}`, qty: area, unit: "sqft", nationalAvg: 2.25 }] : []),
-    ...(intLF > 0 ? [{ label: `Interior Wall Framing${floorSfx}`, qty: intArea, unit: "sqft", nationalAvg: 3.85 }] : []),
-    ...(intLF > 0 && inputs.interiorDrywall ? [{ label: `Drywall Hang & Finish — Interior Walls (both sides)${floorSfx}`, qty: intArea * 2, unit: "sqft", nationalAvg: 2.25 }] : []),
-    ...(intDoors > 0 ? [{ label: "Interior Door Rough Opening Framing", qty: intDoors, unit: "ea", nationalAvg: 115.00 }] : []),
-    ...(extDoors > 0 ? [{ label: "Exterior Door Rough Opening Framing", qty: extDoors, unit: "ea", nationalAvg: 145.00 }] : []),
-    ...(windows > 0 ? [{ label: "Window Rough Opening Framing", qty: windows, unit: "ea", nationalAvg: 125.00 }] : []),
-    ...(blkLF > 0 ? [{ label: "2×10 Blocking Install (cabinets, vanities, fixtures)", qty: blkLF, unit: "LF", nationalAvg: 2.65 }] : []),
-    ...(gableArea > 0 ? [{ label: "Gable End Framing (both ends)", qty: gableArea, unit: "sqft", nationalAvg: 4.50 }] : []),
-    ...(gableArea > 0 && inputs.exteriorSheathing ? [{ label: "Gable End Sheathing Install", qty: gableArea, unit: "sqft", nationalAvg: 2.40 }] : []),
+    ...(lf > 0 ? [{ label: `Exterior Wall Framing${floorSfx}`, qty: area, unit: "sqft", nationalAvg: 5.85 }] : []),
+    ...(lf > 0 && inputs.exteriorSheathing ? [{ label: `Advantech Sheathing Install & Seam Tape${floorSfx}`, qty: area, unit: "sqft", nationalAvg: 3.15 }] : []),
+    ...(lf > 0 && inputs.insulation ? [{ label: `Insulation (Batt) Install${floorSfx}`, qty: area, unit: "sqft", nationalAvg: 1.95 }] : []),
+    ...(lf > 0 && inputs.drywall ? [{ label: `Drywall Hang & Finish — Exterior Walls${floorSfx}`, qty: area, unit: "sqft", nationalAvg: 3.25 }] : []),
+    ...(intLF > 0 ? [{ label: `Interior Wall Framing${floorSfx}`, qty: intArea, unit: "sqft", nationalAvg: 4.85 }] : []),
+    ...(intLF > 0 && inputs.interiorDrywall ? [{ label: `Drywall Hang & Finish — Interior Walls (both sides)${floorSfx}`, qty: intArea * 2, unit: "sqft", nationalAvg: 3.25 }] : []),
+    ...(intDoors > 0 ? [{ label: "Interior Door Rough Opening Framing", qty: intDoors, unit: "ea", nationalAvg: 148.00 }] : []),
+    ...(extDoors > 0 ? [{ label: "Exterior Door Rough Opening Framing", qty: extDoors, unit: "ea", nationalAvg: 188.00 }] : []),
+    ...(windows > 0 ? [{ label: "Window Rough Opening Framing", qty: windows, unit: "ea", nationalAvg: 158.00 }] : []),
+    ...(blkLF > 0 ? [{ label: "2×10 Blocking Install (cabinets, vanities, fixtures)", qty: blkLF, unit: "LF", nationalAvg: 3.50 }] : []),
+    ...(gableArea > 0 ? [{ label: "Gable End Framing (both ends)", qty: gableArea, unit: "sqft", nationalAvg: 5.85 }] : []),
+    ...(gableArea > 0 && inputs.exteriorSheathing ? [{ label: "Gable End Sheathing Install", qty: gableArea, unit: "sqft", nationalAvg: 3.15 }] : []),
 
     // ── Window install ──
     ...(inputs.includeWindowUnits && windows > 0 ? [
-      { label: "Window Install, Flash & Seal", qty: windows, unit: "ea", nationalAvg: 185.00 },
+      { label: "Window Install, Flash & Seal", qty: windows, unit: "ea", nationalAvg: 245.00 },
     ] : []),
 
     // ── Exterior door install ──
     ...(inputs.includeExtDoorUnits ? [
-      ...((extDoorEntryN + extDoorFrenchN) > 0 ? [{ label: "Entry / French Door — Install, Flash & Weather-Seal", qty: extDoorEntryN + extDoorFrenchN, unit: "ea", nationalAvg: 225.00 }] : []),
-      ...(extDoorSliderN > 0 ? [{ label: "Sliding Glass Door — Install, Flash & Seal", qty: extDoorSliderN, unit: "ea", nationalAvg: 285.00 }] : []),
-      ...((extDoorGarSingleN + extDoorGarDoubleN) > 0 ? [{ label: "Garage Door — Install, Springs & Opener Rough-In", qty: extDoorGarSingleN + extDoorGarDoubleN, unit: "ea", nationalAvg: 350.00 }] : []),
+      ...((extDoorEntryN + extDoorFrenchN) > 0 ? [{ label: "Entry / French Door — Install, Flash & Weather-Seal", qty: extDoorEntryN + extDoorFrenchN, unit: "ea", nationalAvg: 295.00 }] : []),
+      ...(extDoorSliderN > 0 ? [{ label: "Sliding Glass Door — Install, Flash & Seal", qty: extDoorSliderN, unit: "ea", nationalAvg: 365.00 }] : []),
+      ...((extDoorGarSingleN + extDoorGarDoubleN) > 0 ? [{ label: "Garage Door — Install, Springs & Opener Rough-In", qty: extDoorGarSingleN + extDoorGarDoubleN, unit: "ea", nationalAvg: 465.00 }] : []),
     ] : []),
 
     // ── Interior door install ──
@@ -1942,9 +1942,9 @@ function getWallLaborItems(inputs: WallInputs): LaborItem[] {
 
     // ── Trim install ──
     ...(inputs.includeTrim ? [
-      ...(baseMoldingLF > 0 ? [{ label: "Base Molding Install", qty: baseMoldingLF, unit: "LF", nationalAvg: 3.50 }] : []),
-      ...(inputs.includeIntDoorUnits && intDoors > 0 ? [{ label: "Door Casing Install (both sides)", qty: Math.ceil(intDoors * 18), unit: "LF", nationalAvg: 4.25 }] : []),
-      ...(inputs.includeWindowUnits && windows > 0 ? [{ label: "Window Casing Install", qty: Math.ceil(windows * 12), unit: "LF", nationalAvg: 4.25 }] : []),
+      ...(baseMoldingLF > 0 ? [{ label: "Base Molding Install", qty: baseMoldingLF, unit: "LF", nationalAvg: 4.85 }] : []),
+      ...(inputs.includeIntDoorUnits && intDoors > 0 ? [{ label: "Door Casing Install (both sides)", qty: Math.ceil(intDoors * 18), unit: "LF", nationalAvg: 5.65 }] : []),
+      ...(inputs.includeWindowUnits && windows > 0 ? [{ label: "Window Casing Install", qty: Math.ceil(windows * 12), unit: "LF", nationalAvg: 5.65 }] : []),
     ] : []),
   ];
 }
@@ -2090,19 +2090,19 @@ function WallTab() {
             <div className="mt-3 pl-4 border-l-2 border-[#E85D26]/30">
               <p className="text-xs text-[#AAA] mb-3">Enter count per type — totals drive rough opening framing automatically</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-                <Field label="Entry Door" note="$485/ea">
+                <Field label="Entry Door" note="$595/ea">
                   <NumberInput value={inputs.extDoorEntryCount} onChange={v => setInputs(p => ({ ...p, extDoorEntryCount: v }))} placeholder="0" />
                 </Field>
-                <Field label="French Pair" note="$1,250/ea">
+                <Field label="French Pair" note="$1,485/ea">
                   <NumberInput value={inputs.extDoorFrenchCount} onChange={v => setInputs(p => ({ ...p, extDoorFrenchCount: v }))} placeholder="0" />
                 </Field>
-                <Field label="Sliding Glass" note="$895/ea">
+                <Field label="Sliding Glass" note="$1,050/ea">
                   <NumberInput value={inputs.extDoorSliderCount} onChange={v => setInputs(p => ({ ...p, extDoorSliderCount: v }))} placeholder="0" />
                 </Field>
-                <Field label="Garage Single" note="$850/ea (9×7)">
+                <Field label="Garage Single" note="$985/ea (9×7)">
                   <NumberInput value={inputs.extDoorGarSingleCount} onChange={v => setInputs(p => ({ ...p, extDoorGarSingleCount: v }))} placeholder="0" />
                 </Field>
-                <Field label="Garage Double" note="$1,350/ea (16×7)">
+                <Field label="Garage Double" note="$1,595/ea (16×7)">
                   <NumberInput value={inputs.extDoorGarDoubleCount} onChange={v => setInputs(p => ({ ...p, extDoorGarDoubleCount: v }))} placeholder="0" />
                 </Field>
               </div>
@@ -2230,9 +2230,9 @@ interface FloorInputs {
   interiorRisers: string;
 }
 
-const FLOOR_MAT_PRICES: Record<string, number> = { lvp: 2.89, carpet: 2.49, carpet_pad: 2.89, hardwood: 5.98, tile: 3.49, none: 0 };
+const FLOOR_MAT_PRICES: Record<string, number> = { lvp: 3.45, carpet: 2.65, carpet_pad: 3.25, hardwood: 7.45, tile: 4.25, none: 0 };
 const FLOOR_LABELS: Record<string, string> = { lvp: "LVP — Luxury Vinyl Plank", carpet: "Carpet", carpet_pad: "Carpet w/ Pad — Mid-Grade", hardwood: "Hardwood", tile: "Ceramic / Porcelain Tile", none: "None" };
-const FLOOR_LABOR: Record<string, number> = { lvp: 3.85, carpet: 1.85, carpet_pad: 2.05, hardwood: 7.85, tile: 12.50, none: 0 };
+const FLOOR_LABOR: Record<string, number> = { lvp: 4.85, carpet: 2.45, carpet_pad: 2.75, hardwood: 9.85, tile: 14.50, none: 0 };
 
 const JOIST_LABEL: Record<JoistType, string> = {
   "2x10":       '2×10 Floor Joists',
@@ -2242,8 +2242,8 @@ const JOIST_LABEL: Record<JoistType, string> = {
   "tji_14":     'TJI 14" Engineered I-Joists',
 };
 const JOIST_PRICE: Record<JoistType, number> = {
-  "2x10": 1.85, "2x12": 2.45,
-  "tji_9.5": 2.25, "tji_11.875": 3.15, "tji_14": 3.95,
+  "2x10": 2.25, "2x12": 2.95,
+  "tji_9.5": 2.85, "tji_11.875": 3.85, "tji_14": 4.95,
 };
 const JOIST_SPACING_FT: Record<JoistSpacing, number> = { "12": 1.0, "16": 4 / 3, "19.2": 1.6, "24": 2.0 };
 
@@ -2263,9 +2263,9 @@ const BEAM_LABEL: Record<string, string> = {
   "lvl_5.25x11.25": 'LVL Beam 5-1/4"×11-1/4"',
 };
 const BEAM_PRICE: Record<string, number> = {
-  "triple_2x12": 2.45,
-  "lvl_3.5x9.5": 8.50, "lvl_3.5x11.25": 11.00,
-  "lvl_5.25x9.5": 12.50, "lvl_5.25x11.25": 15.50,
+  "triple_2x12": 2.95,
+  "lvl_3.5x9.5": 10.50, "lvl_3.5x11.25": 13.50,
+  "lvl_5.25x9.5": 15.50, "lvl_5.25x11.25": 19.50,
 };
 
 const DEFAULT_FLOOR: FloorInputs = {
@@ -2278,8 +2278,8 @@ const DEFAULT_FLOOR: FloorInputs = {
 };
 
 const ADHESIVE_CONFIG: Record<AdhesiveType, { label: string; coverage: number; unit: string; price: number }> = {
-  liquid: { label: "Subfloor Construction Adhesive (28 oz tube)", coverage: 83,  unit: "tube", price: 8.50  },
-  spray:  { label: "Subfloor Construction Adhesive (Spray)",      coverage: 365, unit: "can",  price: 28.98 },
+  liquid: { label: "Subfloor Construction Adhesive (28 oz tube)", coverage: 83,  unit: "tube", price: 9.85  },
+  spray:  { label: "Subfloor Construction Adhesive (Spray)",      coverage: 365, unit: "can",  price: 32.98 },
 };
 
 const STD_LUMBER_LENGTHS = [8, 10, 12, 14, 16, 18, 20];
@@ -2299,10 +2299,10 @@ function boardSplit(runLF: number, stdLengths: number[], primaryPrefs: number[])
 
 type LVLConfig = { plies: number; pieceLabel: string; pricePerPlyLF: number };
 const LVL_CONFIG: Record<string, LVLConfig> = {
-  "lvl_3.5x9.5":   { plies: 2, pieceLabel: '1-3/4"×9-1/2" LVL',   pricePerPlyLF: 4.25 },
-  "lvl_3.5x11.25": { plies: 2, pieceLabel: '1-3/4"×11-1/4" LVL',  pricePerPlyLF: 5.50 },
-  "lvl_5.25x9.5":  { plies: 3, pieceLabel: '1-3/4"×9-1/2" LVL',   pricePerPlyLF: 4.17 },
-  "lvl_5.25x11.25":{ plies: 3, pieceLabel: '1-3/4"×11-1/4" LVL',  pricePerPlyLF: 5.17 },
+  "lvl_3.5x9.5":   { plies: 2, pieceLabel: '1-3/4"×9-1/2" LVL',   pricePerPlyLF: 5.25 },
+  "lvl_3.5x11.25": { plies: 2, pieceLabel: '1-3/4"×11-1/4" LVL',  pricePerPlyLF: 6.75 },
+  "lvl_5.25x9.5":  { plies: 3, pieceLabel: '1-3/4"×9-1/2" LVL',   pricePerPlyLF: 5.17 },
+  "lvl_5.25x11.25":{ plies: 3, pieceLabel: '1-3/4"×11-1/4" LVL',  pricePerPlyLF: 6.42 },
 };
 
 function getFloorFramingMatItems(inputs: FloorInputs): MatItem[] {
@@ -2327,7 +2327,7 @@ function getFloorFramingMatItems(inputs: FloorInputs): MatItem[] {
   items.push({ label: JOIST_LABEL[inputs.joistType] + floorLabel, qty: joistLF, unit: "LF", price: JOIST_PRICE[inputs.joistType] });
 
   if (inputs.rimType === "advantech") {
-    items.push({ label: 'Advantech 1-1/8" Rim Board' + floorLabel, qty: rimLF, unit: "LF", price: 4.85 });
+    items.push({ label: 'Advantech 1-1/8" Rim Board' + floorLabel, qty: rimLF, unit: "LF", price: 5.85 });
   } else {
     const rimLabel = (inputs.joistType === "2x10" ? '2×10 Solid Lumber Rim Joist'
       : inputs.joistType === "2x12" ? '2×12 Solid Lumber Rim Joist'
@@ -2367,14 +2367,14 @@ function getFloorFramingMatItems(inputs: FloorInputs): MatItem[] {
         });
       }
     }
-    items.push({ label: "Beam Post Caps & Saddle Hardware", qty: beamCount * 3, unit: "ea", price: 18.50 });
+    items.push({ label: "Beam Post Caps & Saddle Hardware", qty: beamCount * 3, unit: "ea", price: 22.50 });
   }
 
   const hangerQty = Math.max(0, joistCount - 2) * storiesCount;
   if (hangerQty > 0) {
     items.push({
       label: (isTJI ? 'TJI Joist Hangers (IUS / ILTUS Series)' : 'Joist Hangers (LUS Series)') + floorLabel,
-      qty: hangerQty, unit: "ea", price: isTJI ? 3.85 : 2.95,
+      qty: hangerQty, unit: "ea", price: isTJI ? 4.65 : 3.65,
     });
   }
 
@@ -2386,17 +2386,17 @@ function getFloorFramingMatItems(inputs: FloorInputs): MatItem[] {
 
   if (inputs.includeBasementStairs) {
     const risers = Math.max(3, parseInt(inputs.basementRisers) || 13);
-    items.push({ label: 'Basement Stair — 2×12 Stringers (14 ft)', qty: 3, unit: "ea", price: 52.98 });
-    items.push({ label: 'Basement Stair — 2×12 Treads', qty: risers - 1, unit: "ea", price: 9.80 });
-    items.push({ label: "Basement Stair Framing Hardware & Fasteners", qty: 1, unit: "lot", price: 48.00 });
+    items.push({ label: 'Basement Stair — 2×12 Stringers (14 ft)', qty: 3, unit: "ea", price: 62.98 });
+    items.push({ label: 'Basement Stair — 2×12 Treads', qty: risers - 1, unit: "ea", price: 11.98 });
+    items.push({ label: "Basement Stair Framing Hardware & Fasteners", qty: 1, unit: "lot", price: 58.00 });
   }
 
   if (inputs.includeInteriorStairs) {
     const risers = Math.max(3, parseInt(inputs.interiorRisers) || 14);
-    items.push({ label: 'Interior Stair — 2×12 Stringers (14 ft)', qty: 3, unit: "ea", price: 52.98 });
-    items.push({ label: 'Interior Stair — 2×12 Treads', qty: risers - 1, unit: "ea", price: 9.80 });
-    items.push({ label: 'Interior Stair Opening — Double 2×10 Header', qty: 10, unit: "LF", price: 2.45 });
-    items.push({ label: "Interior Stair Framing Hardware & Fasteners", qty: 1, unit: "lot", price: 62.00 });
+    items.push({ label: 'Interior Stair — 2×12 Stringers (14 ft)', qty: 3, unit: "ea", price: 62.98 });
+    items.push({ label: 'Interior Stair — 2×12 Treads', qty: risers - 1, unit: "ea", price: 11.98 });
+    items.push({ label: 'Interior Stair Opening — Double 2×10 Header', qty: 10, unit: "LF", price: 2.95 });
+    items.push({ label: "Interior Stair Framing Hardware & Fasteners", qty: 1, unit: "lot", price: 72.00 });
   }
 
   return items;
@@ -2416,19 +2416,19 @@ function getFloorFramingLaborItems(inputs: FloorInputs): LaborItem[] {
   const beamLF = Math.ceil(runLength) * beamCount;
   const items: LaborItem[] = [];
 
-  items.push({ label: "Floor Joist Framing & Layout" + floorLabel, qty: sqft * storiesCount, unit: "sqft", nationalAvg: 2.85 });
-  items.push({ label: "Rim / Band Joist Install" + floorLabel, qty: rimLF, unit: "LF", nationalAvg: 2.25 });
+  items.push({ label: "Floor Joist Framing & Layout" + floorLabel, qty: sqft * storiesCount, unit: "sqft", nationalAvg: 3.45 });
+  items.push({ label: "Rim / Band Joist Install" + floorLabel, qty: rimLF, unit: "LF", nationalAvg: 2.85 });
 
   if (inputs.beamType !== "none") {
-    items.push({ label: "Main Beam Set & Hardware", qty: beamLF, unit: "LF", nationalAvg: 6.50 });
+    items.push({ label: "Main Beam Set & Hardware", qty: beamLF, unit: "LF", nationalAvg: 8.25 });
   }
 
   if (inputs.includeBasementStairs) {
-    items.push({ label: "Basement Stair Rough Framing", qty: 1, unit: "ea", nationalAvg: 525 });
+    items.push({ label: "Basement Stair Rough Framing", qty: 1, unit: "ea", nationalAvg: 685 });
   }
 
   if (inputs.includeInteriorStairs) {
-    items.push({ label: "Interior Stair Rough Framing & Opening", qty: 1, unit: "ea", nationalAvg: 685 });
+    items.push({ label: "Interior Stair Rough Framing & Opening", qty: 1, unit: "ea", nationalAvg: 865 });
   }
 
   return items;
@@ -2443,12 +2443,12 @@ function getFloorMatItems(inputs: FloorInputs): MatItem[] {
   return [
     ...getFloorFramingMatItems(inputs),
     ...(inputs.includeSubfloor ? [
-      { label: `Advantech 3/4" Subfloor Panel (4×8)${floorLabel}`, qty: Math.ceil(totalSqft * WASTE / 32), unit: "sheet", price: 52.98 },
+      { label: `Advantech 3/4" Subfloor Panel (4×8)${floorLabel}`, qty: Math.ceil(totalSqft * WASTE / 32), unit: "sheet", price: 58.98 },
       { label: adhesive.label + floorLabel, qty: Math.max(1, Math.ceil(totalSqft * WASTE / adhesive.coverage)), unit: adhesive.unit, price: adhesive.price },
     ] : []),
     ...(inputs.finish === "carpet_pad" ? [
-      { label: `Carpet — Mid-Grade Broadloom (26 oz face wt)${floorLabel}`, qty: Math.ceil(totalSqft * WASTE), unit: "sqft", price: 2.89 },
-      { label: `Carpet Pad — 6 lb Rebond 7/16"${floorLabel}`, qty: Math.ceil(totalSqft * WASTE), unit: "sqft", price: 0.65 },
+      { label: `Carpet — Mid-Grade Broadloom (26 oz face wt)${floorLabel}`, qty: Math.ceil(totalSqft * WASTE), unit: "sqft", price: 3.25 },
+      { label: `Carpet Pad — 6 lb Rebond 7/16"${floorLabel}`, qty: Math.ceil(totalSqft * WASTE), unit: "sqft", price: 0.75 },
     ] : inputs.finish !== "none" ? [
       { label: FLOOR_LABELS[inputs.finish] + floorLabel, qty: Math.ceil(totalSqft * WASTE), unit: "sqft", price: FLOOR_MAT_PRICES[inputs.finish] ?? 0 },
     ] : []),
@@ -2461,7 +2461,7 @@ function getFloorLaborItems(inputs: FloorInputs): LaborItem[] {
   const floorLabel = storiesCount > 1 ? " (both floors)" : "";
   return [
     ...getFloorFramingLaborItems(inputs),
-    ...(inputs.includeSubfloor ? [{ label: `Advantech Subfloor Install (glued & screwed)${floorLabel}`, qty: totalSqft, unit: "sqft", nationalAvg: 1.45 }] : []),
+    ...(inputs.includeSubfloor ? [{ label: `Advantech Subfloor Install (glued & screwed)${floorLabel}`, qty: totalSqft, unit: "sqft", nationalAvg: 1.85 }] : []),
     ...(inputs.finish !== "none" ? [{ label: `${FLOOR_LABELS[inputs.finish]} Installation${floorLabel}`, qty: totalSqft, unit: "sqft", nationalAvg: FLOOR_LABOR[inputs.finish] ?? 0 }] : []),
   ];
 }
@@ -2694,18 +2694,18 @@ const DEFAULT_ROOF: RoofInputs = { footprintSqft: "", pitch: "", archShingles: t
 
 // Truss price by full span
 const TRUSS_PRICE_TIERS: { maxSpan: number; price: number }[] = [
-  { maxSpan: 24, price: 175 }, { maxSpan: 32, price: 245 },
-  { maxSpan: 40, price: 330 }, { maxSpan: 48, price: 425 },
-  { maxSpan: Infinity, price: 525 },
+  { maxSpan: 24, price: 215 }, { maxSpan: 32, price: 298 },
+  { maxSpan: 40, price: 405 }, { maxSpan: 48, price: 525 },
+  { maxSpan: Infinity, price: 648 },
 ];
 function trussUnitPrice(span: number): number {
   return TRUSS_PRICE_TIERS.find(t => span <= t.maxSpan)?.price ?? 525;
 }
 // Rafter / ceiling joist config by half-span
 const RAFTER_CFG: { maxHalfSpan: number; rSize: string; rPrice: number; rdgSize: string; rdgPrice: number; cjSize: string; cjPrice: number }[] = [
-  { maxHalfSpan: 14, rSize: "2×8",  rPrice: 18.98, rdgSize: "2×10", rdgPrice: 24.98, cjSize: "2×8",  cjPrice: 18.98 },
-  { maxHalfSpan: 18, rSize: "2×10", rPrice: 24.98, rdgSize: "2×12", rdgPrice: 31.98, cjSize: "2×10", cjPrice: 24.98 },
-  { maxHalfSpan: Infinity, rSize: "2×12", rPrice: 31.98, rdgSize: "2×12", rdgPrice: 31.98, cjSize: "2×12", cjPrice: 31.98 },
+  { maxHalfSpan: 14, rSize: "2×8",  rPrice: 22.98, rdgSize: "2×10", rdgPrice: 29.98, cjSize: "2×8",  cjPrice: 22.98 },
+  { maxHalfSpan: 18, rSize: "2×10", rPrice: 29.98, rdgSize: "2×12", rdgPrice: 38.98, cjSize: "2×10", cjPrice: 29.98 },
+  { maxHalfSpan: Infinity, rSize: "2×12", rPrice: 38.98, rdgSize: "2×12", rdgPrice: 38.98, cjSize: "2×12", cjPrice: 38.98 },
 ];
 function rafterCfg(halfSpan: number) { return RAFTER_CFG.find(r => halfSpan <= r.maxHalfSpan) ?? RAFTER_CFG[RAFTER_CFG.length - 1]; }
 const STD_BOARD_LENGTHS = [8, 10, 12, 14, 16, 18, 20];
@@ -2730,9 +2730,9 @@ function getRoofMatItems(inputs: RoofInputs): MatItem[] {
       framingItems.push(
         { label: `Prefab Gable Roof Trusses — ${bw.toFixed(0)}' Span (${spacing}" OC)`, qty: trussCount, unit: "ea", price: tPrice },
         { label: `Gable End Trusses — Ladder Frame (${bw.toFixed(0)}' Span)`, qty: 2, unit: "ea", price: Math.round(tPrice * 1.15) },
-        { label: "Hurricane Ties — H2.5A Truss Clip (2 per truss, both bearing walls)", qty: trussCount * 2, unit: "ea", price: 1.89 },
-        { label: "Structural Screws — Truss to Top Plate (box)", qty: Math.max(1, Math.ceil(trussCount / 15)), unit: "box", price: 18.50 },
-        { label: "2×4×16 Temporary Bracing Lumber", qty: Math.max(2, Math.ceil(bl / 16) * 3), unit: "ea", price: 10.97 },
+        { label: "Hurricane Ties — H2.5A Truss Clip (2 per truss, both bearing walls)", qty: trussCount * 2, unit: "ea", price: 2.25 },
+        { label: "Structural Screws — Truss to Top Plate (box)", qty: Math.max(1, Math.ceil(trussCount / 15)), unit: "box", price: 21.98 },
+        { label: "2×4×16 Temporary Bracing Lumber", qty: Math.max(2, Math.ceil(bl / 16) * 3), unit: "ea", price: 11.98 },
       );
     } else {
       // Rafter system
@@ -2761,24 +2761,24 @@ function getRoofMatItems(inputs: RoofInputs): MatItem[] {
       framingItems.push(
         { label: `${rc.rSize}×${rafterBoardLen}' Common Rafters (${spacing}" OC, both sides)`, qty: Math.ceil(totalRafters * WASTE), unit: "ea", price: rc.rPrice },
         { label: `${rc.rdgSize}×${ridgeBoardLen}' Ridge Board`, qty: ridgeBoardCount, unit: "ea", price: rc.rdgPrice },
-        { label: `2×4×${collarBoardLen}' Collar Ties (every 4' OC)`, qty: Math.ceil(collarCount * WASTE), unit: "ea", price: 5.48 },
+        { label: `2×4×${collarBoardLen}' Collar Ties (every 4' OC)`, qty: Math.ceil(collarCount * WASTE), unit: "ea", price: 5.98 },
         { label: `${rc.cjSize}×${cjBoardLen}' Ceiling Joists (${spacing}" OC)`, qty: Math.ceil(cjCount * WASTE), unit: "ea", price: rc.cjPrice },
-        { label: "Hurricane Ties — H2.5A Rafter Clip (1 per rafter at plate)", qty: totalRafters, unit: "ea", price: 1.89 },
-        { label: "Structural Screws — Ridge & Rafter (box)", qty: Math.max(1, Math.ceil(totalRafters / 40)), unit: "box", price: 18.50 },
-        { label: "Ring Shank Nails — Ceiling Joist & Rafter (box)", qty: Math.max(1, Math.ceil(totalRafters / 50)), unit: "box", price: 14.98 },
+        { label: "Hurricane Ties — H2.5A Rafter Clip (1 per rafter at plate)", qty: totalRafters, unit: "ea", price: 2.25 },
+        { label: "Structural Screws — Ridge & Rafter (box)", qty: Math.max(1, Math.ceil(totalRafters / 40)), unit: "box", price: 21.98 },
+        { label: "Ring Shank Nails — Ceiling Joist & Rafter (box)", qty: Math.max(1, Math.ceil(totalRafters / 50)), unit: "box", price: 17.98 },
       );
     }
   }
 
   return [
     ...framingItems,
-    ...(inputs.archShingles ? [{ label: "Architectural Shingles (bundle)", qty: Math.ceil((actual / 100) * 3.33 * WASTE), unit: "bundle", price: 38.98 }] : []),
-    { label: "Synthetic Underlayment", qty: Math.ceil(actual * WASTE), unit: "sqft", price: 0.12 },
+    ...(inputs.archShingles ? [{ label: "Architectural Shingles (bundle)", qty: Math.ceil((actual / 100) * 3.33 * WASTE), unit: "bundle", price: 48.98 }] : []),
+    { label: "Synthetic Underlayment", qty: Math.ceil(actual * WASTE), unit: "sqft", price: 0.18 },
     ...(inputs.includeDecking ? [
-      { label: "Advantech Roof Sheathing 7/16\" (4×8)", qty: Math.ceil(actual * WASTE / 32), unit: "sheet", price: 34.98 },
-      { label: "Advantech Seam Tape (75 LF roll)", qty: Math.max(1, Math.ceil(actual * WASTE / 300)), unit: "roll", price: 24.98 },
+      { label: "Advantech Roof Sheathing 7/16\" (4×8)", qty: Math.ceil(actual * WASTE / 32), unit: "sheet", price: 38.98 },
+      { label: "Advantech Seam Tape (75 LF roll)", qty: Math.max(1, Math.ceil(actual * WASTE / 300)), unit: "roll", price: 27.98 },
     ] : []),
-    ...(inputs.iceWater ? [{ label: "Ice & Water Shield", qty: Math.ceil(fp * 0.25 * WASTE), unit: "sqft", price: 0.45 }] : []),
+    ...(inputs.iceWater ? [{ label: "Ice & Water Shield", qty: Math.ceil(fp * 0.25 * WASTE), unit: "sqft", price: 0.62 }] : []),
   ];
 }
 function getRoofLaborItems(inputs: RoofInputs): LaborItem[] {
@@ -2797,24 +2797,24 @@ function getRoofLaborItems(inputs: RoofInputs): LaborItem[] {
       const trussCount = Math.ceil(bl / spacingFt) + 1;
       // RSMeans 06 17 53 — light residential truss set, 75th %ile
       framingLabor.push(
-        { label: "Roof Truss Delivery & Crane Set", qty: trussCount + 2, unit: "ea", nationalAvg: 58.00 },
-        { label: "Truss Bracing, Tie-Down & Sheathing Blocking", qty: actual || Math.round(bw * bl * factor), unit: "sqft", nationalAvg: 0.88 },
+        { label: "Roof Truss Delivery & Crane Set", qty: trussCount + 2, unit: "ea", nationalAvg: 72.00 },
+        { label: "Truss Bracing, Tie-Down & Sheathing Blocking", qty: actual || Math.round(bw * bl * factor), unit: "sqft", nationalAvg: 1.15 },
       );
     } else {
       // RSMeans 06 11 10 — stick-built roof framing, rafters + ridge + collar ties, 75th %ile
       framingLabor.push(
-        { label: "Roof Framing — Rafters, Ridge Board & Collar Ties", qty: actual || Math.round(bw * bl * factor), unit: "sqft", nationalAvg: 5.85 },
-        { label: "Ceiling Joist Framing", qty: fp || Math.round(bw * bl), unit: "sqft", nationalAvg: 1.95 },
+        { label: "Roof Framing — Rafters, Ridge Board & Collar Ties", qty: actual || Math.round(bw * bl * factor), unit: "sqft", nationalAvg: 7.25 },
+        { label: "Ceiling Joist Framing", qty: fp || Math.round(bw * bl), unit: "sqft", nationalAvg: 2.45 },
       );
     }
   }
 
   return [
     ...framingLabor,
-    ...(inputs.archShingles ? [{ label: "Shingle Installation", qty: actual, unit: "sqft", nationalAvg: 3.85 }] : []),
-    { label: "Underlayment & Flashing Install", qty: actual, unit: "sqft", nationalAvg: 0.95 },
-    ...(inputs.includeDecking ? [{ label: "Advantech Roof Sheathing Install & Seam Tape", qty: actual, unit: "sqft", nationalAvg: 3.85 }] : []),
-    ...(inputs.iceWater ? [{ label: "Ice & Water Shield Install", qty: Math.round(fp * 0.25), unit: "sqft", nationalAvg: 1.15 }] : []),
+    ...(inputs.archShingles ? [{ label: "Shingle Installation", qty: actual, unit: "sqft", nationalAvg: 4.85 }] : []),
+    { label: "Underlayment & Flashing Install", qty: actual, unit: "sqft", nationalAvg: 1.25 },
+    ...(inputs.includeDecking ? [{ label: "Advantech Roof Sheathing Install & Seam Tape", qty: actual, unit: "sqft", nationalAvg: 2.65 }] : []),
+    ...(inputs.iceWater ? [{ label: "Ice & Water Shield Install", qty: Math.round(fp * 0.25), unit: "sqft", nationalAvg: 1.45 }] : []),
   ];
 }
 function RoofTab() {
@@ -2973,25 +2973,25 @@ function getPlumbingMatItems(i: PlumbingInputs): MatItem[] {
   const ptraps = (i.fullBaths * 2) + (i.halfBaths * 1) + (i.hasKitchen ? 1 : 0) + (i.hasLaundry ? 1 : 0);
   const waxRings = i.fullBaths + i.halfBaths;
   const items: MatItem[] = [];
-  if (pex12 > 0) items.push({ label: 'PEX-A ½" Supply Branches', qty: pex12, unit: "LF", price: 0.68 });
-  if (pex34 > 0) items.push({ label: 'PEX-A ¾" Supply Trunk / Outdoor Runs', qty: pex34, unit: "LF", price: 0.98 });
-  if (pvc4 > 0) items.push({ label: '4" PVC Main Drain / Stack', qty: pvc4, unit: "LF", price: 4.25 });
-  if (pvc3 > 0) items.push({ label: '3" PVC Drain Branches (Bathrooms)', qty: pvc3, unit: "LF", price: 2.85 });
-  if (pvc2 > 0) items.push({ label: '2" PVC Drain (Kitchen/Laundry)', qty: pvc2, unit: "LF", price: 1.95 });
-  if (shutoffs > 0) items.push({ label: "½\" Shut-Off Valves", qty: shutoffs, unit: "ea", price: 8.50 });
-  if (ptraps > 0) items.push({ label: "P-Traps", qty: ptraps, unit: "ea", price: 12.50 });
-  if (waxRings > 0) items.push({ label: "Toilet Wax Ring & Closet Flange", qty: waxRings, unit: "ea", price: 8.50 });
-  if (i.spigots > 0) items.push({ label: "Frost-Free Outdoor Spigot", qty: i.spigots, unit: "ea", price: 22.50 });
-  if (i.hasLaundry) items.push({ label: "Laundry Box & Valves", qty: 1, unit: "ea", price: 38.00 });
+  if (pex12 > 0) items.push({ label: 'PEX-A ½" Supply Branches', qty: pex12, unit: "LF", price: 0.95 });
+  if (pex34 > 0) items.push({ label: 'PEX-A ¾" Supply Trunk / Outdoor Runs', qty: pex34, unit: "LF", price: 1.35 });
+  if (pvc4 > 0) items.push({ label: '4" PVC Main Drain / Stack', qty: pvc4, unit: "LF", price: 5.25 });
+  if (pvc3 > 0) items.push({ label: '3" PVC Drain Branches (Bathrooms)', qty: pvc3, unit: "LF", price: 3.45 });
+  if (pvc2 > 0) items.push({ label: '2" PVC Drain (Kitchen/Laundry)', qty: pvc2, unit: "LF", price: 2.45 });
+  if (shutoffs > 0) items.push({ label: "½\" Shut-Off Valves", qty: shutoffs, unit: "ea", price: 12.50 });
+  if (ptraps > 0) items.push({ label: "P-Traps", qty: ptraps, unit: "ea", price: 15.50 });
+  if (waxRings > 0) items.push({ label: "Toilet Wax Ring & Closet Flange", qty: waxRings, unit: "ea", price: 12.50 });
+  if (i.spigots > 0) items.push({ label: "Frost-Free Outdoor Spigot", qty: i.spigots, unit: "ea", price: 32.50 });
+  if (i.hasLaundry) items.push({ label: "Laundry Box & Valves", qty: 1, unit: "ea", price: 52.00 });
   return items;
 }
 function getPlumbingLaborItems(i: PlumbingInputs): LaborItem[] {
   const items: LaborItem[] = [];
-  if (i.fullBaths > 0) items.push({ label: "Full Bathroom Rough-In", qty: i.fullBaths, unit: "ea", nationalAvg: 1650 });
-  if (i.halfBaths > 0) items.push({ label: "Half Bath / Powder Room Rough-In", qty: i.halfBaths, unit: "ea", nationalAvg: 975 });
-  if (i.hasKitchen) items.push({ label: "Kitchen Plumbing Rough-In", qty: 1, unit: "ea", nationalAvg: 625 });
-  if (i.hasLaundry) items.push({ label: "Laundry Hookup Rough-In", qty: 1, unit: "ea", nationalAvg: 550 });
-  if (i.spigots > 0) items.push({ label: "Outdoor Spigot Rough-In", qty: i.spigots, unit: "ea", nationalAvg: 195 });
+  if (i.fullBaths > 0) items.push({ label: "Full Bathroom Rough-In", qty: i.fullBaths, unit: "ea", nationalAvg: 2150 });
+  if (i.halfBaths > 0) items.push({ label: "Half Bath / Powder Room Rough-In", qty: i.halfBaths, unit: "ea", nationalAvg: 1250 });
+  if (i.hasKitchen) items.push({ label: "Kitchen Plumbing Rough-In", qty: 1, unit: "ea", nationalAvg: 825 });
+  if (i.hasLaundry) items.push({ label: "Laundry Hookup Rough-In", qty: 1, unit: "ea", nationalAvg: 685 });
+  if (i.spigots > 0) items.push({ label: "Outdoor Spigot Rough-In", qty: i.spigots, unit: "ea", nationalAvg: 265 });
   return items;
 }
 function PlumbingTab() {
@@ -3090,17 +3090,17 @@ function getElectricalMatItems(inp: ElectricalInputs): MatItem[] {
   const stdBreakers = Math.ceil(sqft / 400) + kitchenCircuits + bathroomCircuits + (appliances.dishwasher ? 1 : 0) + (appliances.garage ? 1 : 0);
   const twoPolBreakers = (appliances.electricRange ? 1 : 0) + (appliances.electricDryer ? 1 : 0) + (appliances.evCharger ? 1 : 0) + (appliances.hotTub ? 1 : 0);
   const panelSize = (appliances.evCharger && appliances.hotTub) ? "400A" : "200A";
-  const panelPrice = panelSize === "400A" ? 1250 : 485;
+  const panelPrice = panelSize === "400A" ? 1650 : 685;
   const items: MatItem[] = [{ label: `${panelSize} Main Panel with Main Breaker`, qty: 1, unit: "ea", price: panelPrice }];
-  if (romex142 > 0) items.push({ label: "14/2 Romex — Lighting Circuits", qty: romex142, unit: "LF", price: 0.55 });
-  if (romex122 > 0) items.push({ label: "12/2 Romex — Outlet & General Circuits", qty: romex122, unit: "LF", price: 0.65 });
-  if (romex103 > 0) items.push({ label: "10/3 Romex — Range / Dryer (240V)", qty: romex103, unit: "LF", price: 1.45 });
-  if (romex63 > 0) items.push({ label: "6/3 Romex — EV Charger / Hot Tub (240V)", qty: romex63, unit: "LF", price: 2.85 });
-  items.push({ label: "Standard Duplex Outlets", qty: Math.max(0, totalOutlets - gfciOutlets), unit: "ea", price: 2.85 });
-  items.push({ label: "GFCI Outlets (Kitchen, Bath, Garage, Exterior)", qty: gfciOutlets, unit: "ea", price: 14.50 });
-  items.push({ label: "AFCI Breakers (Bedrooms & Living Areas)", qty: afciBreakers, unit: "ea", price: 38.00 });
-  if (stdBreakers > 0) items.push({ label: "Standard 15/20A Circuit Breakers", qty: stdBreakers, unit: "ea", price: 8.50 });
-  if (twoPolBreakers > 0) items.push({ label: "2-Pole 240V Breakers (Appliances)", qty: twoPolBreakers, unit: "ea", price: 18.50 });
+  if (romex142 > 0) items.push({ label: "14/2 Romex — Lighting Circuits", qty: romex142, unit: "LF", price: 0.72 });
+  if (romex122 > 0) items.push({ label: "12/2 Romex — Outlet & General Circuits", qty: romex122, unit: "LF", price: 0.85 });
+  if (romex103 > 0) items.push({ label: "10/3 Romex — Range / Dryer (240V)", qty: romex103, unit: "LF", price: 1.95 });
+  if (romex63 > 0) items.push({ label: "6/3 Romex — EV Charger / Hot Tub (240V)", qty: romex63, unit: "LF", price: 3.85 });
+  items.push({ label: "Standard Duplex Outlets", qty: Math.max(0, totalOutlets - gfciOutlets), unit: "ea", price: 3.25 });
+  items.push({ label: "GFCI Outlets (Kitchen, Bath, Garage, Exterior)", qty: gfciOutlets, unit: "ea", price: 18.50 });
+  items.push({ label: "AFCI Breakers (Bedrooms & Living Areas)", qty: afciBreakers, unit: "ea", price: 48.50 });
+  if (stdBreakers > 0) items.push({ label: "Standard 15/20A Circuit Breakers", qty: stdBreakers, unit: "ea", price: 10.50 });
+  if (twoPolBreakers > 0) items.push({ label: "2-Pole 240V Breakers (Appliances)", qty: twoPolBreakers, unit: "ea", price: 24.50 });
   return items;
 }
 function getElectricalLaborItems(inp: ElectricalInputs): LaborItem[] {
@@ -3111,11 +3111,11 @@ function getElectricalLaborItems(inp: ElectricalInputs): LaborItem[] {
     + (appliances.electricRange ? 1 : 0) + (appliances.electricDryer ? 1 : 0)
     + (appliances.evCharger ? 1 : 0) + (appliances.hotTub ? 1 : 0);
   const items: LaborItem[] = [
-    { label: "Panel Installation & Setup", qty: 1, unit: "ea", nationalAvg: 1050 },
-    { label: "Circuit Rough-In (per circuit)", qty: totalCircuits, unit: "circuit", nationalAvg: 395 },
+    { label: "Panel Installation & Setup", qty: 1, unit: "ea", nationalAvg: 1450 },
+    { label: "Circuit Rough-In (per circuit)", qty: totalCircuits, unit: "circuit", nationalAvg: 485 },
   ];
-  if (appliances.evCharger) items.push({ label: "EV Charger Circuit (240V)", qty: 1, unit: "ea", nationalAvg: 1350 });
-  if (appliances.hotTub) items.push({ label: "Hot Tub / Spa Circuit (240V, GFCI)", qty: 1, unit: "ea", nationalAvg: 1350 });
+  if (appliances.evCharger) items.push({ label: "EV Charger Circuit (240V)", qty: 1, unit: "ea", nationalAvg: 1750 });
+  if (appliances.hotTub) items.push({ label: "Hot Tub / Spa Circuit (240V, GFCI)", qty: 1, unit: "ea", nationalAvg: 1750 });
   return items;
 }
 function ElectricalTab() {
@@ -3191,26 +3191,26 @@ const HEATING_BTU: Record<string, number> = { cold: 45, mixed: 35, hot: 25 };
 const COOLING_BTU: Record<string, number> = { cold: 20, mixed: 25, hot: 35 };
 
 function sizeFurnace(btu: number): { label: string; price: number } {
-  if (btu <= 60000) return { label: "60,000 BTU Gas Furnace", price: 785 };
-  if (btu <= 80000) return { label: "80,000 BTU Gas Furnace", price: 985 };
-  if (btu <= 100000) return { label: "100,000 BTU Gas Furnace", price: 1245 };
-  return { label: "120,000 BTU Gas Furnace", price: 1485 };
+  if (btu <= 60000) return { label: "60,000 BTU Gas Furnace", price: 985 };
+  if (btu <= 80000) return { label: "80,000 BTU Gas Furnace", price: 1225 };
+  if (btu <= 100000) return { label: "100,000 BTU Gas Furnace", price: 1545 };
+  return { label: "120,000 BTU Gas Furnace", price: 1845 };
 }
 function sizeAC(btu: number): { label: string; tons: number; price: number } {
-  const sizes = [{ btu: 18000, tons: 1.5, price: 1085 }, { btu: 24000, tons: 2, price: 1285 }, { btu: 30000, tons: 2.5, price: 1385 }, { btu: 36000, tons: 3, price: 1485 }, { btu: 42000, tons: 3.5, price: 1685 }, { btu: 48000, tons: 4, price: 1885 }, { btu: 60000, tons: 5, price: 2285 }];
+  const sizes = [{ btu: 18000, tons: 1.5, price: 1385 }, { btu: 24000, tons: 2, price: 1585 }, { btu: 30000, tons: 2.5, price: 1745 }, { btu: 36000, tons: 3, price: 1885 }, { btu: 42000, tons: 3.5, price: 2085 }, { btu: 48000, tons: 4, price: 2385 }, { btu: 60000, tons: 5, price: 2885 }];
   const match = sizes.find(s => s.btu >= btu) ?? sizes[sizes.length - 1];
   return { label: `${match.tons}-Ton A/C Condenser`, tons: match.tons, price: match.price };
 }
 function sizeHP(btu: number): { label: string; tons: number; price: number } {
-  const sizes = [{ btu: 18000, tons: 1.5, price: 1685 }, { btu: 24000, tons: 2, price: 1885 }, { btu: 30000, tons: 2.5, price: 2185 }, { btu: 36000, tons: 3, price: 2485 }, { btu: 42000, tons: 3.5, price: 2785 }, { btu: 48000, tons: 4, price: 3085 }, { btu: 60000, tons: 5, price: 3685 }];
+  const sizes = [{ btu: 18000, tons: 1.5, price: 2085 }, { btu: 24000, tons: 2, price: 2385 }, { btu: 30000, tons: 2.5, price: 2685 }, { btu: 36000, tons: 3, price: 3085 }, { btu: 42000, tons: 3.5, price: 3485 }, { btu: 48000, tons: 4, price: 3885 }, { btu: 60000, tons: 5, price: 4585 }];
   const match = sizes.find(s => s.btu >= btu) ?? sizes[sizes.length - 1];
   return { label: `${match.tons}-Ton Heat Pump`, tons: match.tons, price: match.price };
 }
 function sizeBoiler(btu: number): { label: string; price: number } {
-  if (btu <= 60000) return { label: "60,000 BTU Condensing Boiler (On-Demand)", price: 1850 };
-  if (btu <= 80000) return { label: "80,000 BTU Condensing Boiler (On-Demand)", price: 2250 };
-  if (btu <= 100000) return { label: "100,000 BTU Condensing Boiler (On-Demand)", price: 2750 };
-  return { label: "120,000 BTU Condensing Boiler (On-Demand)", price: 3250 };
+  if (btu <= 60000) return { label: "60,000 BTU Condensing Boiler (On-Demand)", price: 2350 };
+  if (btu <= 80000) return { label: "80,000 BTU Condensing Boiler (On-Demand)", price: 2850 };
+  if (btu <= 100000) return { label: "100,000 BTU Condensing Boiler (On-Demand)", price: 3450 };
+  return { label: "120,000 BTU Condensing Boiler (On-Demand)", price: 4050 };
 }
 function getHvacMatItems(inp: HvacInputs): MatItem[] {
   const sqft = parseFloat(inp.sqft) || 0;
@@ -3224,10 +3224,10 @@ function getHvacMatItems(inp: HvacInputs): MatItem[] {
   if (system === "mini-split") {
     const heads = Math.ceil(sqft / 500);
     items = [
-      { label: `Mini-Split Indoor Heads (${heads}×12,000 BTU)`, qty: heads, unit: "ea", price: 750 },
-      { label: "Mini-Split Outdoor Condenser Unit", qty: 1, unit: "ea", price: 1200 + Math.max(0, heads - 2) * 850 },
-      { label: "Refrigerant Lineset", qty: heads * 25, unit: "LF", price: 5.50 },
-      { label: "Control Wiring", qty: heads * 25, unit: "LF", price: 0.85 },
+      { label: `Mini-Split Indoor Heads (${heads}×12,000 BTU)`, qty: heads, unit: "ea", price: 985 },
+      { label: "Mini-Split Outdoor Condenser Unit", qty: 1, unit: "ea", price: 1485 + Math.max(0, heads - 2) * 1050 },
+      { label: "Refrigerant Lineset", qty: heads * 25, unit: "LF", price: 7.25 },
+      { label: "Control Wiring", qty: heads * 25, unit: "LF", price: 1.05 },
     ];
   } else if (system === "on-demand-hydro") {
     const boiler = sizeBoiler(heatBtu);
@@ -3235,13 +3235,13 @@ function getHvacMatItems(inp: HvacInputs): MatItem[] {
     const pexLF = Math.ceil(baseboardLF * 2 * WASTE);
     items = [
       { label: boiler.label, qty: 1, unit: "ea", price: boiler.price },
-      { label: "Baseboard Fin-Tube Radiators", qty: baseboardLF, unit: "LF", price: 18.50 },
-      { label: 'PEX-B ¾" Heating Loop Tubing', qty: pexLF, unit: "LF", price: 0.62 },
-      { label: "Circulator Pump", qty: 1, unit: "ea", price: 185 },
-      { label: "Expansion Tank", qty: 1, unit: "ea", price: 65 },
-      { label: "Pressure Relief Valve", qty: 1, unit: "ea", price: 28 },
-      { label: "Zone Manifold (2–4 zones)", qty: 1, unit: "ea", price: 185 },
-      { label: "Programmable Thermostat", qty: 1, unit: "ea", price: 125 },
+      { label: "Baseboard Fin-Tube Radiators", qty: baseboardLF, unit: "LF", price: 22.50 },
+      { label: 'PEX-B ¾" Heating Loop Tubing', qty: pexLF, unit: "LF", price: 0.82 },
+      { label: "Circulator Pump", qty: 1, unit: "ea", price: 225 },
+      { label: "Expansion Tank", qty: 1, unit: "ea", price: 85 },
+      { label: "Pressure Relief Valve", qty: 1, unit: "ea", price: 35 },
+      { label: "Zone Manifold (2–4 zones)", qty: 1, unit: "ea", price: 225 },
+      { label: "Programmable Thermostat", qty: 1, unit: "ea", price: 155 },
     ];
   } else {
     if (system === "gas-central") {
@@ -3249,23 +3249,23 @@ function getHvacMatItems(inp: HvacInputs): MatItem[] {
       const ac = sizeAC(coolBtu);
       items.push({ label: furnace.label, qty: 1, unit: "ea", price: furnace.price });
       items.push({ label: ac.label, qty: 1, unit: "ea", price: ac.price });
-      items.push({ label: "Evaporator Coil / Air Handler", qty: 1, unit: "ea", price: 650 });
-      items.push({ label: "Refrigerant Lineset (25 LF)", qty: 25, unit: "LF", price: 5.50 });
+      items.push({ label: "Evaporator Coil / Air Handler", qty: 1, unit: "ea", price: 825 });
+      items.push({ label: "Refrigerant Lineset (25 LF)", qty: 25, unit: "LF", price: 7.25 });
     } else {
       const hp = sizeHP(Math.max(heatBtu, coolBtu));
       items.push({ label: hp.label, qty: 1, unit: "ea", price: hp.price });
-      items.push({ label: "Air Handler / Indoor Unit", qty: 1, unit: "ea", price: 685 });
-      items.push({ label: "Refrigerant Lineset (25 LF)", qty: 25, unit: "LF", price: 5.50 });
+      items.push({ label: "Air Handler / Indoor Unit", qty: 1, unit: "ea", price: 865 });
+      items.push({ label: "Refrigerant Lineset (25 LF)", qty: 25, unit: "LF", price: 7.25 });
     }
-    items.push({ label: "Flex Duct", qty: ductLF, unit: "LF", price: 2.50 });
-    items.push({ label: "Supply Registers", qty: registers, unit: "ea", price: 13.50 });
-    items.push({ label: "Return Air Grilles", qty: returns, unit: "ea", price: 18.50 });
-    items.push({ label: "Programmable Thermostat", qty: 1, unit: "ea", price: 125 });
+    items.push({ label: "Flex Duct", qty: ductLF, unit: "LF", price: 3.25 });
+    items.push({ label: "Supply Registers", qty: registers, unit: "ea", price: 16.50 });
+    items.push({ label: "Return Air Grilles", qty: returns, unit: "ea", price: 22.50 });
+    items.push({ label: "Programmable Thermostat", qty: 1, unit: "ea", price: 155 });
   }
   if (gasFireplace) {
-    items.push({ label: "Direct-Vent Gas / Propane Fireplace", qty: 1, unit: "ea", price: 1450 });
-    items.push({ label: "Direct-Vent Vent Kit", qty: 1, unit: "ea", price: 285 });
-    items.push({ label: 'Gas Line Stub to Fireplace (½" black iron)', qty: 10, unit: "LF", price: 2.85 });
+    items.push({ label: "Direct-Vent Gas / Propane Fireplace", qty: 1, unit: "ea", price: 1850 });
+    items.push({ label: "Direct-Vent Vent Kit", qty: 1, unit: "ea", price: 365 });
+    items.push({ label: 'Gas Line Stub to Fireplace (½" black iron)', qty: 10, unit: "LF", price: 3.85 });
   }
   return items;
 }
@@ -3274,15 +3274,15 @@ function getHvacLaborItems(inp: HvacInputs): LaborItem[] {
   const items: LaborItem[] = [];
   if (inp.system === "mini-split") {
     const heads = Math.ceil(sqft / 500);
-    items.push({ label: "Mini-Split Installation (per head)", qty: heads, unit: "head", nationalAvg: 1650 });
-    items.push({ label: "Outdoor Unit Set & Startup", qty: 1, unit: "ea", nationalAvg: 850 });
+    items.push({ label: "Mini-Split Installation (per head)", qty: heads, unit: "head", nationalAvg: 2150 });
+    items.push({ label: "Outdoor Unit Set & Startup", qty: 1, unit: "ea", nationalAvg: 1150 });
   } else if (inp.system === "on-demand-hydro") {
-    items.push({ label: "Hydronic Rough-In, Boiler Set & Startup", qty: sqft, unit: "sqft", nationalAvg: 7.25 });
+    items.push({ label: "Hydronic Rough-In, Boiler Set & Startup", qty: sqft, unit: "sqft", nationalAvg: 9.25 });
   } else {
-    items.push({ label: "HVAC Rough-In & Equipment Set", qty: sqft, unit: "sqft", nationalAvg: 3.65 });
+    items.push({ label: "HVAC Rough-In & Equipment Set", qty: sqft, unit: "sqft", nationalAvg: 4.85 });
   }
   if (inp.gasFireplace) {
-    items.push({ label: "Gas Fireplace Install & Vent", qty: 1, unit: "ea", nationalAvg: 925 });
+    items.push({ label: "Gas Fireplace Install & Vent", qty: 1, unit: "ea", nationalAvg: 1250 });
   }
   return items;
 }
