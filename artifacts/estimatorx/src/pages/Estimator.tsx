@@ -808,11 +808,13 @@ function getSiteWorkLaborItems(inputs: SiteWorkInputs): LaborItem[] {
   const items: LaborItem[] = [];
 
   // ── Grading & earthwork ──
-  if (fp > 0) {
-    const disturbedSqft = Math.round(fp * 1.4);
-    items.push({ label: "Clearing & Grubbing", qty: disturbedSqft, unit: "sqft", nationalAvg: 0.68 });
-    items.push({ label: "Rough Grading (machine)", qty: disturbedSqft, unit: "sqft", nationalAvg: 0.85 });
-    items.push({ label: "Topsoil Respread & Fine Grade", qty: disturbedSqft, unit: "sqft", nationalAvg: 0.55 });
+  // C&G, rough grading, and topsoil respread are site-wide operations — use lot size.
+  // Fall back to footprint only when no lot size is entered so the user still gets a line item.
+  const siteSqft = lot > 0 ? lot : fp > 0 ? Math.round(fp * 1.4) : 0;
+  if (siteSqft > 0) {
+    items.push({ label: "Clearing & Grubbing", qty: siteSqft, unit: "sqft", nationalAvg: 0.68 });
+    items.push({ label: "Rough Grading (machine)", qty: siteSqft, unit: "sqft", nationalAvg: 0.85 });
+    items.push({ label: "Topsoil Respread & Fine Grade", qty: siteSqft, unit: "sqft", nationalAvg: 0.55 });
   }
   if (fp > 0 && cut > 0) {
     items.push({ label: "Bulk Excavation & Haul (machine)", qty: Math.ceil(fp * (cut / 12) / 27 * 1.25), unit: "CY", nationalAvg: 18.50 });
@@ -926,7 +928,7 @@ function SiteWorkTab() {
           <span className="text-[#E85D26] text-lg leading-none mt-0.5">⚠</span>
           <div className="text-xs text-[#555] leading-relaxed">
             <span className="font-bold text-[#333]">OSHA 29 CFR 1926.651(j)(2) — Mandatory Excavation Setback.</span>{" "}
-            All excavated spoil, equipment, and materials <span className="font-semibold">must</span> be kept a minimum of <span className="font-semibold">2 feet from the edge</span> of any open excavation. This is a federal regulatory requirement, not a recommendation. Clearing &amp; Grubbing is estimated at <span className="font-semibold">building footprint + 40%</span> ({Math.round(fp * 1.4).toLocaleString()} sqft) to account for the mandatory spoil setback zone, equipment staging, and worker egress around the foundation perimeter.
+            All excavated spoil, equipment, and materials <span className="font-semibold">must</span> be kept a minimum of <span className="font-semibold">2 feet from the edge</span> of any open excavation (foundation hole). This is a federal regulatory requirement, not a recommendation. Your site staging plan must reserve a continuous 2-foot spoil-free setback around the entire foundation excavation perimeter — failure to maintain this clearance is an OSHA citation.
           </div>
         </div>
       )}
