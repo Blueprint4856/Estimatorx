@@ -922,6 +922,15 @@ function SiteWorkTab() {
             label="Foundation backfill sand — haul in clean fill (unchecked = reuse excavated material)" />
         )}
       </div>
+      {fp > 0 && (
+        <div className="border border-[#E85D26]/40 bg-[#E85D26]/5 rounded p-3 mb-6 flex gap-3">
+          <span className="text-[#E85D26] text-lg leading-none mt-0.5">⚠</span>
+          <div className="text-xs text-[#555] leading-relaxed">
+            <span className="font-bold text-[#333]">OSHA 29 CFR 1926.651(j)(2) — Mandatory Excavation Setback.</span>{" "}
+            All excavated spoil, equipment, and materials <span className="font-semibold">must</span> be kept a minimum of <span className="font-semibold">2 feet from the edge</span> of any open excavation. This is a federal regulatory requirement, not a recommendation. Clearing &amp; Grubbing is estimated at <span className="font-semibold">building footprint + 40%</span> ({Math.round(fp * 1.4).toLocaleString()} sqft) to account for the mandatory spoil setback zone, equipment staging, and worker egress around the foundation perimeter.
+          </div>
+        </div>
+      )}
 
       {/* ── Driveway ── */}
       <SWSection title="Driveway" />
