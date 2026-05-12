@@ -808,9 +808,8 @@ function getSiteWorkLaborItems(inputs: SiteWorkInputs): LaborItem[] {
   const items: LaborItem[] = [];
 
   // ── Grading & earthwork ──
-  // C&G, rough grading, and topsoil respread are site-wide operations — use lot size.
-  // Fall back to footprint only when no lot size is entered so the user still gets a line item.
-  const siteSqft = lot > 0 ? lot : fp > 0 ? Math.round(fp * 1.4) : 0;
+  // C&G, rough grading, and topsoil respread use 3× the building footprint.
+  const siteSqft = fp > 0 ? Math.round(fp * 3) : 0;
   if (siteSqft > 0) {
     items.push({ label: "Clearing & Grubbing", qty: siteSqft, unit: "sqft", nationalAvg: 0.68 });
     items.push({ label: "Rough Grading (machine)", qty: siteSqft, unit: "sqft", nationalAvg: 0.85 });
