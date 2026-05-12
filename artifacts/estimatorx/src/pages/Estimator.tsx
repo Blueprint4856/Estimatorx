@@ -809,11 +809,10 @@ function getSiteWorkLaborItems(inputs: SiteWorkInputs): LaborItem[] {
 
   // ── Grading & earthwork ──
   if (fp > 0) {
-    items.push({ label: "Clearing & Grubbing", qty: Math.round(fp * 1.4), unit: "sqft", nationalAvg: 0.68 });
-  }
-  if (lot > 0) {
-    items.push({ label: "Rough Grading (machine)", qty: lot, unit: "sqft", nationalAvg: 0.85 });
-    items.push({ label: "Topsoil Respread & Fine Grade", qty: lot, unit: "sqft", nationalAvg: 0.55 });
+    const disturbedSqft = Math.round(fp * 1.4);
+    items.push({ label: "Clearing & Grubbing", qty: disturbedSqft, unit: "sqft", nationalAvg: 0.68 });
+    items.push({ label: "Rough Grading (machine)", qty: disturbedSqft, unit: "sqft", nationalAvg: 0.85 });
+    items.push({ label: "Topsoil Respread & Fine Grade", qty: disturbedSqft, unit: "sqft", nationalAvg: 0.55 });
   }
   if (fp > 0 && cut > 0) {
     items.push({ label: "Bulk Excavation & Haul (machine)", qty: Math.ceil(fp * (cut / 12) / 27 * 1.25), unit: "CY", nationalAvg: 18.50 });
