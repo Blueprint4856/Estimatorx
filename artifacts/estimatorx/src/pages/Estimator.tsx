@@ -809,7 +809,7 @@ function getSiteWorkLaborItems(inputs: SiteWorkInputs): LaborItem[] {
 
   // ── Grading & earthwork ──
   if (fp > 0) {
-    items.push({ label: "Clearing & Grubbing", qty: Math.round(fp * 1.2), unit: "sqft", nationalAvg: 0.68 });
+    items.push({ label: "Clearing & Grubbing", qty: Math.round(fp * 1.4), unit: "sqft", nationalAvg: 0.68 });
   }
   if (lot > 0) {
     items.push({ label: "Rough Grading (machine)", qty: lot, unit: "sqft", nationalAvg: 0.85 });
