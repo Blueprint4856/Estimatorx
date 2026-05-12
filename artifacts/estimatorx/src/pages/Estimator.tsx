@@ -97,6 +97,33 @@ function useLocalStorage<T>(key: string, defaultValue: T): [T, React.Dispatch<Re
   return [value, setValue];
 }
 
+function useTabUndo<T>(storageKey: string, defaultValue: T) {
+  const [rawInputs, setRaw] = useLocalStorage<T>(storageKey, defaultValue);
+  const [snapshot, setSnapshot] = useState<T | null>(null);
+  const activeRef = useRef(false);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rawRef = useRef<T>(rawInputs);
+  rawRef.current = rawInputs;
+  const setInputs: React.Dispatch<React.SetStateAction<T>> = useCallback((action) => {
+    if (!activeRef.current) {
+      setSnapshot(rawRef.current);
+      activeRef.current = true;
+    }
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => { activeRef.current = false; }, 1200);
+    setRaw(action);
+  }, [setRaw]);
+  const undo = useCallback(() => {
+    if (snapshot !== null) {
+      setRaw(snapshot);
+      setSnapshot(null);
+      activeRef.current = false;
+      if (timerRef.current) { clearTimeout(timerRef.current); timerRef.current = null; }
+    }
+  }, [snapshot, setRaw]);
+  return { rawInputs, setInputs, undo, canUndo: snapshot !== null };
+}
+
 const SELECT_CLS = "w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors";
 
 interface ProjectInputs {
@@ -665,6 +692,13 @@ function EmptyState({ text }: { text: string }) {
 function ResultNote() {
   return <p className="text-[10px] text-[#AAA]">Includes 10% material waste factor. Labor rates are RSMeans national averages — edit above. Delivery, permits, equipment rental, and tax not included.</p>;
 }
+function UndoBtn({ onUndo }: { onUndo: () => void }) {
+  return (
+    <button onClick={onUndo} className="inline-flex items-center gap-1.5 text-xs font-bold text-[#E85D26] border border-[#E85D26]/40 bg-[#E85D26]/5 px-2.5 py-1 rounded hover:bg-[#E85D26]/10 transition-colors no-print">
+      <RotateCcw size={11} />Undo last change
+    </button>
+  );
+}
 
 /* ─────────────────────────────────────────────
    SITE WORK TAB
@@ -856,7 +890,7 @@ function getSiteWorkLaborItems(inputs: SiteWorkInputs): LaborItem[] {
 }
 
 function SiteWorkTab() {
-  const [rawInputs, setInputs] = useLocalStorage<SiteWorkInputs>(SK.sitework, DEFAULT_SITEWORK);
+  const { rawInputs, setInputs, undo, canUndo } = useTabUndo<SiteWorkInputs>(SK.sitework, DEFAULT_SITEWORK);
   const [project] = useProject();
   const tabInputs: SiteWorkInputs = { ...DEFAULT_SITEWORK, ...rawInputs };
   const inputs: SiteWorkInputs = {
@@ -895,9 +929,12 @@ function SiteWorkTab() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h2 className="text-2xl font-black uppercase font-serif text-[#1A1A1A] mb-1">Site Work</h2>
-        <p className="text-sm text-[#888]">Clearing, grading, excavation, utilities, and driveway — everything before the foundation goes in.</p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-black uppercase font-serif text-[#1A1A1A] mb-1">Site Work</h2>
+          <p className="text-sm text-[#888]">Clearing, grading, excavation, utilities, and driveway — everything before the foundation goes in.</p>
+        </div>
+        {canUndo && <UndoBtn onUndo={undo} />}
       </div>
 
       {/* ── Grading & Excavation ── */}
@@ -1347,7 +1384,7 @@ function getFoundationLaborItems(inputs: FoundationInputs): LaborItem[] {
 }
 
 function FoundationTab() {
-  const [rawInputs, setInputs] = useLocalStorage<FoundationInputs>(SK.foundation, DEFAULT_FOUNDATION);
+  const { rawInputs, setInputs, undo, canUndo } = useTabUndo<FoundationInputs>(SK.foundation, DEFAULT_FOUNDATION);
   const [project] = useProject();
   const tabInputs: FoundationInputs = { ...DEFAULT_FOUNDATION, ...rawInputs };
   const inputs: FoundationInputs = {
@@ -1395,9 +1432,12 @@ function FoundationTab() {
 
   return (
     <div>
-      <div className="mb-8">
-        <h2 className="text-2xl font-black uppercase font-serif text-[#1A1A1A] mb-1">Foundation & Concrete</h2>
-        <p className="text-sm text-[#888]">Configure your foundation type and footprint — materials and labor auto-calculate.</p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-black uppercase font-serif text-[#1A1A1A] mb-1">Foundation & Concrete</h2>
+          <p className="text-sm text-[#888]">Configure your foundation type and footprint — materials and labor auto-calculate.</p>
+        </div>
+        {canUndo && <UndoBtn onUndo={undo} />}
       </div>
 
       {/* Inputs */}
@@ -1960,7 +2000,7 @@ function getWallLaborItems(inputs: WallInputs): LaborItem[] {
   ];
 }
 function WallTab() {
-  const [rawInputs, setInputs] = useLocalStorage<WallInputs>(SK.wall, DEFAULT_WALL);
+  const { rawInputs, setInputs, undo, canUndo } = useTabUndo<WallInputs>(SK.wall, DEFAULT_WALL);
   const [project] = useProject();
   const tabInputs: WallInputs = { ...DEFAULT_WALL, ...rawInputs, studSize: migrateStudSize(rawInputs?.studSize) };
   const inputs: WallInputs = {
@@ -2006,6 +2046,7 @@ function WallTab() {
 
   return (
     <div>
+      {canUndo && <div className="flex justify-end mb-3 no-print"><UndoBtn onUndo={undo} /></div>}
       {/* ── Exterior Walls ── */}
       <div className="no-print">
         <SectionHeader title="Exterior Walls" note="Choose stud size, sheathing, insulation & drywall" />
@@ -2478,7 +2519,7 @@ function getFloorLaborItems(inputs: FloorInputs): LaborItem[] {
 }
 
 function FloorTab() {
-  const [rawInputs, setInputs] = useLocalStorage<FloorInputs>(SK.floor, DEFAULT_FLOOR);
+  const { rawInputs, setInputs, undo, canUndo } = useTabUndo<FloorInputs>(SK.floor, DEFAULT_FLOOR);
   const [project] = useProject();
   const tabInputs: FloorInputs = { ...DEFAULT_FLOOR, ...rawInputs };
   const inputs: FloorInputs = {
@@ -2516,6 +2557,7 @@ function FloorTab() {
 
   return (
     <div>
+      {canUndo && <div className="flex justify-end mb-3 no-print"><UndoBtn onUndo={undo} /></div>}
       <div className="flex flex-col gap-6 no-print">
 
         {/* ── Building dimensions + story count ── */}
@@ -2829,7 +2871,7 @@ function getRoofLaborItems(inputs: RoofInputs): LaborItem[] {
   ];
 }
 function RoofTab() {
-  const [rawInputs, setInputs] = useLocalStorage<RoofInputs>(SK.roof, DEFAULT_ROOF);
+  const { rawInputs, setInputs, undo, canUndo } = useTabUndo<RoofInputs>(SK.roof, DEFAULT_ROOF);
   const [project] = useProject();
   const tabInputs: RoofInputs = { ...DEFAULT_ROOF, ...rawInputs };
   const inputs: RoofInputs = {
@@ -2877,6 +2919,7 @@ function RoofTab() {
 
   return (
     <div>
+      {canUndo && <div className="flex justify-end mb-3 no-print"><UndoBtn onUndo={undo} /></div>}
       <div className="no-print">
         {/* ── Framing System ── */}
         <SH title="Roof Framing System" note="Trusses are factory-built; rafters are site-cut — leave dimensions blank to skip framing" />
@@ -3006,7 +3049,7 @@ function getPlumbingLaborItems(i: PlumbingInputs): LaborItem[] {
   return items;
 }
 function PlumbingTab() {
-  const [rawInputs, setInputs] = useLocalStorage<PlumbingInputs>(SK.plumbing, DEFAULT_PLUMBING);
+  const { rawInputs, setInputs, undo, canUndo } = useTabUndo<PlumbingInputs>(SK.plumbing, DEFAULT_PLUMBING);
   const [project] = useProject();
   const tabInputs: PlumbingInputs = { ...DEFAULT_PLUMBING, ...rawInputs };
   const inputs: PlumbingInputs = {
@@ -3036,6 +3079,7 @@ function PlumbingTab() {
   const pf = sqftVal > 0 ? Math.max(1.0, parseFloat(Math.sqrt(sqftVal / 1000).toFixed(2))) : 1;
   return (
     <div>
+      {canUndo && <div className="flex justify-end mb-3 no-print"><UndoBtn onUndo={undo} /></div>}
       <p className="text-sm text-[#666] mb-6 no-print">Pipe quantities scale with house size — a bathroom at the far end of a 3,000 sqft home needs significantly more pipe than one in a 1,000 sqft house.</p>
       <div className="mb-6 no-print">
         <Field label="Home Size (sq ft)" note="Used to estimate pipe run lengths from fixtures to main stack and service entry">
@@ -3130,7 +3174,7 @@ function getElectricalLaborItems(inp: ElectricalInputs): LaborItem[] {
   return items;
 }
 function ElectricalTab() {
-  const [rawInputs, setInputs] = useLocalStorage<ElectricalInputs>(SK.electrical, DEFAULT_ELECTRICAL);
+  const { rawInputs, setInputs, undo, canUndo } = useTabUndo<ElectricalInputs>(SK.electrical, DEFAULT_ELECTRICAL);
   const [project] = useProject();
   const tabInputs: ElectricalInputs = { ...DEFAULT_ELECTRICAL, ...rawInputs };
   const inputs: ElectricalInputs = {
@@ -3161,6 +3205,7 @@ function ElectricalTab() {
   const panelSize = (inputs.appliances.evCharger && inputs.appliances.hotTub) ? "400A" : "200A";
   return (
     <div>
+      {canUndo && <div className="flex justify-end mb-3 no-print"><UndoBtn onUndo={undo} /></div>}
       <p className="text-sm text-[#666] mb-6 no-print">Tell us about your home — we handle the circuit math.</p>
       <div className="grid sm:grid-cols-3 gap-8 mb-8 no-print">
         <div className="sm:col-span-1"><Field label="Home Size (sq ft)"><NumberInput value={inputs.sqft} onChange={v => setInputs(p => ({ ...p, sqft: v }))} placeholder="e.g. 2000" />{!tabInputs.sqft && project.sqft && <ProjectBadge />}</Field></div>
@@ -3298,7 +3343,7 @@ function getHvacLaborItems(inp: HvacInputs): LaborItem[] {
   return items;
 }
 function HvacTab() {
-  const [rawInputs, setInputs] = useLocalStorage<HvacInputs>(SK.hvac, DEFAULT_HVAC);
+  const { rawInputs, setInputs, undo, canUndo } = useTabUndo<HvacInputs>(SK.hvac, DEFAULT_HVAC);
   const [project] = useProject();
   const tabInputs: HvacInputs = { ...DEFAULT_HVAC, ...rawInputs };
   const inputs: HvacInputs = {
@@ -3330,6 +3375,7 @@ function HvacTab() {
   const heads = Math.ceil(sqft / 500);
   return (
     <div>
+      {canUndo && <div className="flex justify-end mb-3 no-print"><UndoBtn onUndo={undo} /></div>}
       <p className="text-sm text-[#666] mb-6 no-print">Tell us about your home — we calculate the equipment size you need.</p>
       <div className="grid md:grid-cols-2 gap-6 mb-6 no-print">
         <Field label="Home Size (sq ft)"><NumberInput value={inputs.sqft} onChange={v => setInputs(p => ({ ...p, sqft: v }))} placeholder="e.g. 2000" />{!tabInputs.sqft && project.sqft && <ProjectBadge />}</Field>
