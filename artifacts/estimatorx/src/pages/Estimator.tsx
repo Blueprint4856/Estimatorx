@@ -3445,6 +3445,7 @@ function HvacTab() {
 ───────────────────────────────────────────── */
 function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "summary">) => void; onPrint: () => void }) {
   // Read all tab states — same keys as individual tabs; fresh on every mount
+  const [project] = useProject();
   const [siteInputs] = useLocalStorage<SiteWorkInputs>(SK.sitework, DEFAULT_SITEWORK);
   const [siteSR] = useLocalStorage<LaborRates>(SK.siteworkRates, {});
   const [siteMP] = useLocalStorage<MatPrices>(SK.siteMatPrices, {});
@@ -3532,22 +3533,33 @@ function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "sum
     return { label, tabId, mat, lab, total: mat + lab, hasData };
   };
 
+  // Apply the same project-level fallbacks each tab component uses so Summary
+  // correctly recognises tabs as having data even when the user relied on the
+  // project badge rather than re-typing values on the individual tab.
+  const siteEff: SiteWorkInputs = { ...DEFAULT_SITEWORK, ...siteInputs, footprintSqft: siteInputs.footprintSqft || project.footprintSqft || project.sqft };
+  const foundEff: FoundationInputs = { ...DEFAULT_FOUNDATION, ...foundInputs, sqft: foundInputs.sqft || project.sqft, perimeter: foundInputs.perimeter || (foundInputs.perimeterOverride ? project.linearFeet : "") };
+  const wallEff: WallInputs = { ...DEFAULT_WALL, ...wallInputs, linearFeet: wallInputs.linearFeet || project.linearFeet, stories: wallInputs.stories || project.stories || "1", buildingWidth: wallInputs.buildingWidth || project.buildingWidth, roofPitch: wallInputs.roofPitch || (project.roofPitch ? project.roofPitch.split(":")[0] : "") };
+  const floorEff: FloorInputs = { ...DEFAULT_FLOOR, ...floorInputs, buildingWidth: floorInputs.buildingWidth || project.buildingWidth, buildingLength: floorInputs.buildingLength || project.buildingLength, stories: floorInputs.stories || project.stories || "1" };
+  const roofEff: RoofInputs = { ...DEFAULT_ROOF, ...roofInputs, footprintSqft: roofInputs.footprintSqft || project.footprintSqft || project.sqft, buildingWidth: roofInputs.buildingWidth || project.buildingWidth, buildingLength: roofInputs.buildingLength || project.buildingLength };
+  const elecEff: ElectricalInputs = { ...DEFAULT_ELECTRICAL, ...elecInputs, sqft: elecInputs.sqft || project.sqft };
+  const hvacEff: HvacInputs = { ...DEFAULT_HVAC, ...hvacInputs, sqft: hvacInputs.sqft || project.sqft, stories: hvacInputs.stories || project.stories || "1" };
+
   const siteHasData = (() => {
-    const lot = parseFloat(siteInputs.lotSqft) || 0;
-    const fp = parseFloat(siteInputs.footprintSqft) || 0;
-    const driveSqft = (parseFloat(siteInputs.drivewayLength) || 0) * (parseFloat(siteInputs.drivewayWidth) || 12);
-    return lot > 0 || fp > 0 || (siteInputs.includeDriveway && driveSqft > 0);
+    const lot = parseFloat(siteEff.lotSqft) || 0;
+    const fp = parseFloat(siteEff.footprintSqft) || 0;
+    const driveSqft = (parseFloat(siteEff.drivewayLength) || 0) * (parseFloat(siteEff.drivewayWidth) || 12);
+    return lot > 0 || fp > 0 || (siteEff.includeDriveway && driveSqft > 0);
   })();
 
   const rows = [
-    computeTab("Site Work", "sitework", getSiteWorkMatItems(siteInputs), siteCM, siteMP, siteMQtys, getSiteWorkLaborItems(siteInputs), siteSR, siteLQtys, siteCL, siteHasData),
-    computeTab("Foundation", "foundation", getFoundationMatItems(foundInputs), foundCM, foundMP, foundMQtys, getFoundationLaborItems(foundInputs), foundSR, foundLQtys, foundCL, (parseFloat(foundInputs.sqft) || 0) > 0),
-    computeTab("Walls", "wall", getWallMatItems(wallInputs), wallCM, wallMP, wallMQtys, getWallLaborItems(wallInputs), wallSR, wallLQtys, wallCL, (parseFloat(wallInputs.linearFeet) || 0) > 0),
-    computeTab("Floors", "floor", getFloorMatItems(floorInputs), floorCM, floorMP, floorMQtys, getFloorLaborItems(floorInputs), floorSR, floorLQtys, floorCL, ((parseFloat(floorInputs.buildingWidth) || 0) * (parseFloat(floorInputs.buildingLength) || 0)) > 0),
-    computeTab("Roofing", "roof", getRoofMatItems(roofInputs), roofCM, roofMP, roofMQtys, getRoofLaborItems(roofInputs), roofSR, roofLQtys, roofCL, (parseFloat(roofInputs.footprintSqft) || 0) > 0),
+    computeTab("Site Work", "sitework", getSiteWorkMatItems(siteEff), siteCM, siteMP, siteMQtys, getSiteWorkLaborItems(siteEff), siteSR, siteLQtys, siteCL, siteHasData),
+    computeTab("Foundation", "foundation", getFoundationMatItems(foundEff), foundCM, foundMP, foundMQtys, getFoundationLaborItems(foundEff), foundSR, foundLQtys, foundCL, (parseFloat(foundEff.sqft) || 0) > 0),
+    computeTab("Walls", "wall", getWallMatItems(wallEff), wallCM, wallMP, wallMQtys, getWallLaborItems(wallEff), wallSR, wallLQtys, wallCL, (parseFloat(wallEff.linearFeet) || 0) > 0),
+    computeTab("Floors", "floor", getFloorMatItems(floorEff), floorCM, floorMP, floorMQtys, getFloorLaborItems(floorEff), floorSR, floorLQtys, floorCL, ((parseFloat(floorEff.buildingWidth) || 0) * (parseFloat(floorEff.buildingLength) || 0)) > 0),
+    computeTab("Roofing", "roof", getRoofMatItems(roofEff), roofCM, roofMP, roofMQtys, getRoofLaborItems(roofEff), roofSR, roofLQtys, roofCL, (parseFloat(roofEff.footprintSqft) || 0) > 0),
     computeTab("Plumbing", "plumbing", getPlumbingMatItems(plumbInputs), plumbCM, plumbMP, plumbMQtys, getPlumbingLaborItems(plumbInputs), plumbSR, plumbLQtys, plumbCL, (plumbInputs.fullBaths + plumbInputs.halfBaths + plumbInputs.spigots + (plumbInputs.hasKitchen ? 1 : 0) + (plumbInputs.hasLaundry ? 1 : 0)) > 0),
-    computeTab("Electrical", "electrical", getElectricalMatItems(elecInputs), elecCM, elecMP, elecMQtys, getElectricalLaborItems(elecInputs), elecSR, elecLQtys, elecCL, (parseFloat(elecInputs.sqft) || 0) > 0),
-    computeTab("Heating & Cooling", "hvac", getHvacMatItems(hvacInputs), hvacCM, hvacMP, hvacMQtys, getHvacLaborItems(hvacInputs), hvacSR, hvacLQtys, hvacCL, (parseFloat(hvacInputs.sqft) || 0) > 0),
+    computeTab("Electrical", "electrical", getElectricalMatItems(elecEff), elecCM, elecMP, elecMQtys, getElectricalLaborItems(elecEff), elecSR, elecLQtys, elecCL, (parseFloat(elecEff.sqft) || 0) > 0),
+    computeTab("Heating & Cooling", "hvac", getHvacMatItems(hvacEff), hvacCM, hvacMP, hvacMQtys, getHvacLaborItems(hvacEff), hvacSR, hvacLQtys, hvacCL, (parseFloat(hvacEff.sqft) || 0) > 0),
   ];
 
   const filledRows = rows.filter(r => r.hasData);
