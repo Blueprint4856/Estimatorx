@@ -2003,9 +2003,10 @@ function WallTab() {
   const { rawInputs, setInputs, undo, canUndo } = useTabUndo<WallInputs>(SK.wall, DEFAULT_WALL);
   const [project] = useProject();
   const tabInputs: WallInputs = { ...DEFAULT_WALL, ...rawInputs, studSize: migrateStudSize(rawInputs?.studSize) };
+  const autoPerim = project.sqft ? String(Math.ceil(Math.sqrt(parseFloat(project.sqft)) * 4)) : "";
   const inputs: WallInputs = {
     ...tabInputs,
-    linearFeet: tabInputs.linearFeet || project.linearFeet,
+    linearFeet: tabInputs.linearFeet || project.linearFeet || autoPerim,
     stories: tabInputs.stories || project.stories || "1",
     buildingWidth: tabInputs.buildingWidth || project.buildingWidth,
     roofPitch: tabInputs.roofPitch || (project.roofPitch ? project.roofPitch.split(":")[0] : ""),
@@ -2064,6 +2065,7 @@ function WallTab() {
           <Field label="Exterior Wall Linear Feet" note={storiesCount > 1 ? "Enter perimeter for one floor — quantities auto-doubled" : undefined}>
             <NumberInput value={inputs.linearFeet} onChange={v => setInputs(p => ({ ...p, linearFeet: v }))} placeholder="e.g. 180" />
             {!tabInputs.linearFeet && project.linearFeet && <ProjectBadge />}
+            {!tabInputs.linearFeet && !project.linearFeet && autoPerim && <ProjectBadge label="estimated from sqft" />}
           </Field>
           <Field label="Ceiling Height (ft)" note={storiesCount > 1 ? "Per floor" : undefined}>
             <select value={inputs.ceilingHeight} onChange={e => setInputs(p => ({ ...p, ceilingHeight: e.target.value }))}
@@ -2522,10 +2524,13 @@ function FloorTab() {
   const { rawInputs, setInputs, undo, canUndo } = useTabUndo<FloorInputs>(SK.floor, DEFAULT_FLOOR);
   const [project] = useProject();
   const tabInputs: FloorInputs = { ...DEFAULT_FLOOR, ...rawInputs };
+  const fpSqft = parseFloat(project.footprintSqft || project.sqft) || 0;
+  const autoFloorW = fpSqft > 0 ? String(Math.ceil(Math.sqrt(fpSqft))) : "";
+  const autoFloorL = fpSqft > 0 && autoFloorW ? String(Math.ceil(fpSqft / Math.ceil(Math.sqrt(fpSqft)))) : "";
   const inputs: FloorInputs = {
     ...tabInputs,
-    buildingWidth: tabInputs.buildingWidth || project.buildingWidth,
-    buildingLength: tabInputs.buildingLength || project.buildingLength,
+    buildingWidth: tabInputs.buildingWidth || project.buildingWidth || autoFloorW,
+    buildingLength: tabInputs.buildingLength || project.buildingLength || autoFloorL,
     stories: tabInputs.stories || project.stories || "1",
   };
   const set = useCallback(<K extends keyof FloorInputs>(k: K, v: FloorInputs[K]) => setInputs(p => ({ ...p, [k]: v })), [setInputs]);
@@ -2565,10 +2570,12 @@ function FloorTab() {
           <Field label="Building Width (ft)" note="Clear span direction — joists run this way">
             <NumberInput value={inputs.buildingWidth} onChange={v => set("buildingWidth", v)} placeholder="e.g. 28" />
             {!tabInputs.buildingWidth && project.buildingWidth && <ProjectBadge />}
+            {!tabInputs.buildingWidth && !project.buildingWidth && autoFloorW && <ProjectBadge label="estimated from sqft" />}
           </Field>
           <Field label="Building Length (ft)" note="Beam run direction — parallel to the beam">
             <NumberInput value={inputs.buildingLength} onChange={v => set("buildingLength", v)} placeholder="e.g. 48" />
             {!tabInputs.buildingLength && project.buildingLength && <ProjectBadge />}
+            {!tabInputs.buildingLength && !project.buildingLength && autoFloorL && <ProjectBadge label="estimated from sqft" />}
           </Field>
           <Field
             label="Floor Area (sq ft)"
@@ -3536,10 +3543,14 @@ function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "sum
   // Apply the same project-level fallbacks each tab component uses so Summary
   // correctly recognises tabs as having data even when the user relied on the
   // project badge rather than re-typing values on the individual tab.
+  const summaryAutoPerim = project.sqft ? String(Math.ceil(Math.sqrt(parseFloat(project.sqft)) * 4)) : "";
+  const summaryFpSqft = parseFloat(project.footprintSqft || project.sqft) || 0;
+  const summaryAutoW = summaryFpSqft > 0 ? String(Math.ceil(Math.sqrt(summaryFpSqft))) : "";
+  const summaryAutoL = summaryFpSqft > 0 && summaryAutoW ? String(Math.ceil(summaryFpSqft / Math.ceil(Math.sqrt(summaryFpSqft)))) : "";
   const siteEff: SiteWorkInputs = { ...DEFAULT_SITEWORK, ...siteInputs, footprintSqft: siteInputs.footprintSqft || project.footprintSqft || project.sqft };
   const foundEff: FoundationInputs = { ...DEFAULT_FOUNDATION, ...foundInputs, sqft: foundInputs.sqft || project.sqft, perimeter: foundInputs.perimeter || (foundInputs.perimeterOverride ? project.linearFeet : "") };
-  const wallEff: WallInputs = { ...DEFAULT_WALL, ...wallInputs, linearFeet: wallInputs.linearFeet || project.linearFeet, stories: wallInputs.stories || project.stories || "1", buildingWidth: wallInputs.buildingWidth || project.buildingWidth, roofPitch: wallInputs.roofPitch || (project.roofPitch ? project.roofPitch.split(":")[0] : "") };
-  const floorEff: FloorInputs = { ...DEFAULT_FLOOR, ...floorInputs, buildingWidth: floorInputs.buildingWidth || project.buildingWidth, buildingLength: floorInputs.buildingLength || project.buildingLength, stories: floorInputs.stories || project.stories || "1" };
+  const wallEff: WallInputs = { ...DEFAULT_WALL, ...wallInputs, linearFeet: wallInputs.linearFeet || project.linearFeet || summaryAutoPerim, stories: wallInputs.stories || project.stories || "1", buildingWidth: wallInputs.buildingWidth || project.buildingWidth, roofPitch: wallInputs.roofPitch || (project.roofPitch ? project.roofPitch.split(":")[0] : "") };
+  const floorEff: FloorInputs = { ...DEFAULT_FLOOR, ...floorInputs, buildingWidth: floorInputs.buildingWidth || project.buildingWidth || summaryAutoW, buildingLength: floorInputs.buildingLength || project.buildingLength || summaryAutoL, stories: floorInputs.stories || project.stories || "1" };
   const roofEff: RoofInputs = { ...DEFAULT_ROOF, ...roofInputs, footprintSqft: roofInputs.footprintSqft || project.footprintSqft || project.sqft, buildingWidth: roofInputs.buildingWidth || project.buildingWidth, buildingLength: roofInputs.buildingLength || project.buildingLength };
   const elecEff: ElectricalInputs = { ...DEFAULT_ELECTRICAL, ...elecInputs, sqft: elecInputs.sqft || project.sqft };
   const hvacEff: HvacInputs = { ...DEFAULT_HVAC, ...hvacInputs, sqft: hvacInputs.sqft || project.sqft, stories: hvacInputs.stories || project.stories || "1" };
