@@ -40,8 +40,19 @@ const corsOrigin = process.env.REPLIT_DOMAINS
   : /\.replit\.dev$/;
 
 app.use(cors({ credentials: true, origin: corsOrigin }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+
+// Stripe webhooks must receive the raw body for signature verification.
+// Register this BEFORE express.json() so the Buffer is preserved.
+app.use("/api/stripe/webhook", express.raw({ type: "application/json" }));
+
+app.use((req, _res, next) => {
+  if (Buffer.isBuffer(req.body)) { next(); return; }
+  express.json()(req, _res, next);
+});
+app.use((req, _res, next) => {
+  if (Buffer.isBuffer(req.body)) { next(); return; }
+  express.urlencoded({ extended: true })(req, _res, next);
+});
 
 app.use(
   clerkMiddleware((req) => ({

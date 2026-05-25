@@ -9,6 +9,7 @@ import Home from "@/pages/Home";
 import Estimator from "@/pages/Estimator";
 import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
+import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 
 const queryClient = new QueryClient();
 
@@ -359,10 +360,12 @@ function ClerkProviderWithRoutes() {
     >
       <QueryClientProvider client={queryClient}>
         <ClerkQueryClientCacheInvalidator />
-        <TooltipProvider>
-          <Router />
-          <Toaster />
-        </TooltipProvider>
+        <SubscriptionProvider>
+          <TooltipProvider>
+            <Router />
+            <Toaster />
+          </TooltipProvider>
+        </SubscriptionProvider>
       </QueryClientProvider>
     </ClerkProvider>
   );

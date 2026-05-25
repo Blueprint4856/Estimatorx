@@ -1,7 +1,9 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { ChevronRight, Printer, RotateCcw, Link2, Trash2, Check, Plus, X } from "lucide-react";
 import { useUser, useClerk } from "@clerk/react";
+import { useSubscription } from "@/contexts/SubscriptionContext";
+import { PaywallModal } from "@/components/PaywallModal";
 
 type Tab = "sitework" | "foundation" | "wall" | "floor" | "roof" | "plumbing" | "electrical" | "hvac" | "summary";
 const WASTE = 1.10;
@@ -219,29 +221,13 @@ function ProjectSetupCard() {
   );
 }
 
-// ── Feature gate — paywall integration point ──────────────────────────────
-type GatedFeature = "share" | "print" | "export";
-function useFeatureAccess(_feature: GatedFeature): { allowed: boolean } {
-  return { allowed: true };
-}
-
-function UpgradeModal({ feature, onClose }: { feature: GatedFeature; onClose: () => void }) {
-  const label = feature === "share" ? "Shareable Links" : feature === "print" ? "Print / PDF Export" : "Export";
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
-      <div className="bg-white max-w-sm w-full mx-4 p-8 text-center shadow-xl" onClick={e => e.stopPropagation()}>
-        <div className="w-14 h-14 bg-[#FFF0E8] rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-[#E85D26] text-2xl font-black">Pro</span>
-        </div>
-        <h2 className="text-xl font-black text-[#1A1A1A] mb-2">Upgrade to Unlock</h2>
-        <p className="text-sm text-[#666] mb-6">
-          <strong>{label}</strong> is available on the Pro plan. Upgrade to share estimates with clients, export PDFs, and more.
-        </p>
-        <button onClick={onClose} className="w-full bg-[#E85D26] text-white font-bold py-3 hover:bg-[#c94d1f] transition-colors">Got it</button>
-        <button onClick={onClose} className="mt-3 w-full text-sm text-[#999] hover:text-[#555] transition-colors">Maybe later</button>
-      </div>
-    </div>
-  );
+// ── Feature gate — backed by SubscriptionContext ───────────────────────────
+type GatedFeature = "print" | "cci";
+function useFeatureAccess(feature: GatedFeature): { allowed: boolean } {
+  const { isXPlan } = useSubscription();
+  if (feature === "print") return { allowed: isXPlan };
+  if (feature === "cci")   return { allowed: isXPlan };
+  return { allowed: false };
 }
 
 // ── URL state helpers ──────────────────────────────────────────────────────
@@ -3752,11 +3738,43 @@ export default function Estimator() {
   const [copied, setCopied] = useState(false);
   const [upgradeFeature, setUpgradeFeature] = useState<GatedFeature | null>(null);
 
-  const shareAccess = useFeatureAccess("share");
   const printAccess = useFeatureAccess("print");
+  const { refresh: refreshPlan } = useSubscription();
+
+  // After returning from Stripe print checkout, verify the session and print.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("checkout") !== "success") return;
+    const action = params.get("action");
+    const sessionId = params.get("session_id");
+    const plan = params.get("plan");
+
+    // Clean URL immediately
+    window.history.replaceState({}, "", window.location.pathname);
+
+    if (plan === "x_plan") {
+      // X Plan subscription — just refresh subscription state
+      void refreshPlan();
+      return;
+    }
+
+    if (action === "print" && sessionId) {
+      void (async () => {
+        try {
+          const base = import.meta.env.BASE_URL as string;
+          const res = await fetch(`${base}api/stripe/verify-print`, {
+            method: "POST",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ sessionId }),
+          });
+          if (res.ok) { window.print(); }
+        } catch { /* silent — user can retry */ }
+      })();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleCopyLink = useCallback(() => {
-    if (!shareAccess.allowed) { setUpgradeFeature("share"); return; }
     const state = readAllLocalStorage();
     const encoded = serializeState(state);
     const url = new URL(window.location.href);
@@ -3769,7 +3787,7 @@ export default function Estimator() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     });
-  }, [shareAccess.allowed]);
+  }, []);
 
   const handleClear = useCallback(() => {
     clearAllLocalStorage();
@@ -3787,7 +3805,7 @@ export default function Estimator() {
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-[#F7F4F0] text-[#1A1A1A]">
-      {upgradeFeature && <UpgradeModal feature={upgradeFeature} onClose={() => setUpgradeFeature(null)} />}
+      {upgradeFeature && <PaywallModal trigger={upgradeFeature} onClose={() => setUpgradeFeature(null)} />}
 
       <header className="no-print sticky top-0 z-50 w-full border-b border-[#E0DAD3] bg-white shadow-sm">
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
