@@ -49,21 +49,26 @@ router.post("/stripe/checkout/print", async (req, res) => {
     res.status(500).json({ error: "Print checkout not configured" }); return;
   }
 
-  const stripe = getStripe();
-  const customerId = await ensureUser(userId);
-  const origin = (req.headers.origin as string | undefined) ?? `https://${(process.env.REPLIT_DOMAINS ?? "").split(",")[0]}`;
+  try {
+    const stripe = getStripe();
+    const customerId = await ensureUser(userId);
+    const origin = (req.headers.origin as string | undefined) ?? `https://${(process.env.REPLIT_DOMAINS ?? "").split(",")[0]}`;
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "payment",
-    allow_promotion_codes: true,
-    ...(customerId ? { customer: customerId } : {}),
-    line_items: [{ price: printPriceId, quantity: 1 }],
-    success_url: `${origin}/estimator?checkout=success&action=print&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${origin}/estimator`,
-    metadata: { clerkId: userId },
-  });
+    const session = await stripe.checkout.sessions.create({
+      mode: "payment",
+      allow_promotion_codes: true,
+      ...(customerId ? { customer: customerId } : {}),
+      line_items: [{ price: printPriceId, quantity: 1 }],
+      success_url: `${origin}/estimator?checkout=success&action=print&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/estimator`,
+      metadata: { clerkId: userId },
+    });
 
-  res.json({ url: session.url });
+    res.json({ url: session.url });
+  } catch (err) {
+    req.log.error({ err }, "Stripe print checkout failed");
+    res.status(500).json({ error: "Checkout unavailable — please try again shortly" }); return;
+  }
 });
 
 /* ── POST /api/stripe/checkout/xplan ───────────────────────────────────── */
@@ -77,21 +82,26 @@ router.post("/stripe/checkout/xplan", async (req, res) => {
     res.status(500).json({ error: "X Plan checkout not configured" }); return;
   }
 
-  const stripe = getStripe();
-  const customerId = await ensureUser(userId);
-  const origin = (req.headers.origin as string | undefined) ?? `https://${(process.env.REPLIT_DOMAINS ?? "").split(",")[0]}`;
+  try {
+    const stripe = getStripe();
+    const customerId = await ensureUser(userId);
+    const origin = (req.headers.origin as string | undefined) ?? `https://${(process.env.REPLIT_DOMAINS ?? "").split(",")[0]}`;
 
-  const session = await stripe.checkout.sessions.create({
-    mode: "subscription",
-    allow_promotion_codes: true,
-    ...(customerId ? { customer: customerId } : {}),
-    line_items: [{ price: xplanPriceId, quantity: 1 }],
-    success_url: `${origin}/estimator?checkout=success&plan=x_plan&session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${origin}/estimator`,
-    metadata: { clerkId: userId },
-  });
+    const session = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      allow_promotion_codes: true,
+      ...(customerId ? { customer: customerId } : {}),
+      line_items: [{ price: xplanPriceId, quantity: 1 }],
+      success_url: `${origin}/estimator?checkout=success&plan=x_plan&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${origin}/estimator`,
+      metadata: { clerkId: userId },
+    });
 
-  res.json({ url: session.url });
+    res.json({ url: session.url });
+  } catch (err) {
+    req.log.error({ err }, "Stripe xplan checkout failed");
+    res.status(500).json({ error: "Checkout unavailable — please try again shortly" }); return;
+  }
 });
 
 /* ── POST /api/stripe/verify-print ─────────────────────────────────────── */
