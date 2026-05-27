@@ -1968,6 +1968,7 @@ const DEFAULT_WALL: WallInputs = {
   blockingLF: "",
   intDoorCount: "", extDoorCount: "", windowCount: "",
   stories: "", buildingWidth: "", roofPitch: "",
+  buildType: "full", sharedWallLF: "",
   includeWindowUnits: false, windowType: "single_hung",
   includeExtDoorUnits: false,
   extDoorEntryCount: "", extDoorSliderCount: "", extDoorFrenchCount: "",
@@ -2000,7 +2001,8 @@ const TRIM_STYLES: Record<string, { label: string; basePrice: number; casingPric
 };
 
 function getWallMatItems(inputs: WallInputs): MatItem[] {
-  const lf = parseFloat(inputs.linearFeet) || 0;
+  const sharedWall = inputs.buildType === "addition" ? (parseFloat(inputs.sharedWallLF) || 0) : 0;
+  const lf = Math.max(0, (parseFloat(inputs.linearFeet) || 0) - sharedWall);
   const h = parseFloat(inputs.ceilingHeight) || 9;
   const storiesCount = parseInt(inputs.stories ?? "1") || 1;
   const area = lf * h * storiesCount;
@@ -2131,7 +2133,8 @@ function getWallMatItems(inputs: WallInputs): MatItem[] {
   ];
 }
 function getWallLaborItems(inputs: WallInputs): LaborItem[] {
-  const lf = parseFloat(inputs.linearFeet) || 0;
+  const sharedWall = inputs.buildType === "addition" ? (parseFloat(inputs.sharedWallLF) || 0) : 0;
+  const lf = Math.max(0, (parseFloat(inputs.linearFeet) || 0) - sharedWall);
   const h = parseFloat(inputs.ceilingHeight) || 9;
   const storiesCount = parseInt(inputs.stories ?? "1") || 1;
   const area = Math.round(lf * h * storiesCount);
@@ -2251,6 +2254,18 @@ function WallTab() {
       <div className="no-print">
         <SectionHeader title="Exterior Walls" note="Choose stud size, sheathing, insulation & drywall" />
         <div className="grid md:grid-cols-2 gap-6">
+          <Field label="Build Type">
+            <select value={tabInputs.buildType ?? "full"} onChange={e => setInputs(p => ({ ...p, buildType: e.target.value as "full" | "addition", sharedWallLF: "" }))}
+              className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+              <option value="full">Full Build (4 walls)</option>
+              <option value="addition">Addition (3 walls — ties into existing)</option>
+            </select>
+          </Field>
+          {(tabInputs.buildType ?? "full") === "addition" && (
+            <Field label="Shared Wall Length (ft)" note="The existing wall you're tying into — not framed">
+              <NumberInput value={tabInputs.sharedWallLF} onChange={v => setInputs(p => ({ ...p, sharedWallLF: v }))} placeholder="e.g. 20" />
+            </Field>
+          )}
           <Field label="Number of Stories">
             <select value={tabInputs.stories} onChange={e => setInputs(p => ({ ...p, stories: e.target.value }))}
               className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
