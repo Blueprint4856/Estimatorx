@@ -1,3 +1,4 @@
 - [Stripe checkout config](stripe-checkout-config.md) — key gotchas for Stripe Checkout session options in this project
 - [PDF plan import](pdf-plan-import.md) — use pdfjs-dist legacy build (not main) for Node.js; image rendering deferred; openai SDK used directly with Replit proxy env vars
 - [pdfjs-dist Node.js worker setup](pdfjs-node-worker.md) — workerSrc="" is falsy and crashes in production; must use worker_threads + workerPort instead.
+- [pdfjs-dist v5 Node.js usage](pdfjs-v5-nodejs.md) — do NOT set workerPort/workerSrc; v5 auto-detects Node.js and runs in-process (fake worker). Setting workerPort bypasses this and crashes on browser APIs.

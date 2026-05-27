@@ -1,15 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import multer from "multer";
-import { Worker as NodeWorker } from "node:worker_threads";
 import { getAuth } from "@clerk/express";
-
-// pdfjs-dist v5's GlobalWorkerOptions.workerPort setter checks `val instanceof Worker`
-// where Worker is the *browser* global. In Node.js that global doesn't exist, so the
-// check always throws. Exposing node:worker_threads Worker as the global makes the
-// instanceof check pass without changing any other behaviour.
-if (typeof (globalThis as Record<string, unknown>).Worker === "undefined") {
-  (globalThis as Record<string, unknown>).Worker = NodeWorker;
-}
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
@@ -49,86 +40,68 @@ function getOpenAI(): OpenAI {
   });
 }
 
-/**
- * Run a pdfjs operation with a real Node.js worker thread.
- *
- * Setting GlobalWorkerOptions.workerSrc = "" (empty string) is falsy — pdfjs-dist rejects it
- * in production with "No GlobalWorkerOptions.workerSrc specified."
- * The correct Node.js approach is to use worker_threads with the pdfjs worker module,
- * assigning it via GlobalWorkerOptions.workerPort.
- */
-async function withPdfjsWorker<T>(
-  fn: (pdfjs: Record<string, unknown>) => Promise<T>
-): Promise<T> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs") as any;
-
-  // import.meta.resolve returns a file:// URL usable directly by NodeWorker
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const workerUrl = (import.meta as any).resolve("pdfjs-dist/legacy/build/pdf.worker.mjs") as string;
-  const worker = new NodeWorker(new URL(workerUrl));
-  pdfjs.GlobalWorkerOptions.workerPort = worker;
-
-  try {
-    return await fn(pdfjs);
-  } finally {
-    await worker.terminate();
+// pdfjs-dist v5 detects Node.js (isNodeJS = true) and sets #isWorkerDisabled = true in
+// its static initialiser. This means PDFWorker automatically uses #setupFakeWorker(),
+// running everything in-process — no Worker thread, no browser APIs needed.
+// Do NOT set GlobalWorkerOptions.workerPort or workerSrc; doing so bypasses this path
+// and routes through #initializeFromPort / #initialize which expect browser APIs.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _pdfjs: any = null;
+async function getPdfjs() {
+  if (!_pdfjs) {
+    _pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
   }
+  return _pdfjs;
 }
 
 interface TextItem { str: string }
 
 /** Extract embedded text from up to maxPages PDF pages using pdfjs-dist legacy build. */
 async function extractTextFromPdf(buffer: Buffer, maxPages = 6): Promise<string> {
-  return withPdfjsWorker(async (pdfjs) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const p = pdfjs as any;
-    const data = new Uint8Array(buffer);
-    const pdfDoc = await p.getDocument({ data, verbosity: 0 }).promise;
-    const pageCount = Math.min(pdfDoc.numPages as number, maxPages);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfjs = await getPdfjs() as any;
+  const data = new Uint8Array(buffer);
+  const pdfDoc = await pdfjs.getDocument({ data, verbosity: 0 }).promise;
+  const pageCount = Math.min(pdfDoc.numPages as number, maxPages);
 
-    const pageTexts: string[] = [];
-    for (let i = 1; i <= pageCount; i++) {
-      const page = await pdfDoc.getPage(i);
-      const textContent = await page.getTextContent();
-      const pageText = (textContent.items as TextItem[])
-        .filter((item) => item.str)
-        .map((item) => item.str)
-        .join(" ");
-      if (pageText.trim()) pageTexts.push(`[Page ${i}]\n${pageText}`);
-    }
+  const pageTexts: string[] = [];
+  for (let i = 1; i <= pageCount; i++) {
+    const page = await pdfDoc.getPage(i);
+    const textContent = await page.getTextContent();
+    const pageText = (textContent.items as TextItem[])
+      .filter((item) => item.str)
+      .map((item) => item.str)
+      .join(" ");
+    if (pageText.trim()) pageTexts.push(`[Page ${i}]\n${pageText}`);
+  }
 
-    return pageTexts.join("\n\n");
-  });
+  return pageTexts.join("\n\n");
 }
 
 /** Render PDF pages to JPEG buffers using pdfjs-dist + node-canvas (for scanned/image PDFs). */
 async function renderPdfToImages(buffer: Buffer, maxPages = 6): Promise<Buffer[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { createCanvas } = await import("canvas") as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfjs = await getPdfjs() as any;
+  const data = new Uint8Array(buffer);
+  const pdfDoc = await pdfjs.getDocument({ data, verbosity: 0 }).promise;
+  const pageCount = Math.min(pdfDoc.numPages as number, maxPages);
 
-  return withPdfjsWorker(async (pdfjs) => {
+  const images: Buffer[] = [];
+  for (let i = 1; i <= pageCount; i++) {
+    const page = await pdfDoc.getPage(i);
+    const viewport = page.getViewport({ scale: 1.5 });
+    const canvas = createCanvas(Math.ceil(viewport.width as number), Math.ceil(viewport.height as number));
+    const ctx = canvas.getContext("2d");
+
+    await page.render({ canvasContext: ctx, viewport }).promise;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const p = pdfjs as any;
-    const data = new Uint8Array(buffer);
-    const pdfDoc = await p.getDocument({ data, verbosity: 0 }).promise;
-    const pageCount = Math.min(pdfDoc.numPages as number, maxPages);
+    images.push((canvas as any).toBuffer("image/jpeg", { quality: 0.85 }));
+  }
 
-    const images: Buffer[] = [];
-    for (let i = 1; i <= pageCount; i++) {
-      const page = await pdfDoc.getPage(i);
-      const viewport = page.getViewport({ scale: 1.5 });
-      const canvas = createCanvas(Math.ceil(viewport.width as number), Math.ceil(viewport.height as number));
-      const ctx = canvas.getContext("2d");
-
-      await page.render({ canvasContext: ctx, viewport }).promise;
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      images.push((canvas as any).toBuffer("image/jpeg", { quality: 0.85 }));
-    }
-
-    return images;
-  });
+  return images;
 }
 
 export interface ExtractedPlanData {
