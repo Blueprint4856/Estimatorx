@@ -1,6 +1,6 @@
 ---
-name: pdfjs-dist v5 Node.js usage
-description: How to correctly use pdfjs-dist v5 on a Node.js server — do NOT configure a worker.
+name: pdfjs-dist v5 Node.js usage + production canvas pitfall
+description: How to correctly use pdfjs-dist v5 on a Node.js server — do NOT configure a worker. Also: node-canvas will fail in production.
 ---
 
 ## Rule
@@ -29,10 +29,6 @@ Setting `workerPort` bypasses `#initialize()` entirely — it routes through
 calls `comObj.addEventListener('message', ...)`. Node.js `Worker` objects use `.on()`
 not `.addEventListener()`, so this always throws `comObj.addEventListener is not a function`.
 
-Setting `globalThis.Worker = NodeWorker` to pass the `instanceof Worker` check in the
-`workerPort` setter does not help — it only gets you past the setter; the `addEventListener`
-crash still happens inside `MessageHandler`.
-
 ## How to apply
 
 ```typescript
@@ -47,3 +43,35 @@ globalThis.Worker = NodeWorker;                    // doesn't fix addEventListen
 ```
 
 Tested with pdfjs-dist@5.7.284, Node.js v24.
+
+## Production: node-canvas does NOT work
+
+The Replit production deployment container is missing `libuuid.so.1` (and likely other
+native libs that `node-canvas` needs). `OffscreenCanvas` is also not available in this
+Node.js 24 build (it's `undefined` globally).
+
+**Do not use node-canvas or OffscreenCanvas for PDF rendering in this project.**
+
+## Working approach: send PDF directly to OpenAI
+
+OpenAI SDK v6.39.0 supports a `file` content part with `file_data`. GPT-4o can read
+the PDF natively — no rendering, no canvas, no native deps:
+
+```typescript
+const { default: OpenAI } = await import("openai");
+const openai = new OpenAI({ apiKey, baseURL });
+const pdfBase64 = pdfBuffer.toString("base64");
+
+await openai.chat.completions.create({
+  model: "gpt-4o",
+  messages: [{
+    role: "user",
+    content: [
+      { type: "file", file: { filename: "plan.pdf", file_data: `data:application/pdf;base64,${pdfBase64}` } } as any,
+      { type: "text", text: "Extract dimensions..." },
+    ],
+  }],
+});
+```
+
+This works for both digital (text-layer) and scanned (image-only) PDFs.

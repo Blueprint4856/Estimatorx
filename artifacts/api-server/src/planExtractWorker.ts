@@ -22,7 +22,7 @@ const EXTRACTION_HINTS = `Extraction hints:
 
 Return ONLY valid JSON — no explanation, no markdown fences.`;
 
-const VISION_PROMPT = `You are a construction plan reading assistant. Analyze these rendered images of a residential building plan PDF and extract key dimensions.
+const EXTRACTION_PROMPT = `You are a construction plan reading assistant. Analyze this residential building plan PDF and extract key dimensions.
 
 Return ONLY a single JSON object with these exact keys (use null for any value you cannot find):
 
@@ -39,36 +39,7 @@ interface WorkerInput {
 async function run(): Promise<void> {
   const { pdfBuffer, openaiBaseUrl, openaiApiKey } = workerData as WorkerInput;
 
-  // pdfjs-dist v5 detects isNodeJS=true and uses fake-worker (in-process) mode automatically.
-  // No workerPort or workerSrc needed — setting them bypasses the fake-worker path.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs") as any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { createCanvas } = await import("canvas") as any;
-
-  const data = new Uint8Array(pdfBuffer);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pdfDoc = await (pdfjs.getDocument({ data, verbosity: 0 }).promise) as any;
-  const pageCount = Math.min(pdfDoc.numPages as number, 6);
-
-  const base64Images: string[] = [];
-  for (let i = 1; i <= pageCount; i++) {
-    const page = await pdfDoc.getPage(i);
-    const viewport = page.getViewport({ scale: 1.5 });
-    const canvas = createCanvas(
-      Math.ceil(viewport.width as number),
-      Math.ceil(viewport.height as number),
-    );
-    const ctx = canvas.getContext("2d");
-    await page.render({ canvasContext: ctx, viewport }).promise;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const jpegBuf = (canvas as any).toBuffer("image/jpeg", { quality: 0.85 }) as Buffer;
-    base64Images.push(jpegBuf.toString("base64"));
-  }
-
-  if (base64Images.length === 0) {
-    throw new Error("No pages could be rendered from this PDF");
-  }
+  const pdfBase64 = pdfBuffer.toString("base64");
 
   const { default: OpenAI } = await import("openai");
   const openai = new OpenAI({ apiKey: openaiApiKey, baseURL: openaiBaseUrl });
@@ -80,11 +51,9 @@ async function run(): Promise<void> {
       {
         role: "user",
         content: [
-          { type: "text", text: VISION_PROMPT },
-          ...base64Images.map(b64 => ({
-            type: "image_url" as const,
-            image_url: { url: `data:image/jpeg;base64,${b64}`, detail: "high" as const },
-          })),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          { type: "file", file: { filename: "building-plan.pdf", file_data: `data:application/pdf;base64,${pdfBase64}` } } as any,
+          { type: "text", text: EXTRACTION_PROMPT },
         ],
       },
     ],
