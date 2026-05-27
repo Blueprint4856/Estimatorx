@@ -90,6 +90,7 @@ router.post("/stripe/checkout/xplan", async (req, res) => {
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       allow_promotion_codes: true,
+      payment_method_collection: "if_required",
       ...(customerId ? { customer: customerId } : {}),
       line_items: [{ price: xplanPriceId, quantity: 1 }],
       success_url: `${origin}/estimator?checkout=success&plan=x_plan&session_id={CHECKOUT_SESSION_ID}`,

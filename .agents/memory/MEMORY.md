@@ -1,0 +1,1 @@
+- [Stripe checkout config](stripe-checkout-config.md) — key gotchas for Stripe Checkout session options in this project
