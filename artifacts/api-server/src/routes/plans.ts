@@ -1,10 +1,10 @@
 import { Router, type Request, type Response } from "express";
 import multer from "multer";
-import { Worker } from "node:worker_threads";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
+import OpenAI from "openai";
 
 const router = Router();
 
@@ -40,40 +40,31 @@ export interface ExtractedPlanData {
   confidence: "high" | "medium" | "low";
 }
 
-type WorkerResult =
-  | { ok: true; data: ExtractedPlanData }
-  | { ok: false; error: string };
+const EXTRACTION_PROMPT = `You are a construction plan reading assistant. Analyze this residential building plan PDF and extract key dimensions.
 
-function runExtractWorker(pdfBuffer: Buffer): Promise<ExtractedPlanData> {
-  return new Promise((resolve, reject) => {
-    const openaiBaseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
-    const openaiApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-    if (!openaiBaseUrl || !openaiApiKey) {
-      reject(new Error("OpenAI AI integration not configured"));
-      return;
-    }
+Return ONLY a single JSON object with these exact keys (use null for any value you cannot find):
 
-    // planExtractWorker.mjs is emitted alongside index.mjs in the dist/ directory
-    const workerUrl = new URL("./planExtractWorker.mjs", import.meta.url);
-    const worker = new Worker(workerUrl, {
-      workerData: { pdfBuffer, openaiBaseUrl, openaiApiKey },
-    });
-
-    worker.on("message", (msg: WorkerResult) => {
-      if (msg.ok) {
-        resolve(msg.data);
-      } else {
-        reject(new Error(msg.error));
-      }
-    });
-
-    worker.on("error", reject);
-
-    worker.on("exit", (code) => {
-      if (code !== 0) reject(new Error(`Worker exited with code ${code}`));
-    });
-  });
+{
+  "sqft": <total gross living area in sq ft as a number, or null>,
+  "footprintSqft": <building footprint sq ft as a number, or null — only if clearly different from sqft>,
+  "stories": <number of stories as 1 or 2, or null>,
+  "buildingWidth": <narrow overall dimension in feet as a number, or null>,
+  "buildingLength": <long overall dimension in feet as a number, or null>,
+  "roofPitch": <roof pitch such as "4:12" "6:12" "8:12", or null>,
+  "linearFeet": <total exterior wall perimeter in linear feet as a number, or null>,
+  "confidence": <"high" if 4+ fields clearly found, "medium" if 2-3 fields found, "low" if 0-1 found>
 }
+
+Extraction hints:
+- sqft: look for "gross living area", "GLA", "heated sq ft", "conditioned area", "total living", total floor area labels
+- footprintSqft: only include if clearly different from sqft (e.g. a 2-story house with a noted first-floor area)
+- stories: count above-grade habitable floors; "2 story", "two story", "2-story" -> 2
+- buildingWidth: look for overall building width dimension (shorter span)
+- buildingLength: look for overall building length dimension (longer span)
+- roofPitch: look for "4:12", "6/12", "8 in 12", slope notations in notes or schedules
+- linearFeet: look for perimeter notation, sum of exterior wall lengths, or "LF" measurements
+
+Return ONLY valid JSON — no explanation, no markdown fences.`;
 
 /* ── POST /api/plans/extract ─────────────────────────────────────────────── */
 router.post("/plans/extract", async (req, res) => {
@@ -101,11 +92,52 @@ router.post("/plans/extract", async (req, res) => {
     res.status(400).json({ error: "No PDF file uploaded" }); return;
   }
 
+  const openaiBaseUrl = process.env.AI_INTEGRATIONS_OPENAI_BASE_URL;
+  const openaiApiKey = process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+  if (!openaiBaseUrl || !openaiApiKey) {
+    res.status(500).json({ error: "AI integration not configured" }); return;
+  }
+
+  req.log.info({ size: req.file.size }, "Starting PDF plan extraction");
+
   try {
-    req.log.info({ size: req.file.size }, "Starting PDF plan extraction");
-    const extracted = await runExtractWorker(req.file.buffer);
-    req.log.info({ extracted }, "Plan extraction complete");
-    res.json({ data: extracted });
+    // Buffer is guaranteed here — no worker thread serialization issues
+    const pdfBase64 = req.file.buffer.toString("base64");
+    const fileDataUrl = `data:application/pdf;base64,${pdfBase64}`;
+
+    const openai = new OpenAI({ apiKey: openaiApiKey, baseURL: openaiBaseUrl });
+
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o",
+      max_tokens: 512,
+      messages: [
+        {
+          role: "user",
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          content: [
+            { type: "file", file: { filename: "building-plan.pdf", file_data: fileDataUrl } } as any,
+            { type: "text", text: EXTRACTION_PROMPT },
+          ],
+        },
+      ],
+    });
+
+    const raw = response.choices[0]?.message?.content ?? "{}";
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("AI returned no valid JSON");
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = JSON.parse(jsonMatch[0]) as Record<string, any>;
+
+    if (!["high", "medium", "low"].includes(result.confidence as string)) {
+      const found = [result.sqft, result.stories, result.buildingWidth,
+        result.buildingLength, result.roofPitch, result.linearFeet]
+        .filter(v => v != null).length;
+      result.confidence = found >= 4 ? "high" : found >= 2 ? "medium" : "low";
+    }
+
+    req.log.info({ result }, "Plan extraction complete");
+    res.json({ data: result as ExtractedPlanData });
   } catch (err) {
     req.log.error({ err }, "Plan extraction failed");
     res.status(500).json({ error: "Extraction failed — please try again" }); return;
