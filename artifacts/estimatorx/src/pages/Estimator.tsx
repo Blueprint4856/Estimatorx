@@ -1,9 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Link } from "wouter";
-import { ChevronRight, Printer, RotateCcw, Link2, Trash2, Check, Plus, X } from "lucide-react";
+import { ChevronRight, Printer, RotateCcw, Link2, Trash2, Check, Plus, X, FileUp } from "lucide-react";
 import { useUser, useClerk } from "@clerk/react";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { PaywallModal } from "@/components/PaywallModal";
+import { PlanImportModal } from "@/components/PlanImportModal";
 
 type Tab = "sitework" | "foundation" | "wall" | "floor" | "roof" | "plumbing" | "electrical" | "hvac" | "summary";
 const WASTE = 1.10;
@@ -3737,9 +3738,10 @@ export default function Estimator() {
   const [resetKey, setResetKey] = useState(0);
   const [copied, setCopied] = useState(false);
   const [upgradeFeature, setUpgradeFeature] = useState<GatedFeature | null>(null);
+  const [showPlanImport, setShowPlanImport] = useState(false);
 
   const printAccess = useFeatureAccess("print");
-  const { refresh: refreshPlan } = useSubscription();
+  const { refresh: refreshPlan, isXPlan } = useSubscription();
 
   // After returning from Stripe print checkout, verify the session and print.
   useEffect(() => {
@@ -3803,9 +3805,15 @@ export default function Estimator() {
     window.print();
   }, [printAccess.allowed]);
 
+  const handlePlanImport = useCallback(() => {
+    if (!isXPlan) { setUpgradeFeature("cci"); return; }
+    setShowPlanImport(true);
+  }, [isXPlan]);
+
   return (
     <div className="min-h-[100dvh] flex flex-col bg-[#F7F4F0] text-[#1A1A1A]">
       {upgradeFeature && <PaywallModal trigger={upgradeFeature} onClose={() => setUpgradeFeature(null)} />}
+      {showPlanImport && <PlanImportModal onClose={() => setShowPlanImport(false)} />}
 
       <header className="no-print sticky top-0 z-50 w-full border-b border-[#E0DAD3] bg-white shadow-sm">
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
@@ -3866,6 +3874,11 @@ export default function Estimator() {
               </button>
               {/* Toolbar */}
               <div className="ml-auto flex items-center gap-1">
+                <button onClick={handlePlanImport} title="Import dimensions from building plans PDF"
+                  className="flex items-center gap-2 px-4 py-3 text-sm text-[#888] hover:text-[#E85D26] transition-colors whitespace-nowrap">
+                  <FileUp size={15} />
+                  <span className="hidden sm:inline">Import Plans</span>
+                </button>
                 <button onClick={handleCopyLink} title="Copy shareable link"
                   className={`flex items-center gap-2 px-4 py-3 text-sm transition-colors whitespace-nowrap ${copied ? "text-green-600" : "text-[#888] hover:text-[#E85D26]"}`}>
                   {copied ? <Check size={15} /> : <Link2 size={15} />}

@@ -1,1 +1,2 @@
 - [Stripe checkout config](stripe-checkout-config.md) — key gotchas for Stripe Checkout session options in this project
+- [PDF plan import](pdf-plan-import.md) — use pdfjs-dist legacy build (not main) for Node.js; image rendering deferred; openai SDK used directly with Replit proxy env vars
