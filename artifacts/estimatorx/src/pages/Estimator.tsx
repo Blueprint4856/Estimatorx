@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Link } from "wouter";
-import { ChevronRight, Printer, RotateCcw, Link2, Trash2, Check, Plus, X, FileUp, Pencil, FolderPlus, FolderOpen, ChevronDown, Users } from "lucide-react";
+import { ChevronRight, Printer, RotateCcw, Trash2, Check, Plus, X, FileUp, Pencil, FolderPlus, FolderOpen, ChevronDown, Users } from "lucide-react";
 import { InviteModal } from "@/components/InviteModal";
 import { useUser, useClerk } from "@clerk/react";
 import { useSubscription } from "@/contexts/SubscriptionContext";
@@ -3946,7 +3946,6 @@ export default function Estimator({ sharedToken, sharedName }: { sharedToken?: s
 
   const [tab, setTab] = useState<Tab>("sitework");
   const [resetKey, setResetKey] = useState(0);
-  const [copied, setCopied] = useState(false);
   const [upgradeFeature, setUpgradeFeature] = useState<GatedFeature | null>(null);
   const [showPlanImport, setShowPlanImport] = useState(false);
   const [inviteModal, setInviteModal] = useState<{ url: string; name: string } | null>(null);
@@ -3989,20 +3988,6 @@ export default function Estimator({ sharedToken, sharedName }: { sharedToken?: s
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const handleCopyLink = useCallback(() => {
-    const state = readAllLocalStorage();
-    const encoded = serializeState(state);
-    const url = new URL(window.location.href);
-    url.searchParams.set("s", encoded);
-    navigator.clipboard.writeText(url.toString()).then(() => {
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    }).catch(() => {
-      window.history.replaceState({}, "", url.toString());
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    });
-  }, []);
 
   const handleClear = useCallback(() => {
     clearAllLocalStorage();
@@ -4169,19 +4154,12 @@ export default function Estimator({ sharedToken, sharedName }: { sharedToken?: s
                     {saveStatus === "saved" ? <Check size={15} /> : <RotateCcw size={15} className={saveStatus === "saving" ? "animate-spin" : ""} />}
                     <span className="hidden sm:inline">{saveStatus === "saved" ? "Saved" : saveStatus === "saving" ? "Saving…" : "Unsaved"}</span>
                   </span>
-                ) : isXPlan ? (
-                  /* X Plan owner: Invite button */
+                ) : (
+                  /* Invite button — X Plan only (non-X-Plan hits upgrade paywall) */
                   <button onClick={() => void handleInvite()} disabled={inviteCreating} title="Create an invite link for team members"
                     className="flex items-center gap-2 px-4 py-3 text-sm text-[#888] hover:text-[#E85D26] transition-colors whitespace-nowrap disabled:opacity-50">
                     <Users size={15} />
                     <span className="hidden sm:inline">{inviteCreating ? "Creating…" : "Invite"}</span>
-                  </button>
-                ) : (
-                  /* Free plan: URL-based share */
-                  <button onClick={handleCopyLink} title="Copy shareable link"
-                    className={`flex items-center gap-2 px-4 py-3 text-sm transition-colors whitespace-nowrap ${copied ? "text-green-600" : "text-[#888] hover:text-[#E85D26]"}`}>
-                    {copied ? <Check size={15} /> : <Link2 size={15} />}
-                    <span className="hidden sm:inline">{copied ? "Copied!" : "Share"}</span>
                   </button>
                 )}
                 {/* Clear — hidden in shared mode */}
