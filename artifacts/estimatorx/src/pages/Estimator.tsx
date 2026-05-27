@@ -1930,6 +1930,8 @@ interface WallInputs {
   includeTrim: boolean;
   trimStyle: string;
   baseMoldingLF: string;
+  buildType: "full" | "addition";
+  sharedWallLF: string;
 }
 
 const STUD_CONFIG: Record<StudSize, { studLabel: string; plateLabel: string; studPrice: number; platePrice: number; ocSpacing: number; insulLabel: string; insulPrice: number }> = {
