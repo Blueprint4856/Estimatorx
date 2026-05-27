@@ -37,32 +37,38 @@ export interface ExtractedPlanData {
   buildingLength: number | null;
   roofPitch: string | null;
   linearFeet: number | null;
+  foundationType: "slab" | "crawlspace" | "basement" | null;
+  wallHeight: number | null;
   confidence: "high" | "medium" | "low";
 }
 
-const EXTRACTION_PROMPT = `You are a construction plan reading assistant. Analyze this residential building plan PDF and extract key dimensions.
+const EXTRACTION_PROMPT = `You are a construction plan reading assistant. Analyze this building plan PDF and extract key dimensions. This may be a house, shop, garage, barn, pole building, addition, or any other structure — residential or non-residential.
 
 Return ONLY a single JSON object with these exact keys (use null for any value you cannot find):
 
 {
-  "sqft": <total gross living area in sq ft as a number, or null>,
+  "sqft": <total floor area in sq ft as a number, or null>,
   "footprintSqft": <building footprint sq ft as a number, or null — only if clearly different from sqft>,
   "stories": <number of stories as 1 or 2, or null>,
   "buildingWidth": <narrow overall dimension in feet as a number, or null>,
   "buildingLength": <long overall dimension in feet as a number, or null>,
   "roofPitch": <roof pitch such as "4:12" "6:12" "8:12", or null>,
   "linearFeet": <total exterior wall perimeter in linear feet as a number, or null>,
+  "foundationType": <"slab" for slab-on-grade/monolithic slab, "crawlspace" for crawl space/pier-and-beam/stem wall with vents, "basement" for full below-grade basement, or null>,
+  "wallHeight": <exterior wall height or plate height in feet as a whole number, e.g. 8 9 10 12 14, or null>,
   "confidence": <"high" if 4+ fields clearly found, "medium" if 2-3 fields found, "low" if 0-1 found>
 }
 
 Extraction hints:
-- sqft: look for "gross living area", "GLA", "heated sq ft", "conditioned area", "total living", total floor area labels
-- footprintSqft: only include if clearly different from sqft (e.g. a 2-story house with a noted first-floor area)
-- stories: count above-grade habitable floors; "2 story", "two story", "2-story" -> 2
-- buildingWidth: look for overall building width dimension (shorter span)
-- buildingLength: look for overall building length dimension (longer span)
-- roofPitch: look for "4:12", "6/12", "8 in 12", slope notations in notes or schedules
-- linearFeet: look for perimeter notation, sum of exterior wall lengths, or "LF" measurements
+- sqft: look for "gross living area", "GLA", "heated sq ft", "conditioned area", "total living", "floor area", "building area", "shop area", "total area", "footprint". If area not labeled, calculate buildingWidth × buildingLength if both are found.
+- footprintSqft: only include if clearly different from sqft (e.g. a 2-story building where first-floor footprint is called out)
+- stories: count above-grade habitable or usable floors. Default to 1 for shops, garages, and single-level additions unless plan explicitly shows a second floor.
+- buildingWidth: overall building width on floor plan or foundation plan — the shorter span. For additions, use the addition's own width.
+- buildingLength: overall building length — the longer span. For additions, use the addition's own length.
+- roofPitch: look for slope notation "4:12", "6/12", "8 in 12", roof plan slope arrows, or general notes / structural sheets.
+- linearFeet: look for perimeter notation or sum of exterior wall lengths. If not labeled, calculate as 2 × (buildingWidth + buildingLength) when both are found.
+- foundationType: look at foundation plan details. Thickened-edge monolithic pour, slab key, anchor bolts in slab → "slab". Vented crawl space, floor joists, stem walls, pier-and-beam → "crawlspace". Poured concrete walls extending 6+ feet below grade, window wells → "basement".
+- wallHeight: look for "plate height", "wall height", "EWH" (exterior wall height), or stud length callouts (e.g. "10' plate ht", "12' walls"). Precut stud codes: 92-5/8" → 8 ft, 104-5/8" → 9 ft, 116-5/8" → 10 ft.
 
 Return ONLY valid JSON — no explanation, no markdown fences.`;
 
@@ -131,7 +137,8 @@ router.post("/plans/extract", async (req, res) => {
 
     if (!["high", "medium", "low"].includes(result.confidence as string)) {
       const found = [result.sqft, result.stories, result.buildingWidth,
-        result.buildingLength, result.roofPitch, result.linearFeet]
+        result.buildingLength, result.roofPitch, result.linearFeet,
+        result.foundationType, result.wallHeight]
         .filter(v => v != null).length;
       result.confidence = found >= 4 ? "high" : found >= 2 ? "medium" : "low";
     }

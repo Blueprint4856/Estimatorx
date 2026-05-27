@@ -9,6 +9,8 @@ interface ExtractedPlanData {
   buildingLength: number | null;
   roofPitch: string | null;
   linearFeet: number | null;
+  foundationType: "slab" | "crawlspace" | "basement" | null;
+  wallHeight: number | null;
   confidence: "high" | "medium" | "low";
 }
 
@@ -20,18 +22,22 @@ interface EditableFields {
   buildingLength: string;
   roofPitch: string;
   linearFeet: string;
+  foundationType: string;
+  wallHeight: string;
 }
 
 const ROOF_PITCHES = ["2:12","4:12","5:12","6:12","7:12","8:12","9:12","10:12","12:12"];
 
 const FIELD_META: { key: keyof EditableFields; label: string; unit: string; type: "number" | "select" }[] = [
-  { key: "sqft", label: "Gross Living Area", unit: "sq ft", type: "number" },
+  { key: "sqft", label: "Floor / Building Area", unit: "sq ft", type: "number" },
   { key: "footprintSqft", label: "Building Footprint", unit: "sq ft", type: "number" },
   { key: "stories", label: "Stories", unit: "", type: "select" },
   { key: "buildingWidth", label: "Building Width", unit: "ft", type: "number" },
   { key: "buildingLength", label: "Building Length", unit: "ft", type: "number" },
   { key: "roofPitch", label: "Roof Pitch", unit: "", type: "select" },
   { key: "linearFeet", label: "Exterior Perimeter", unit: "LF", type: "number" },
+  { key: "foundationType", label: "Foundation Type", unit: "", type: "select" },
+  { key: "wallHeight", label: "Wall / Plate Height", unit: "ft", type: "number" },
 ];
 
 const CONFIDENCE_CONFIG = {
@@ -49,6 +55,8 @@ function toEditableFields(data: ExtractedPlanData): EditableFields {
     buildingLength: data.buildingLength != null ? String(data.buildingLength) : "",
     roofPitch: data.roofPitch ?? "",
     linearFeet: data.linearFeet != null ? String(data.linearFeet) : "",
+    foundationType: data.foundationType ?? "",
+    wallHeight: data.wallHeight != null ? String(data.wallHeight) : "",
   };
 }
 
@@ -68,6 +76,7 @@ export function PlanImportModal({ onClose }: PlanImportModalProps) {
   const [fields, setFields] = useState<EditableFields>({
     sqft: "", footprintSqft: "", stories: "", buildingWidth: "",
     buildingLength: "", roofPitch: "", linearFeet: "",
+    foundationType: "", wallHeight: "",
   });
   const [confidence, setConfidence] = useState<"high" | "medium" | "low">("medium");
   const [errorMsg, setErrorMsg] = useState("");
@@ -150,11 +159,11 @@ export function PlanImportModal({ onClose }: PlanImportModalProps) {
   }
 
   function applyToEstimate() {
+    // ── Project Setup ─────────────────────────────────────────────────────
     const existing = (() => {
       try { return JSON.parse(localStorage.getItem(SK_PROJECT) ?? "{}") as Record<string, string>; }
       catch { return {}; }
     })();
-
     const updated = { ...existing };
     if (fields.sqft) updated.sqft = fields.sqft;
     if (fields.footprintSqft) updated.footprintSqft = fields.footprintSqft;
@@ -163,8 +172,31 @@ export function PlanImportModal({ onClose }: PlanImportModalProps) {
     if (fields.buildingLength) updated.buildingLength = fields.buildingLength;
     if (fields.roofPitch) updated.roofPitch = fields.roofPitch;
     if (fields.linearFeet) updated.linearFeet = fields.linearFeet;
-
     try { localStorage.setItem(SK_PROJECT, JSON.stringify(updated)); } catch {}
+
+    // ── Foundation tab — write foundationType ─────────────────────────────
+    if (fields.foundationType) {
+      const SK_FOUND = "ex.found";
+      const existingFound = (() => {
+        try { return JSON.parse(localStorage.getItem(SK_FOUND) ?? "{}") as Record<string, unknown>; }
+        catch { return {}; }
+      })();
+      try { localStorage.setItem(SK_FOUND, JSON.stringify({ ...existingFound, foundationType: fields.foundationType })); } catch {}
+    }
+
+    // ── Wall tab — write ceilingHeight (only supported heights: 8–12) ─────
+    if (fields.wallHeight) {
+      const validHeights = ["8", "9", "10", "11", "12"];
+      const h = String(Math.round(parseFloat(fields.wallHeight)));
+      if (validHeights.includes(h)) {
+        const SK_WALL = "ex.wall";
+        const existingWall = (() => {
+          try { return JSON.parse(localStorage.getItem(SK_WALL) ?? "{}") as Record<string, unknown>; }
+          catch { return {}; }
+        })();
+        try { localStorage.setItem(SK_WALL, JSON.stringify({ ...existingWall, ceilingHeight: h })); } catch {}
+      }
+    }
 
     setStage("done");
     setTimeout(() => {
@@ -305,6 +337,13 @@ export function PlanImportModal({ onClose }: PlanImportModalProps) {
                             <option value="">not found</option>
                             <option value="1">1 story</option>
                             <option value="2">2 stories</option>
+                          </select>
+                        ) : key === "foundationType" ? (
+                          <select value={value} onChange={e => setField(key, e.target.value)} className={SELECT_CLS}>
+                            <option value="">not found</option>
+                            <option value="slab">Slab-on-grade</option>
+                            <option value="crawlspace">Crawl space</option>
+                            <option value="basement">Full basement</option>
                           </select>
                         ) : (
                           <select value={value} onChange={e => setField(key, e.target.value)} className={SELECT_CLS}>
