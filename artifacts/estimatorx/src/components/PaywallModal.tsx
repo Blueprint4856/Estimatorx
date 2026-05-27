@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { X, Printer, Zap, Tag } from "lucide-react";
+import { useSubscription } from "../contexts/SubscriptionContext";
 
 interface PaywallModalProps {
   onClose: () => void;
@@ -7,10 +8,12 @@ interface PaywallModalProps {
 }
 
 export function PaywallModal({ onClose, trigger }: PaywallModalProps) {
+  const { refresh } = useSubscription();
   const [loading, setLoading] = useState<"print" | "xplan" | null>(null);
   const [promoCode, setPromoCode] = useState("");
   const [showPromo, setShowPromo] = useState(false);
   const [promoError, setPromoError] = useState("");
+  const [activated, setActivated] = useState(false);
   const base = import.meta.env.BASE_URL;
 
   async function goToCheckout(type: "print" | "xplan") {
@@ -37,8 +40,14 @@ export function PaywallModal({ onClose, trigger }: PaywallModalProps) {
         return;
       }
       if (!res.ok) throw new Error("Checkout failed");
-      const { url } = await res.json() as { url: string };
-      window.location.href = url;
+      const data = await res.json() as { url?: string; activated?: boolean };
+      if (data.activated) {
+        await refresh();
+        setActivated(true);
+        setTimeout(() => onClose(), 1500);
+        return;
+      }
+      window.location.href = data.url!;
     } catch {
       setLoading(null);
       alert("Something went wrong. Please try again.");
@@ -148,13 +157,19 @@ export function PaywallModal({ onClose, trigger }: PaywallModalProps) {
                 </div>
               )}
 
-              <button
-                onClick={() => goToCheckout("xplan")}
-                disabled={loading !== null}
-                className="w-full bg-[#E85D26] text-white py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-[#D44A15] transition-colors disabled:opacity-50"
-              >
-                {loading === "xplan" ? "Redirecting…" : "Upgrade to X Plan"}
-              </button>
+              {activated ? (
+                <div className="w-full bg-green-50 border border-green-300 py-2.5 text-xs font-bold uppercase tracking-widest text-green-700 text-center">
+                  X Plan activated!
+                </div>
+              ) : (
+                <button
+                  onClick={() => goToCheckout("xplan")}
+                  disabled={loading !== null}
+                  className="w-full bg-[#E85D26] text-white py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-[#D44A15] transition-colors disabled:opacity-50"
+                >
+                  {loading === "xplan" ? "Activating…" : "Upgrade to X Plan"}
+                </button>
+              )}
             </div>
           </div>
 

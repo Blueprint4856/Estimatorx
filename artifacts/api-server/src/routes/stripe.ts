@@ -71,6 +71,14 @@ router.post("/stripe/checkout/print", async (req, res) => {
   }
 });
 
+/* ── Ensure a Stripe customer exists, creating one if needed ── */
+async function ensureStripeCustomer(stripe: Stripe, clerkId: string, existingCustomerId: string | undefined): Promise<string> {
+  if (existingCustomerId) return existingCustomerId;
+  const customer = await stripe.customers.create({ metadata: { clerkId } });
+  await db.update(usersTable).set({ stripeCustomerId: customer.id }).where(eq(usersTable.clerkId, clerkId));
+  return customer.id;
+}
+
 /* ── POST /api/stripe/checkout/xplan ───────────────────────────────────── */
 router.post("/stripe/checkout/xplan", async (req, res) => {
   const { userId } = getAuth(req);
@@ -87,17 +95,65 @@ router.post("/stripe/checkout/xplan", async (req, res) => {
   try {
     const stripe = getStripe();
 
-    // If a promo code was supplied, resolve it to a Stripe promotion_code ID
-    let discounts: { promotion_code: string }[] | undefined;
+    // If a promo code was supplied, resolve it and check if it's fully covered
+    let resolvedPromoId: string | undefined;
+    let isFullyCovered = false;
+
     if (promoCode) {
-      const promos = await stripe.promotionCodes.list({ code: promoCode, active: true, limit: 1 });
+      const promos = await stripe.promotionCodes.list({
+        code: promoCode,
+        active: true,
+        limit: 1,
+        expand: ["data.promotion.coupon"],
+      });
       if (promos.data.length === 0) {
         res.status(400).json({ error: "Invalid or expired promo code." }); return;
       }
-      discounts = [{ promotion_code: promos.data[0].id }];
+
+      const promo = promos.data[0];
+      resolvedPromoId = promo.id;
+      const coupon = promo.promotion.coupon as Stripe.Coupon;
+
+      // 100% off by percentage
+      if (coupon.percent_off === 100) {
+        isFullyCovered = true;
+      } else if (coupon.amount_off != null) {
+        // Check if amount_off covers the full plan price
+        const price = await stripe.prices.retrieve(xplanPriceId);
+        if (price.unit_amount != null && coupon.amount_off >= price.unit_amount) {
+          isFullyCovered = true;
+        }
+      }
     }
 
-    const customerId = await ensureUser(userId);
+    const existingCustomerId = await ensureUser(userId);
+
+    // Fully-covered promo: activate subscription directly, no Checkout redirect
+    if (isFullyCovered && resolvedPromoId) {
+      const customerId = await ensureStripeCustomer(stripe, userId, existingCustomerId);
+
+      const subscription = await stripe.subscriptions.create({
+        customer: customerId,
+        items: [{ price: xplanPriceId }],
+        discounts: [{ promotion_code: resolvedPromoId }],
+        metadata: { clerkId: userId },
+      });
+
+      await db.update(usersTable)
+        .set({
+          plan: "x_plan",
+          stripeSubscriptionId: subscription.id,
+          planExpiresAt: null,
+        })
+        .where(eq(usersTable.clerkId, userId));
+
+      req.log.info({ userId }, "X Plan activated directly via 100% promo code");
+      res.json({ activated: true }); return;
+    }
+
+    // Partial discount or no promo: redirect to Stripe Checkout
+    const discounts = resolvedPromoId ? [{ promotion_code: resolvedPromoId }] : undefined;
+    const customerId = existingCustomerId;
     const origin = (req.headers.origin as string | undefined) ?? `https://${(process.env.REPLIT_DOMAINS ?? "").split(",")[0]}`;
 
     const session = await stripe.checkout.sessions.create({
