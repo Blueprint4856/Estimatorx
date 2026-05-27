@@ -22,7 +22,7 @@ interface EditableFields {
   linearFeet: string;
 }
 
-const ROOF_PITCHES = ["4:12","5:12","6:12","7:12","8:12","9:12","10:12","12:12"];
+const ROOF_PITCHES = ["2:12","4:12","5:12","6:12","7:12","8:12","9:12","10:12","12:12"];
 
 const FIELD_META: { key: keyof EditableFields; label: string; unit: string; type: "number" | "select" }[] = [
   { key: "sqft", label: "Gross Living Area", unit: "sq ft", type: "number" },

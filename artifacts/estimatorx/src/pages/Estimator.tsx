@@ -254,7 +254,7 @@ function ProjectSetupCard() {
             <Field label="Roof Pitch">
               <select value={project.roofPitch} onChange={e => setp("roofPitch", e.target.value)} className={SELECT_CLS}>
                 <option value="">— not set —</option>
-                {["4:12","5:12","6:12","7:12","8:12","9:12","10:12","12:12"].map(p => (
+                {["2:12","4:12","5:12","6:12","7:12","8:12","9:12","10:12","12:12"].map(p => (
                   <option key={p} value={p}>{p}</option>
                 ))}
               </select>
@@ -2297,7 +2297,7 @@ function WallTab() {
               className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
               {!tabInputs.roofPitch && project.roofPitch && <option value="">↑ from project ({project.roofPitch})</option>}
               {!tabInputs.roofPitch && !project.roofPitch && <option value="">— select —</option>}
-              {["4","5","6","7","8","9","10","12"].map(p => <option key={p} value={p}>{p}:12</option>)}
+              {["2","4","5","6","7","8","9","10","12"].map(p => <option key={p} value={p}>{p}:12</option>)}
             </select>
             {!tabInputs.roofPitch && project.roofPitch && <ProjectBadge label={`from project: ${project.roofPitch}`} />}
           </Field>
@@ -2946,7 +2946,7 @@ interface RoofInputs {
   buildingLength: string;
   roofSpacing: "16" | "24";
 }
-const PITCH_FACTORS: Record<string, number> = { "4:12": 1.054, "5:12": 1.083, "6:12": 1.118, "7:12": 1.158, "8:12": 1.202, "9:12": 1.250, "10:12": 1.302, "12:12": 1.414 };
+const PITCH_FACTORS: Record<string, number> = { "2:12": 1.014, "4:12": 1.054, "5:12": 1.083, "6:12": 1.118, "7:12": 1.158, "8:12": 1.202, "9:12": 1.250, "10:12": 1.302, "12:12": 1.414 };
 const DEFAULT_ROOF: RoofInputs = { footprintSqft: "", pitch: "", archShingles: true, iceWater: true, includeDecking: false, roofSystem: "truss", buildingWidth: "", buildingLength: "", roofSpacing: "24" };
 
 // Truss price by full span
