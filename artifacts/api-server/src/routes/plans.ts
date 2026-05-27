@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import multer from "multer";
+import { Worker as NodeWorker } from "node:worker_threads";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
@@ -40,60 +41,86 @@ function getOpenAI(): OpenAI {
   });
 }
 
+/**
+ * Run a pdfjs operation with a real Node.js worker thread.
+ *
+ * Setting GlobalWorkerOptions.workerSrc = "" (empty string) is falsy — pdfjs-dist rejects it
+ * in production with "No GlobalWorkerOptions.workerSrc specified."
+ * The correct Node.js approach is to use worker_threads with the pdfjs worker module,
+ * assigning it via GlobalWorkerOptions.workerPort.
+ */
+async function withPdfjsWorker<T>(
+  fn: (pdfjs: Record<string, unknown>) => Promise<T>
+): Promise<T> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs") as any;
+
+  // import.meta.resolve returns a file:// URL usable directly by NodeWorker
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const workerUrl = (import.meta as any).resolve("pdfjs-dist/legacy/build/pdf.worker.mjs") as string;
+  const worker = new NodeWorker(new URL(workerUrl));
+  pdfjs.GlobalWorkerOptions.workerPort = worker;
+
+  try {
+    return await fn(pdfjs);
+  } finally {
+    await worker.terminate();
+  }
+}
+
 interface TextItem { str: string }
 
 /** Extract embedded text from up to maxPages PDF pages using pdfjs-dist legacy build. */
 async function extractTextFromPdf(buffer: Buffer, maxPages = 6): Promise<string> {
-  // Must use the legacy build — the main build requires browser globals (DOMMatrix) that crash Node.js.
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs") as any;
-  pdfjs.GlobalWorkerOptions.workerSrc = "";
+  return withPdfjsWorker(async (pdfjs) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const p = pdfjs as any;
+    const data = new Uint8Array(buffer);
+    const pdfDoc = await p.getDocument({ data, verbosity: 0 }).promise;
+    const pageCount = Math.min(pdfDoc.numPages as number, maxPages);
 
-  const data = new Uint8Array(buffer);
-  const pdfDoc = await pdfjs.getDocument({ data, verbosity: 0 }).promise;
-  const pageCount = Math.min(pdfDoc.numPages, maxPages);
+    const pageTexts: string[] = [];
+    for (let i = 1; i <= pageCount; i++) {
+      const page = await pdfDoc.getPage(i);
+      const textContent = await page.getTextContent();
+      const pageText = (textContent.items as TextItem[])
+        .filter((item) => item.str)
+        .map((item) => item.str)
+        .join(" ");
+      if (pageText.trim()) pageTexts.push(`[Page ${i}]\n${pageText}`);
+    }
 
-  const pageTexts: string[] = [];
-  for (let i = 1; i <= pageCount; i++) {
-    const page = await pdfDoc.getPage(i);
-    const textContent = await page.getTextContent();
-    const pageText = (textContent.items as TextItem[])
-      .filter((item) => item.str)
-      .map((item) => item.str)
-      .join(" ");
-    if (pageText.trim()) pageTexts.push(`[Page ${i}]\n${pageText}`);
-  }
-
-  return pageTexts.join("\n\n");
+    return pageTexts.join("\n\n");
+  });
 }
 
 /** Render PDF pages to JPEG buffers using pdfjs-dist + node-canvas (for scanned/image PDFs). */
 async function renderPdfToImages(buffer: Buffer, maxPages = 6): Promise<Buffer[]> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs") as any;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { createCanvas } = await import("canvas") as any;
 
-  pdfjs.GlobalWorkerOptions.workerSrc = "";
-
-  const data = new Uint8Array(buffer);
-  const pdfDoc = await pdfjs.getDocument({ data, verbosity: 0 }).promise;
-  const pageCount = Math.min(pdfDoc.numPages, maxPages);
-
-  const images: Buffer[] = [];
-  for (let i = 1; i <= pageCount; i++) {
-    const page = await pdfDoc.getPage(i);
-    const viewport = page.getViewport({ scale: 1.5 });
-    const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height));
-    const ctx = canvas.getContext("2d");
-
-    await page.render({ canvasContext: ctx, viewport }).promise;
-
+  return withPdfjsWorker(async (pdfjs) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    images.push((canvas as any).toBuffer("image/jpeg", { quality: 0.85 }));
-  }
+    const p = pdfjs as any;
+    const data = new Uint8Array(buffer);
+    const pdfDoc = await p.getDocument({ data, verbosity: 0 }).promise;
+    const pageCount = Math.min(pdfDoc.numPages as number, maxPages);
 
-  return images;
+    const images: Buffer[] = [];
+    for (let i = 1; i <= pageCount; i++) {
+      const page = await pdfDoc.getPage(i);
+      const viewport = page.getViewport({ scale: 1.5 });
+      const canvas = createCanvas(Math.ceil(viewport.width as number), Math.ceil(viewport.height as number));
+      const ctx = canvas.getContext("2d");
+
+      await page.render({ canvasContext: ctx, viewport }).promise;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      images.push((canvas as any).toBuffer("image/jpeg", { quality: 0.85 }));
+    }
+
+    return images;
+  });
 }
 
 export interface ExtractedPlanData {
