@@ -2942,12 +2942,14 @@ function FloorTab() {
 interface RoofInputs {
   footprintSqft: string; pitch: string; archShingles: boolean; iceWater: boolean; includeDecking: boolean;
   roofSystem: "truss" | "rafter";
+  roofType: "pitched" | "shed";
+  rafterSize: "" | "2x8" | "2x10" | "2x12";
   buildingWidth: string;
   buildingLength: string;
   roofSpacing: "16" | "24";
 }
 const PITCH_FACTORS: Record<string, number> = { "2:12": 1.014, "4:12": 1.054, "5:12": 1.083, "6:12": 1.118, "7:12": 1.158, "8:12": 1.202, "9:12": 1.250, "10:12": 1.302, "12:12": 1.414 };
-const DEFAULT_ROOF: RoofInputs = { footprintSqft: "", pitch: "", archShingles: true, iceWater: true, includeDecking: false, roofSystem: "truss", buildingWidth: "", buildingLength: "", roofSpacing: "24" };
+const DEFAULT_ROOF: RoofInputs = { footprintSqft: "", pitch: "", archShingles: true, iceWater: true, includeDecking: false, roofSystem: "truss", roofType: "pitched", rafterSize: "", buildingWidth: "", buildingLength: "", roofSpacing: "24" };
 
 // Truss price by full span
 const TRUSS_PRICE_TIERS: { maxSpan: number; price: number }[] = [
@@ -2964,7 +2966,15 @@ const RAFTER_CFG: { maxHalfSpan: number; rSize: string; rPrice: number; rdgSize:
   { maxHalfSpan: 18, rSize: "2×10", rPrice: 29.98, rdgSize: "2×12", rdgPrice: 38.98, cjSize: "2×10", cjPrice: 29.98 },
   { maxHalfSpan: Infinity, rSize: "2×12", rPrice: 38.98, rdgSize: "2×12", rdgPrice: 38.98, cjSize: "2×12", cjPrice: 38.98 },
 ];
-function rafterCfg(halfSpan: number) { return RAFTER_CFG.find(r => halfSpan <= r.maxHalfSpan) ?? RAFTER_CFG[RAFTER_CFG.length - 1]; }
+function rafterCfg(span: number) { return RAFTER_CFG.find(r => span <= r.maxHalfSpan) ?? RAFTER_CFG[RAFTER_CFG.length - 1]; }
+const RAFTER_SIZE_CFG: Record<string, typeof RAFTER_CFG[0]> = {
+  "2x8":  { maxHalfSpan: 14,       rSize: "2×8",  rPrice: 22.98, rdgSize: "2×10", rdgPrice: 29.98, cjSize: "2×8",  cjPrice: 22.98 },
+  "2x10": { maxHalfSpan: 18,       rSize: "2×10", rPrice: 29.98, rdgSize: "2×12", rdgPrice: 38.98, cjSize: "2×10", cjPrice: 29.98 },
+  "2x12": { maxHalfSpan: Infinity, rSize: "2×12", rPrice: 38.98, rdgSize: "2×12", rdgPrice: 38.98, cjSize: "2×12", cjPrice: 38.98 },
+};
+function resolveRc(rafterSize: string, span: number) {
+  return (rafterSize && RAFTER_SIZE_CFG[rafterSize]) ? RAFTER_SIZE_CFG[rafterSize] : rafterCfg(span);
+}
 const STD_BOARD_LENGTHS = [8, 10, 12, 14, 16, 18, 20];
 function nextStdLen(lf: number): number { return STD_BOARD_LENGTHS.find(l => l >= lf) ?? 20; }
 
@@ -2991,13 +3001,31 @@ function getRoofMatItems(inputs: RoofInputs): MatItem[] {
         { label: "Structural Screws — Truss to Top Plate (box)", qty: Math.max(1, Math.ceil(trussCount / 15)), unit: "box", price: 21.98 },
         { label: "2×4×16 Temporary Bracing Lumber", qty: Math.max(2, Math.ceil(bl / 16) * 3), unit: "ea", price: 11.98 },
       );
+    } else if ((inputs.roofType ?? "pitched") === "shed") {
+      // Shed (single-slope) rafter system — full-width span, ledger at high side, no ridge/collar ties/ceiling joists
+      const rc = resolveRc(inputs.rafterSize ?? "", bw);
+      const rafterRunFt = bw + 2; // full span + overhang tail
+      const rafterBoardLen = nextStdLen(rafterRunFt * factor);
+      const rafterCount = Math.ceil(bl / spacingFt) + 1;
+
+      // Ledger board fastened to existing wall at high side
+      const ledgerLF = bl + 2;
+      const ledgerBoardLen = nextStdLen(ledgerLF <= 16 ? ledgerLF : 20);
+      const ledgerCount = Math.ceil(ledgerLF / ledgerBoardLen);
+
+      framingItems.push(
+        { label: `${rc.rSize}×${rafterBoardLen}' Shed Rafters (${spacing}" OC, single slope, ${bw.toFixed(0)}' span)`, qty: Math.ceil(rafterCount * WASTE), unit: "ea", price: rc.rPrice },
+        { label: `${rc.rdgSize}×${ledgerBoardLen}' Ledger Board — High Side`, qty: ledgerCount, unit: "ea", price: rc.rdgPrice },
+        { label: "Hurricane Ties — H2.5A Rafter Clip (1 per rafter at plate)", qty: rafterCount, unit: "ea", price: 2.25 },
+        { label: "Structural Screws — Ledger & Rafter (box)", qty: Math.max(1, Math.ceil(rafterCount / 40)), unit: "box", price: 21.98 },
+        { label: "Ring Shank Nails — Rafter to Plate (box)", qty: Math.max(1, Math.ceil(rafterCount / 50)), unit: "box", price: 17.98 },
+      );
     } else {
-      // Rafter system
+      // Pitched (gable) rafter system
       const halfSpan = bw / 2;
-      const rc = rafterCfg(halfSpan);
-      const pf = factor;
+      const rc = resolveRc(inputs.rafterSize ?? "", halfSpan);
       const rafterRunFt = halfSpan + 2; // +2 ft rafter tail / overhang
-      const rafterBoardLen = nextStdLen(rafterRunFt * pf);
+      const rafterBoardLen = nextStdLen(rafterRunFt * factor);
       const raftersPerSide = Math.ceil(bl / spacingFt) + 1;
       const totalRafters = raftersPerSide * 2;
 
@@ -3057,6 +3085,11 @@ function getRoofLaborItems(inputs: RoofInputs): LaborItem[] {
         { label: "Roof Truss Delivery & Crane Set", qty: trussCount + 2, unit: "ea", nationalAvg: 72.00 },
         { label: "Truss Bracing, Tie-Down & Sheathing Blocking", qty: actual || Math.round(bw * bl * factor), unit: "sqft", nationalAvg: 1.15 },
       );
+    } else if ((inputs.roofType ?? "pitched") === "shed") {
+      // RSMeans 06 11 10 — single-slope stick-built framing (no ceiling joists)
+      framingLabor.push(
+        { label: "Roof Framing — Shed Rafters & Ledger Board", qty: actual || Math.round(bw * bl * factor), unit: "sqft", nationalAvg: 6.50 },
+      );
     } else {
       // RSMeans 06 11 10 — stick-built roof framing, rafters + ridge + collar ties, 75th %ile
       framingLabor.push(
@@ -3111,8 +3144,9 @@ function RoofTab() {
   const hasFramingInputs = bwNum > 0 && blNum > 0;
   const spacingNum = parseInt(inputs.roofSpacing ?? "24") || 24;
   const trussCountDisplay = hasFramingInputs ? Math.ceil(blNum / (spacingNum / 12)) + 1 : null;
-  const halfSpanDisplay = bwNum > 0 ? bwNum / 2 : null;
-  const rc = halfSpanDisplay ? rafterCfg(halfSpanDisplay) : null;
+  const isShed = inputs.roofSystem === "rafter" && (inputs.roofType ?? "pitched") === "shed";
+  const rcSpan = isShed ? bwNum : bwNum / 2;
+  const rc = bwNum > 0 ? resolveRc(inputs.rafterSize ?? "", rcSpan) : null;
 
   const SH = ({ title, note }: { title: string; note?: string }) => (
     <div className="flex items-baseline gap-3 mb-4 mt-6 first:mt-0 pb-2 border-b border-[#E8E4DF]">
@@ -3142,11 +3176,31 @@ function RoofTab() {
               <option value="24">24″ OC</option>
             </select>
           </Field>
-          <Field label="Building Width (ft)" note={inputs.roofSystem === "truss" ? "Full truss span" : `Half-span ${halfSpanDisplay ? `${halfSpanDisplay.toFixed(1)}' → uses ${rc?.rSize ?? ""} rafters` : ""}`}>
+          {inputs.roofSystem === "rafter" && (
+            <>
+              <Field label="Roof Type">
+                <select value={inputs.roofType ?? "pitched"} onChange={e => setInputs(p => ({ ...p, roofType: e.target.value as "pitched" | "shed" }))}
+                  className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+                  <option value="pitched">Pitched / Gable</option>
+                  <option value="shed">Shed (Single Slope)</option>
+                </select>
+              </Field>
+              <Field label="Rafter Size" note={!inputs.rafterSize && rc ? `auto: ${rc.rSize}` : undefined}>
+                <select value={inputs.rafterSize ?? ""} onChange={e => setInputs(p => ({ ...p, rafterSize: e.target.value as RoofInputs["rafterSize"] }))}
+                  className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
+                  <option value="">Auto (from span)</option>
+                  <option value="2x8">2×8</option>
+                  <option value="2x10">2×10</option>
+                  <option value="2x12">2×12</option>
+                </select>
+              </Field>
+            </>
+          )}
+          <Field label="Building Width (ft)" note={inputs.roofSystem === "truss" ? "Full truss span" : isShed ? `Full rafter span${bwNum > 0 && rc ? ` → ${rc.rSize}` : ""}` : `Half-span${bwNum > 0 && rc ? ` ${(bwNum / 2).toFixed(1)}' → ${rc.rSize}` : ""}`}>
             <NumberInput value={inputs.buildingWidth} onChange={v => setInputs(p => ({ ...p, buildingWidth: v }))} placeholder="e.g. 28" />
             {!tabInputs.buildingWidth && project.buildingWidth && <ProjectBadge />}
           </Field>
-          <Field label="Building Length (ft)" note={trussCountDisplay ? `${trussCountDisplay} ${inputs.roofSystem === "truss" ? "trusses" : "rafter pairs"} at ${spacingNum}" OC` : undefined}>
+          <Field label="Building Length (ft)" note={trussCountDisplay ? `${trussCountDisplay} ${inputs.roofSystem === "truss" ? "trusses" : isShed ? "rafters" : "rafter pairs"} at ${spacingNum}" OC` : undefined}>
             <NumberInput value={inputs.buildingLength} onChange={v => setInputs(p => ({ ...p, buildingLength: v }))} placeholder="e.g. 48" />
             {!tabInputs.buildingLength && project.buildingLength && <ProjectBadge />}
           </Field>
@@ -3156,7 +3210,12 @@ function RoofTab() {
             <strong>{trussCountDisplay} trusses</strong> ({spacingNum}″ OC) &nbsp;·&nbsp; {bwNum.toFixed(0)}' span &nbsp;·&nbsp; unit price: <strong>${trussUnitPrice(bwNum).toLocaleString()}/ea</strong> &nbsp;·&nbsp; + 2 gable end trusses
           </InfoBox>
         )}
-        {hasFramingInputs && inputs.roofSystem === "rafter" && rc && (
+        {hasFramingInputs && inputs.roofSystem === "rafter" && rc && isShed && (
+          <InfoBox>
+            <strong>{rc.rSize} shed rafters</strong> &nbsp;·&nbsp; {bwNum.toFixed(0)}' span &nbsp;·&nbsp; {rc.rdgSize} ledger board &nbsp;·&nbsp; {Math.ceil(blNum / (spacingNum / 12)) + 1} rafters at {spacingNum}″ OC
+          </InfoBox>
+        )}
+        {hasFramingInputs && inputs.roofSystem === "rafter" && rc && !isShed && (
           <InfoBox>
             <strong>{rc.rSize} rafters</strong> &nbsp;·&nbsp; {rc.rdgSize} ridge board &nbsp;·&nbsp; {rc.cjSize} ceiling joists &nbsp;·&nbsp; {Math.ceil(blNum / (spacingNum / 12)) + 1} rafter pairs per side
           </InfoBox>
