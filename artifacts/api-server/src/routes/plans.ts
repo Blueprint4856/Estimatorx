@@ -2,6 +2,14 @@ import { Router, type Request, type Response } from "express";
 import multer from "multer";
 import { Worker as NodeWorker } from "node:worker_threads";
 import { getAuth } from "@clerk/express";
+
+// pdfjs-dist v5's GlobalWorkerOptions.workerPort setter checks `val instanceof Worker`
+// where Worker is the *browser* global. In Node.js that global doesn't exist, so the
+// check always throws. Exposing node:worker_threads Worker as the global makes the
+// instanceof check pass without changing any other behaviour.
+if (typeof (globalThis as Record<string, unknown>).Worker === "undefined") {
+  (globalThis as Record<string, unknown>).Worker = NodeWorker;
+}
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db/schema";
 import { eq } from "drizzle-orm";
