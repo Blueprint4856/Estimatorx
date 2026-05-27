@@ -1,4 +1,4 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
 import multer from "multer";
 import { getAuth } from "@clerk/express";
 import { db } from "@workspace/db";
@@ -15,10 +15,20 @@ const upload = multer({
     if (file.mimetype === "application/pdf") {
       cb(null, true);
     } else {
-      cb(new Error("Only PDF files are accepted"));
+      cb(new Error("Only PDF files are accepted. Please upload a .pdf file."));
     }
   },
 });
+
+/** Run multer as a promise so errors are catchable before the route handler. */
+function runUpload(req: Request, res: Response): Promise<void> {
+  return new Promise((resolve, reject) => {
+    upload.single("pdf")(req, res, (err) => {
+      if (err) reject(err);
+      else resolve();
+    });
+  });
+}
 
 function getOpenAI(): OpenAI {
   if (!process.env.AI_INTEGRATIONS_OPENAI_BASE_URL || !process.env.AI_INTEGRATIONS_OPENAI_API_KEY) {
@@ -34,15 +44,14 @@ interface TextItem { str: string }
 
 async function extractTextFromPdf(buffer: Buffer, maxPages = 6): Promise<string> {
   // Dynamically import the legacy (Node.js-compatible) build of pdfjs-dist.
-  // The legacy build does not require browser globals like DOMMatrix.
+  // The main build requires browser globals like DOMMatrix — the legacy build does not.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs") as any;
 
-  // Disable web worker — we run synchronously in the request handler
   pdfjs.GlobalWorkerOptions.workerSrc = "";
 
   const data = new Uint8Array(buffer);
-  const pdfDoc = await pdfjs.getDocument({ data, verbosity: 0, disableWorker: true }).promise;
+  const pdfDoc = await pdfjs.getDocument({ data, verbosity: 0 }).promise;
   const pageCount = Math.min(pdfDoc.numPages, maxPages);
 
   const pageTexts: string[] = [];
@@ -59,7 +68,7 @@ async function extractTextFromPdf(buffer: Buffer, maxPages = 6): Promise<string>
   return pageTexts.join("\n\n");
 }
 
-interface ExtractedPlanData {
+export interface ExtractedPlanData {
   sqft: number | null;
   footprintSqft: number | null;
   stories: 1 | 2 | null;
@@ -67,11 +76,12 @@ interface ExtractedPlanData {
   buildingLength: number | null;
   roofPitch: string | null;
   linearFeet: number | null;
+  confidence: "high" | "medium" | "low";
 }
 
 const SYSTEM_PROMPT = `You are a construction plan reading assistant. Analyze the provided text extracted from residential building plan PDF pages and extract key dimensions.
 
-Return ONLY a single JSON object with these exact keys (use null if a value cannot be found):
+Return ONLY a single JSON object with these exact keys:
 
 {
   "sqft": <total gross living area in square feet as a number, or null>,
@@ -80,7 +90,8 @@ Return ONLY a single JSON object with these exact keys (use null if a value cann
   "buildingWidth": <narrow dimension in feet as a number, or null>,
   "buildingLength": <long dimension in feet as a number, or null>,
   "roofPitch": <roof pitch such as "4:12" "6:12" "8:12", or null>,
-  "linearFeet": <total exterior wall perimeter in linear feet as a number, or null>
+  "linearFeet": <total exterior wall perimeter in linear feet as a number, or null>,
+  "confidence": <"high" if 4+ fields found with clear values, "medium" if 2–3 fields found, "low" if 0–1 found>
 }
 
 Extraction hints:
@@ -113,52 +124,65 @@ async function extractDimensions(pdfText: string): Promise<ExtractedPlanData> {
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) throw new Error("AI returned no valid JSON");
 
-  return JSON.parse(jsonMatch[0]) as ExtractedPlanData;
+  const parsed = JSON.parse(jsonMatch[0]) as ExtractedPlanData;
+
+  // Ensure confidence is always a valid value
+  if (!["high", "medium", "low"].includes(parsed.confidence)) {
+    const found = [parsed.sqft, parsed.stories, parsed.buildingWidth, parsed.buildingLength,
+      parsed.roofPitch, parsed.linearFeet].filter(v => v != null).length;
+    parsed.confidence = found >= 4 ? "high" : found >= 2 ? "medium" : "low";
+  }
+
+  return parsed;
 }
 
 /* ── POST /api/plans/extract ─────────────────────────────────────────────── */
-router.post(
-  "/plans/extract",
-  upload.single("pdf"),
-  async (req, res) => {
-    const { userId } = getAuth(req);
-    if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+router.post("/plans/extract", async (req, res) => {
+  // Run multer first so any upload errors are caught and returned as JSON
+  try {
+    await runUpload(req, res);
+  } catch (err) {
+    const isMulterError = err != null && typeof err === "object" && "code" in err;
+    if (isMulterError && (err as { code: string }).code === "LIMIT_FILE_SIZE") {
+      res.status(413).json({ error: "File too large — maximum 25 MB allowed." }); return;
+    }
+    const msg = err instanceof Error ? err.message : "Upload failed";
+    res.status(400).json({ error: msg }); return;
+  }
 
-    const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
-    const plan = user?.plan ?? "free";
-    if (plan !== "x_plan" && plan !== "pro_plan") {
-      res.status(403).json({ error: "X Plan required" }); return;
+  const { userId } = getAuth(req);
+  if (!userId) { res.status(401).json({ error: "Unauthorized" }); return; }
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.clerkId, userId));
+  const plan = user?.plan ?? "free";
+  if (plan !== "x_plan" && plan !== "pro_plan") {
+    res.status(403).json({ error: "X Plan required" }); return;
+  }
+
+  if (!req.file) {
+    res.status(400).json({ error: "No PDF file uploaded" }); return;
+  }
+
+  try {
+    req.log.info({ size: req.file.size }, "Starting PDF plan text extraction");
+
+    const pdfText = await extractTextFromPdf(req.file.buffer);
+    if (!pdfText.trim()) {
+      res.status(422).json({
+        error: "No readable text found in this PDF. Scanned or image-only PDFs are not yet supported — please use a digital PDF exported from CAD or design software.",
+      }); return;
     }
 
-    if (!req.file) {
-      res.status(400).json({ error: "No PDF file uploaded" }); return;
-    }
+    req.log.info({ chars: pdfText.length }, "PDF text extracted, querying AI");
 
-    try {
-      req.log.info({ size: req.file.size }, "Starting PDF plan text extraction");
+    const extracted = await extractDimensions(pdfText);
 
-      const pdfText = await extractTextFromPdf(req.file.buffer);
-      if (!pdfText.trim()) {
-        res.status(422).json({
-          error: "No readable text found in this PDF. Scanned/image-only PDFs are not supported.",
-        }); return;
-      }
-
-      req.log.info({ chars: pdfText.length }, "PDF text extracted, querying AI");
-
-      const extracted = await extractDimensions(pdfText);
-
-      req.log.info({ extracted }, "Plan extraction complete");
-      res.json({ data: extracted });
-    } catch (err) {
-      req.log.error({ err }, "Plan extraction failed");
-      const message = err instanceof Error ? err.message : "Unknown error";
-      if (message.includes("Only PDF")) {
-        res.status(400).json({ error: message }); return;
-      }
-      res.status(500).json({ error: "Extraction failed — please try again" }); return;
-    }
-  },
-);
+    req.log.info({ extracted }, "Plan extraction complete");
+    res.json({ data: extracted });
+  } catch (err) {
+    req.log.error({ err }, "Plan extraction failed");
+    res.status(500).json({ error: "Extraction failed — please try again" }); return;
+  }
+});
 
 export default router;

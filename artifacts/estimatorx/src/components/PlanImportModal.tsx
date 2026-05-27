@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { X, FileUp, Loader2, CheckCircle, AlertCircle, FileText } from "lucide-react";
+import { X, FileUp, Loader2, CheckCircle, AlertCircle, FileText, TrendingUp } from "lucide-react";
 
 interface ExtractedPlanData {
   sqft: number | null;
@@ -9,6 +9,7 @@ interface ExtractedPlanData {
   buildingLength: number | null;
   roofPitch: string | null;
   linearFeet: number | null;
+  confidence: "high" | "medium" | "low";
 }
 
 interface EditableFields {
@@ -32,6 +33,12 @@ const FIELD_META: { key: keyof EditableFields; label: string; unit: string; type
   { key: "roofPitch", label: "Roof Pitch", unit: "", type: "select" },
   { key: "linearFeet", label: "Exterior Perimeter", unit: "LF", type: "number" },
 ];
+
+const CONFIDENCE_CONFIG = {
+  high: { label: "High confidence", color: "text-green-700", bg: "bg-green-50 border-green-200" },
+  medium: { label: "Medium confidence", color: "text-amber-700", bg: "bg-amber-50 border-amber-200" },
+  low: { label: "Low confidence — verify all values", color: "text-red-700", bg: "bg-red-50 border-red-200" },
+};
 
 function toEditableFields(data: ExtractedPlanData): EditableFields {
   return {
@@ -62,6 +69,7 @@ export function PlanImportModal({ onClose }: PlanImportModalProps) {
     sqft: "", footprintSqft: "", stories: "", buildingWidth: "",
     buildingLength: "", roofPitch: "", linearFeet: "",
   });
+  const [confidence, setConfidence] = useState<"high" | "medium" | "low">("medium");
   const [errorMsg, setErrorMsg] = useState("");
   const [fileName, setFileName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -87,7 +95,24 @@ export function PlanImportModal({ onClose }: PlanImportModalProps) {
         body: formData,
       });
 
-      const json = await res.json() as { data?: ExtractedPlanData; error?: string };
+      // Always read as text first — multer or server errors may not be JSON
+      const rawText = await res.text();
+      let json: { data?: ExtractedPlanData; error?: string };
+      try {
+        json = JSON.parse(rawText) as { data?: ExtractedPlanData; error?: string };
+      } catch {
+        // Non-JSON server error
+        const code = res.status;
+        if (code === 413) {
+          setErrorMsg("File too large — maximum 25 MB allowed.");
+        } else if (code === 415 || code === 400) {
+          setErrorMsg("Only PDF files are accepted.");
+        } else {
+          setErrorMsg("Server error. Please try again.");
+        }
+        setStage("error");
+        return;
+      }
 
       if (!res.ok) {
         setErrorMsg(json.error ?? "Extraction failed. Please try again.");
@@ -97,6 +122,7 @@ export function PlanImportModal({ onClose }: PlanImportModalProps) {
 
       if (json.data) {
         setFields(toEditableFields(json.data));
+        setConfidence(json.data.confidence ?? "medium");
         setStage("review");
       } else {
         setErrorMsg("No data returned from AI.");
@@ -112,6 +138,10 @@ export function PlanImportModal({ onClose }: PlanImportModalProps) {
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (file?.type === "application/pdf") handleFileSelect(file);
+    else if (file) {
+      setErrorMsg("Only PDF files are accepted.");
+      setStage("error");
+    }
   }
 
   function handleInputChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -144,6 +174,7 @@ export function PlanImportModal({ onClose }: PlanImportModalProps) {
   }
 
   const extractedCount = Object.values(fields).filter(v => v !== "").length;
+  const conf = CONFIDENCE_CONFIG[confidence];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={onClose}>
@@ -188,7 +219,7 @@ export function PlanImportModal({ onClose }: PlanImportModalProps) {
               </div>
 
               <p className="mt-4 text-[11px] text-[#AAA] leading-relaxed">
-                Works best with digital (vector) PDFs exported from CAD or design software. Scanned/photographed plans may have reduced accuracy.
+                Works best with digital (vector) PDFs exported from CAD or design software. Scanned/photographed plans are not yet supported.
               </p>
             </>
           )}
@@ -211,7 +242,7 @@ export function PlanImportModal({ onClose }: PlanImportModalProps) {
                 <p className="text-sm text-red-700">{errorMsg}</p>
               </div>
               <button
-                onClick={() => { setStage("pick"); setErrorMsg(""); }}
+                onClick={() => { setStage("pick"); setErrorMsg(""); if (fileInputRef.current) fileInputRef.current.value = ""; }}
                 className="w-full border border-[#1A1A1A] text-[#1A1A1A] py-2.5 text-xs font-bold uppercase tracking-widest hover:bg-[#1A1A1A] hover:text-white transition-colors"
               >
                 Try Again
@@ -222,17 +253,29 @@ export function PlanImportModal({ onClose }: PlanImportModalProps) {
           {/* REVIEW stage */}
           {stage === "review" && (
             <>
-              <div className="flex items-center gap-2 mb-4">
-                <FileText size={14} className="text-[#E85D26]" />
-                <p className="text-xs text-[#666]">{fileName}</p>
-                <span className="ml-auto text-[11px] font-bold text-[#E85D26]">
-                  {extractedCount} of {FIELD_META.length} fields found
+              {/* File + confidence bar */}
+              <div className="flex items-center gap-2 mb-3">
+                <FileText size={14} className="text-[#E85D26] flex-shrink-0" />
+                <p className="text-xs text-[#666] truncate">{fileName}</p>
+                <span className="ml-auto text-[11px] font-bold text-[#E85D26] whitespace-nowrap">
+                  {extractedCount}/{FIELD_META.length} found
                 </span>
               </div>
 
-              <p className="text-xs text-[#888] mb-4">Review and edit the extracted values before applying. Blank fields will be left unchanged.</p>
+              {/* Confidence indicator */}
+              <div className={`flex items-center gap-2 px-3 py-2 border rounded mb-4 ${conf.bg}`}>
+                <TrendingUp size={13} className={conf.color} />
+                <span className={`text-[11px] font-semibold ${conf.color}`}>{conf.label}</span>
+                <span className={`text-[11px] ml-auto ${conf.color} opacity-70`}>
+                  {confidence === "high" ? "Most values clearly stated in document"
+                    : confidence === "medium" ? "Some values may need verification"
+                    : "Few or no recognisable values — please check all fields"}
+                </span>
+              </div>
 
-              <div className="space-y-3 mb-6">
+              <p className="text-xs text-[#888] mb-4">Review and edit extracted values. Blank fields will be left unchanged.</p>
+
+              <div className="space-y-3 mb-6 max-h-72 overflow-y-auto pr-1">
                 {FIELD_META.map(({ key, label, unit, type }) => {
                   const value = fields[key];
                   const found = value !== "";
@@ -244,7 +287,7 @@ export function PlanImportModal({ onClose }: PlanImportModalProps) {
                           : <div className="w-2 h-2 rounded-full bg-[#DDD8D0] mx-auto" />
                         }
                       </div>
-                      <label className="text-xs font-semibold text-[#555] w-40 flex-shrink-0">
+                      <label className="text-xs font-semibold text-[#555] w-36 flex-shrink-0">
                         {label}
                         {unit && <span className="font-normal text-[#999] ml-1">({unit})</span>}
                       </label>
@@ -277,7 +320,7 @@ export function PlanImportModal({ onClose }: PlanImportModalProps) {
 
               <div className="flex gap-3">
                 <button
-                  onClick={() => setStage("pick")}
+                  onClick={() => { setStage("pick"); if (fileInputRef.current) fileInputRef.current.value = ""; }}
                   className="flex-1 border border-[#DDD8D0] text-[#666] py-2.5 text-xs font-bold uppercase tracking-widest hover:border-[#999] transition-colors"
                 >
                   Back
