@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Link } from "wouter";
-import { ChevronRight, Printer, RotateCcw, Link2, Trash2, Check, Plus, X, FileUp, Pencil, FolderPlus, FolderOpen, ChevronDown } from "lucide-react";
+import { ChevronRight, Printer, RotateCcw, Link2, Trash2, Check, Plus, X, FileUp, Pencil, FolderPlus, FolderOpen, ChevronDown, Users } from "lucide-react";
+import { InviteModal } from "@/components/InviteModal";
 import { useUser, useClerk } from "@clerk/react";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { PaywallModal } from "@/components/PaywallModal";
@@ -284,7 +285,7 @@ function useFeatureAccess(feature: GatedFeature): { allowed: boolean } {
 }
 
 // ── URL state helpers ──────────────────────────────────────────────────────
-function readAllLocalStorage() {
+export function readAllLocalStorage() {
   const get = <T,>(key: string): T | undefined => {
     try { const v = localStorage.getItem(key); return v ? JSON.parse(v) as T : undefined; }
     catch { return undefined; }
@@ -315,18 +316,19 @@ function readAllLocalStorage() {
     plumbMatQtys: get(SK.plumbMatQtys), plumbLabQtys: get(SK.plumbLabQtys),
     elecMatQtys: get(SK.elecMatQtys), elecLabQtys: get(SK.elecLabQtys),
     hvacMatQtys: get(SK.hvacMatQtys), hvacLabQtys: get(SK.hvacLabQtys),
+    project: get(SK.project),
   };
 }
 
 type SnapshotState = ReturnType<typeof readAllLocalStorage>;
 
-function serializeState(state: SnapshotState): string {
+export function serializeState(state: SnapshotState): string {
   try { return btoa(encodeURIComponent(JSON.stringify(state))); } catch { return ""; }
 }
-function deserializeState(encoded: string): SnapshotState | null {
+export function deserializeState(encoded: string): SnapshotState | null {
   try { return JSON.parse(decodeURIComponent(atob(encoded))) as SnapshotState; } catch { return null; }
 }
-function primeLocalStorageFromSnapshot(state: SnapshotState) {
+export function primeLocalStorageFromSnapshot(state: SnapshotState) {
   const set = (key: string, val: unknown) => {
     if (val != null) try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
   };
@@ -355,6 +357,7 @@ function primeLocalStorageFromSnapshot(state: SnapshotState) {
   set(SK.plumbMatQtys, state.plumbMatQtys); set(SK.plumbLabQtys, state.plumbLabQtys);
   set(SK.elecMatQtys, state.elecMatQtys); set(SK.elecLabQtys, state.elecLabQtys);
   set(SK.hvacMatQtys, state.hvacMatQtys); set(SK.hvacLabQtys, state.hvacLabQtys);
+  set(SK.project, state.project);
 }
 function clearAllLocalStorage() {
   Object.values(SK).forEach(k => { try { localStorage.removeItem(k); } catch {} });
@@ -3927,7 +3930,7 @@ function EstimatorUserNav() {
   );
 }
 
-export default function Estimator() {
+export default function Estimator({ sharedToken, sharedName }: { sharedToken?: string; sharedName?: string } = {}) {
   // Prime localStorage from URL on first render (before child hooks)
   const urlPrimed = useRef(false);
   if (!urlPrimed.current) {
@@ -3946,6 +3949,9 @@ export default function Estimator() {
   const [copied, setCopied] = useState(false);
   const [upgradeFeature, setUpgradeFeature] = useState<GatedFeature | null>(null);
   const [showPlanImport, setShowPlanImport] = useState(false);
+  const [inviteModal, setInviteModal] = useState<{ url: string; name: string } | null>(null);
+  const [inviteCreating, setInviteCreating] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved">("saved");
 
   const printAccess = useFeatureAccess("print");
   const { refresh: refreshPlan, isXPlan } = useSubscription();
@@ -4020,10 +4026,60 @@ export default function Estimator() {
     setShowPlanImport(true);
   }, [isXPlan]);
 
+  const handleInvite = useCallback(async () => {
+    if (!isXPlan) { setUpgradeFeature("cci"); return; }
+    const state = readAllLocalStorage();
+    const snapshot = serializeState(state);
+    const pid = pmActivePid();
+    const projects = pmReadIndex();
+    const estimateName = projects.find(p => p.id === pid)?.name ?? "Shared Estimate";
+    const base = import.meta.env.BASE_URL as string;
+    setInviteCreating(true);
+    try {
+      const res = await fetch(`${base}api/shared`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: estimateName, snapshot }),
+      });
+      if (res.ok) {
+        const data = await res.json() as { token: string };
+        const basePath = base.replace(/\/$/, "");
+        const url = `${window.location.origin}${basePath}/shared/${data.token}`;
+        setInviteModal({ url, name: estimateName });
+      }
+    } catch { /* silent */ } finally {
+      setInviteCreating(false);
+    }
+  }, [isXPlan]);
+
+  // Auto-save to server every 5 seconds when in shared mode (only if data changed)
+  const lastSavedSnapshotRef = useRef<string>("");
+  useEffect(() => {
+    if (!sharedToken) return;
+    lastSavedSnapshotRef.current = serializeState(readAllLocalStorage());
+    const interval = setInterval(() => {
+      const current = serializeState(readAllLocalStorage());
+      if (current === lastSavedSnapshotRef.current) return;
+      setSaveStatus("saving");
+      const base = import.meta.env.BASE_URL as string;
+      void fetch(`${base}api/shared/${sharedToken}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ snapshot: current }),
+      }).then(r => {
+        if (r.ok) { lastSavedSnapshotRef.current = current; setSaveStatus("saved"); }
+        else { setSaveStatus("unsaved"); }
+      }).catch(() => setSaveStatus("unsaved"));
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [sharedToken]);
+
   return (
     <div className="min-h-[100dvh] flex flex-col bg-[#F7F4F0] text-[#1A1A1A]">
       {upgradeFeature && <PaywallModal trigger={upgradeFeature} onClose={() => setUpgradeFeature(null)} />}
       {showPlanImport && <PlanImportModal onClose={() => setShowPlanImport(false)} />}
+      {inviteModal && <InviteModal url={inviteModal.url} estimateName={inviteModal.name} onClose={() => setInviteModal(null)} />}
 
       <header className="no-print sticky top-0 z-50 w-full border-b border-[#E0DAD3] bg-white shadow-sm">
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
@@ -4050,7 +4106,20 @@ export default function Estimator() {
             </div>
             <h1 className="text-4xl md:text-5xl font-black font-serif uppercase mb-3">Material + Labor Estimator</h1>
             <p className="text-gray-400 text-lg max-w-2xl">Site work, foundation, framing, floors, roofing, plumbing, electrical, and HVAC — all with RSMeans national average labor rates built in.</p>
-            <ProjectSwitcher isXPlan={isXPlan} onUpgrade={() => setUpgradeFeature("cci")} />
+            {sharedToken ? (
+              <div className="mt-5 flex flex-wrap items-center gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-[#E85D26]" />
+                  <span className="text-[#E85D26] text-xs font-bold uppercase tracking-widest">Shared Estimate</span>
+                </div>
+                <span className="text-white font-bold text-lg">{sharedName}</span>
+                <span className={`text-xs font-bold uppercase tracking-widest ${saveStatus === "saved" ? "text-green-400" : saveStatus === "saving" ? "text-yellow-400" : "text-red-400"}`}>
+                  {saveStatus === "saved" ? "● Saved" : saveStatus === "saving" ? "● Saving…" : "● Unsaved"}
+                </span>
+              </div>
+            ) : (
+              <ProjectSwitcher isXPlan={isXPlan} onUpgrade={() => setUpgradeFeature("cci")} />
+            )}
           </div>
         </div>
 
@@ -4085,21 +4154,44 @@ export default function Estimator() {
               </button>
               {/* Toolbar */}
               <div className="ml-auto flex items-center gap-1">
-                <button onClick={handlePlanImport} title="Import dimensions from building plans PDF"
-                  className="flex items-center gap-2 px-4 py-3 text-sm text-[#888] hover:text-[#E85D26] transition-colors whitespace-nowrap">
-                  <FileUp size={15} />
-                  <span className="hidden sm:inline">Import Plans</span>
-                </button>
-                <button onClick={handleCopyLink} title="Copy shareable link"
-                  className={`flex items-center gap-2 px-4 py-3 text-sm transition-colors whitespace-nowrap ${copied ? "text-green-600" : "text-[#888] hover:text-[#E85D26]"}`}>
-                  {copied ? <Check size={15} /> : <Link2 size={15} />}
-                  <span className="hidden sm:inline">{copied ? "Copied!" : "Share"}</span>
-                </button>
-                <button onClick={handleClear} title="Clear all inputs and start over"
-                  className="flex items-center gap-2 px-4 py-3 text-sm text-[#888] hover:text-red-500 transition-colors whitespace-nowrap">
-                  <Trash2 size={15} />
-                  <span className="hidden sm:inline">Clear</span>
-                </button>
+                {/* Import Plans — hidden in shared mode */}
+                {!sharedToken && (
+                  <button onClick={handlePlanImport} title="Import dimensions from building plans PDF"
+                    className="flex items-center gap-2 px-4 py-3 text-sm text-[#888] hover:text-[#E85D26] transition-colors whitespace-nowrap">
+                    <FileUp size={15} />
+                    <span className="hidden sm:inline">Import Plans</span>
+                  </button>
+                )}
+                {/* Share / Invite / Save status */}
+                {sharedToken ? (
+                  /* Shared mode: show save status only */
+                  <span className={`flex items-center gap-2 px-4 py-3 text-sm font-bold uppercase tracking-wider whitespace-nowrap ${saveStatus === "saved" ? "text-green-600" : saveStatus === "saving" ? "text-yellow-500" : "text-red-500"}`}>
+                    {saveStatus === "saved" ? <Check size={15} /> : <RotateCcw size={15} className={saveStatus === "saving" ? "animate-spin" : ""} />}
+                    <span className="hidden sm:inline">{saveStatus === "saved" ? "Saved" : saveStatus === "saving" ? "Saving…" : "Unsaved"}</span>
+                  </span>
+                ) : isXPlan ? (
+                  /* X Plan owner: Invite button */
+                  <button onClick={() => void handleInvite()} disabled={inviteCreating} title="Create an invite link for team members"
+                    className="flex items-center gap-2 px-4 py-3 text-sm text-[#888] hover:text-[#E85D26] transition-colors whitespace-nowrap disabled:opacity-50">
+                    <Users size={15} />
+                    <span className="hidden sm:inline">{inviteCreating ? "Creating…" : "Invite"}</span>
+                  </button>
+                ) : (
+                  /* Free plan: URL-based share */
+                  <button onClick={handleCopyLink} title="Copy shareable link"
+                    className={`flex items-center gap-2 px-4 py-3 text-sm transition-colors whitespace-nowrap ${copied ? "text-green-600" : "text-[#888] hover:text-[#E85D26]"}`}>
+                    {copied ? <Check size={15} /> : <Link2 size={15} />}
+                    <span className="hidden sm:inline">{copied ? "Copied!" : "Share"}</span>
+                  </button>
+                )}
+                {/* Clear — hidden in shared mode */}
+                {!sharedToken && (
+                  <button onClick={handleClear} title="Clear all inputs and start over"
+                    className="flex items-center gap-2 px-4 py-3 text-sm text-[#888] hover:text-red-500 transition-colors whitespace-nowrap">
+                    <Trash2 size={15} />
+                    <span className="hidden sm:inline">Clear</span>
+                  </button>
+                )}
                 <button onClick={handlePrint}
                   className="flex items-center gap-2 px-4 py-3 text-sm text-[#888] hover:text-[#1A1A1A] transition-colors whitespace-nowrap">
                   <Printer size={16} />

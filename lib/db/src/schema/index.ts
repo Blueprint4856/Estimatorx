@@ -26,10 +26,26 @@ export const estimatesTable = pgTable("estimates", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// ── Shared Estimates ─────────────────────────────────────────────────────────
+// Shared via invite link — anyone with the token can read/write.
+// snapshot stores the same base64-encoded format as the ?s= URL share.
+export const sharedEstimatesTable = pgTable("shared_estimates", {
+  id: serial("id").primaryKey(),
+  token: text("token").notNull().unique(),
+  ownerClerkId: text("owner_clerk_id").notNull(),
+  name: text("name").notNull().default("Shared Estimate"),
+  snapshot: text("snapshot").notNull().default(""),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 export const insertUserSchema = createInsertSchema(usersTable).omit({
   id: true, createdAt: true, updatedAt: true,
 });
 export const insertEstimateSchema = createInsertSchema(estimatesTable).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+export const insertSharedEstimateSchema = createInsertSchema(sharedEstimatesTable).omit({
   id: true, createdAt: true, updatedAt: true,
 });
 
@@ -37,3 +53,5 @@ export type User = typeof usersTable.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type Estimate = typeof estimatesTable.$inferSelect;
 export type InsertEstimate = z.infer<typeof insertEstimateSchema>;
+export type SharedEstimate = typeof sharedEstimatesTable.$inferSelect;
+export type InsertSharedEstimate = z.infer<typeof insertSharedEstimateSchema>;
