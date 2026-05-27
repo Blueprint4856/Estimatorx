@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Link } from "wouter";
-import { ChevronRight, Printer, RotateCcw, Link2, Trash2, Check, Plus, X, FileUp } from "lucide-react";
+import { ChevronRight, Printer, RotateCcw, Link2, Trash2, Check, Plus, X, FileUp, Pencil, FolderPlus, FolderOpen, ChevronDown } from "lucide-react";
 import { useUser, useClerk } from "@clerk/react";
 import { useSubscription } from "@/contexts/SubscriptionContext";
 import { PaywallModal } from "@/components/PaywallModal";
@@ -81,6 +81,58 @@ const SK = {
   elecMatQtys: "ex.elec.mqtys", elecLabQtys: "ex.elec.lqtys",
   hvacMatQtys: "ex.hvac.mqtys", hvacLabQtys: "ex.hvac.lqtys",
 } as const;
+
+/* ─────────────────────────────────────────────
+   PROJECT MANAGEMENT
+   Strategy: SK keys always hold the "active" project's live data.
+   Snapshots are full copies of all SK keys, stored per project ID.
+   Switching projects: save snapshot → load target snapshot → reload page.
+───────────────────────────────────────────── */
+const ALL_SK_KEYS = [...Object.values(SK), "ex.project"] as string[];
+const PK = { index: "ex.projects", activePid: "ex.active.pid" } as const;
+
+interface ProjectMeta { id: string; name: string; createdAt: number; updatedAt: number; }
+
+function pmUid(): string { return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`; }
+function pmReadIndex(): ProjectMeta[] {
+  try { const r = localStorage.getItem(PK.index); return r ? JSON.parse(r) as ProjectMeta[] : []; } catch { return []; }
+}
+function pmWriteIndex(list: ProjectMeta[]): void { try { localStorage.setItem(PK.index, JSON.stringify(list)); } catch {} }
+function pmActivePid(): string | null { return localStorage.getItem(PK.activePid); }
+function pmSaveSnapshot(pid: string): void {
+  const snap: Record<string, string | null> = {};
+  for (const key of ALL_SK_KEYS) snap[key] = localStorage.getItem(key);
+  try { localStorage.setItem(`ex.snap.${pid}`, JSON.stringify(snap)); } catch {}
+  const list = pmReadIndex();
+  const i = list.findIndex(p => p.id === pid);
+  if (i >= 0) { list[i].updatedAt = Date.now(); pmWriteIndex(list); }
+}
+function pmLoadSnapshot(pid: string): void {
+  try {
+    const raw = localStorage.getItem(`ex.snap.${pid}`);
+    if (!raw) return;
+    const snap = JSON.parse(raw) as Record<string, string | null>;
+    for (const key of ALL_SK_KEYS) {
+      const v = snap[key];
+      if (v != null) { localStorage.setItem(key, v); } else { localStorage.removeItem(key); }
+    }
+  } catch {}
+}
+function pmClearSKKeys(): void { for (const key of ALL_SK_KEYS) { try { localStorage.removeItem(key); } catch {} } }
+function pmEnsureInit(): string {
+  const list = pmReadIndex();
+  if (list.length > 0) {
+    const pid = pmActivePid() ?? list[0].id;
+    localStorage.setItem(PK.activePid, pid);
+    return pid;
+  }
+  const pid = pmUid();
+  const now = Date.now();
+  pmWriteIndex([{ id: pid, name: "My Estimate", createdAt: now, updatedAt: now }]);
+  localStorage.setItem(PK.activePid, pid);
+  pmSaveSnapshot(pid);
+  return pid;
+}
 
 function useLocalStorage<T>(key: string, defaultValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
   const [value, setValueInternal] = useState<T>(() => {
@@ -306,6 +358,161 @@ function primeLocalStorageFromSnapshot(state: SnapshotState) {
 }
 function clearAllLocalStorage() {
   Object.values(SK).forEach(k => { try { localStorage.removeItem(k); } catch {} });
+}
+
+/* ─────────────────────────────────────────────
+   PROJECT SWITCHER
+───────────────────────────────────────────── */
+interface ProjectSwitcherProps { isXPlan: boolean; onUpgrade: () => void; }
+
+function ProjectSwitcher({ isXPlan, onUpgrade }: ProjectSwitcherProps) {
+  const [projects, setProjects] = useState<ProjectMeta[]>(() => { pmEnsureInit(); return pmReadIndex(); });
+  const [activePid, setActivePid] = useState<string>(() => pmActivePid() ?? "");
+  const [open, setOpen] = useState(false);
+  const [renaming, setRenaming] = useState(false);
+  const [nameInput, setNameInput] = useState("");
+  const dropRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const active = projects.find(p => p.id === activePid) ?? projects[0];
+
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (dropRef.current && !dropRef.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, []);
+
+  function switchTo(pid: string) {
+    if (pid === activePid) { setOpen(false); return; }
+    pmSaveSnapshot(activePid);
+    pmLoadSnapshot(pid);
+    localStorage.setItem(PK.activePid, pid);
+    window.location.reload();
+  }
+
+  function handleNew() {
+    if (!isXPlan && projects.length >= 1) { onUpgrade(); setOpen(false); return; }
+    const pid = pmUid();
+    const now = Date.now();
+    const name = `Estimate ${projects.length + 1}`;
+    const newList = [...projects, { id: pid, name, createdAt: now, updatedAt: now }];
+    pmSaveSnapshot(activePid);
+    pmClearSKKeys();
+    pmWriteIndex(newList);
+    localStorage.setItem(PK.activePid, pid);
+    pmSaveSnapshot(pid);
+    window.location.reload();
+  }
+
+  function startRename() {
+    setNameInput(active?.name ?? "");
+    setRenaming(true);
+    setOpen(false);
+    setTimeout(() => inputRef.current?.select(), 30);
+  }
+
+  function commitRename() {
+    const name = nameInput.trim();
+    if (!name || !active) { setRenaming(false); return; }
+    const list = pmReadIndex();
+    const i = list.findIndex(p => p.id === activePid);
+    if (i >= 0) { list[i].name = name; list[i].updatedAt = Date.now(); pmWriteIndex(list); setProjects([...list]); }
+    setRenaming(false);
+  }
+
+  function handleDelete(pid: string) {
+    if (projects.length <= 1) return;
+    const newList = projects.filter(p => p.id !== pid);
+    pmWriteIndex(newList);
+    try { localStorage.removeItem(`ex.snap.${pid}`); } catch {}
+    if (pid === activePid) {
+      const newPid = newList[0].id;
+      pmLoadSnapshot(newPid);
+      localStorage.setItem(PK.activePid, newPid);
+      setActivePid(newPid);
+      window.location.reload();
+    } else {
+      setProjects(newList);
+      setOpen(false);
+    }
+  }
+
+  return (
+    <div className="mt-5 flex items-center gap-2 no-print">
+      {renaming ? (
+        <div className="flex items-center gap-2">
+          <input
+            ref={inputRef}
+            value={nameInput}
+            onChange={e => setNameInput(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={e => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setRenaming(false); }}
+            className="bg-transparent border-b border-[#E85D26] text-white text-base font-bold focus:outline-none min-w-[12rem] max-w-xs"
+            maxLength={60}
+          />
+          <button onClick={commitRename} className="text-xs text-[#E85D26] font-semibold uppercase tracking-widest hover:text-white transition-colors">Save</button>
+          <button onClick={() => setRenaming(false)} className="text-xs text-[#555] hover:text-white transition-colors">Cancel</button>
+        </div>
+      ) : (
+        <div ref={dropRef} className="relative flex items-center gap-2">
+          <FolderOpen size={15} className="text-[#E85D26] flex-shrink-0" />
+          <button
+            onClick={() => setOpen(o => !o)}
+            className="flex items-center gap-1.5 text-white hover:text-[#E85D26] transition-colors"
+          >
+            <span className="font-bold text-base leading-none">{active?.name ?? "My Estimate"}</span>
+            <ChevronDown size={13} className={`text-[#666] transition-transform flex-shrink-0 ${open ? "rotate-180" : ""}`} />
+          </button>
+          <button onClick={startRename} title="Rename estimate" className="text-[#555] hover:text-[#E85D26] transition-colors ml-1">
+            <Pencil size={13} />
+          </button>
+
+          {open && (
+            <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-[#DDD8D0] shadow-xl z-50 py-1">
+              {projects.map(p => (
+                <div key={p.id} className="flex items-center group">
+                  <button
+                    onClick={() => switchTo(p.id)}
+                    className={`flex-1 text-left px-4 py-2.5 text-sm transition-colors ${p.id === activePid ? "font-bold text-[#E85D26] bg-[#FFF8F5]" : "text-[#333] hover:bg-[#FAF8F5]"}`}
+                  >
+                    {p.name}
+                    {p.id === activePid && <span className="ml-2 text-[9px] font-normal uppercase tracking-widest opacity-60">active</span>}
+                  </button>
+                  {projects.length > 1 && (
+                    <button
+                      onClick={() => handleDelete(p.id)}
+                      className="px-3 py-2.5 text-[#CCC] hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                      title="Delete estimate"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <div className="border-t border-[#EEE] mt-1 pt-1">
+                <button
+                  onClick={startRename}
+                  className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-[#555] hover:bg-[#FAF8F5] transition-colors"
+                >
+                  <Pencil size={12} />
+                  Rename this estimate
+                </button>
+                <button
+                  onClick={handleNew}
+                  className="flex items-center gap-2 w-full px-4 py-2.5 text-sm font-semibold text-[#1A1A1A] hover:bg-[#FFF8F5] hover:text-[#E85D26] transition-colors"
+                >
+                  <FolderPlus size={12} />
+                  New estimate
+                  {!isXPlan && <span className="ml-auto text-[9px] font-black uppercase tracking-widest text-[#E85D26]">X Plan</span>}
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ─────────────────────────────────────────────
@@ -3793,6 +4000,9 @@ export default function Estimator() {
 
   const handleClear = useCallback(() => {
     clearAllLocalStorage();
+    // Save the now-empty state as the snapshot for the active project
+    const pid = pmActivePid();
+    if (pid) pmSaveSnapshot(pid);
     const url = new URL(window.location.href);
     url.searchParams.delete("s");
     window.history.replaceState({}, "", url.toString());
@@ -3840,6 +4050,7 @@ export default function Estimator() {
             </div>
             <h1 className="text-4xl md:text-5xl font-black font-serif uppercase mb-3">Material + Labor Estimator</h1>
             <p className="text-gray-400 text-lg max-w-2xl">Site work, foundation, framing, floors, roofing, plumbing, electrical, and HVAC — all with RSMeans national average labor rates built in.</p>
+            <ProjectSwitcher isXPlan={isXPlan} onUpgrade={() => setUpgradeFeature("cci")} />
           </div>
         </div>
 
