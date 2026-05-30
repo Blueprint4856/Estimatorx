@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Link } from "wouter";
-import { ChevronRight, Printer, RotateCcw, Trash2, Check, Plus, X, FileUp, Pencil, FolderPlus, FolderOpen, ChevronDown, Users } from "lucide-react";
+import { ChevronRight, Printer, RotateCcw, Trash2, Check, Plus, X, FileUp, Pencil, FolderPlus, FolderOpen, ChevronDown, Users, SlidersHorizontal } from "lucide-react";
 import { InviteModal } from "@/components/InviteModal";
 import { useUser, useClerk } from "@clerk/react";
 import { useSubscription } from "@/contexts/SubscriptionContext";
@@ -3994,6 +3994,123 @@ const TABS: { id: Exclude<Tab, "summary">; label: string; group: "structural" | 
   { id: "electrical", label: "Electrical", group: "mep" },
   { id: "hvac", label: "Heating & Cooling", group: "mep" },
 ];
+const ALL_TAB_IDS = TABS.map(t => t.id) as string[];
+const VISIBLE_TABS_KEY = "exVisibleTabs";
+const TAB_PRESETS: { label: string; ids: string[] }[] = [
+  { label: "All Trades", ids: ALL_TAB_IDS },
+  { label: "Roofer", ids: ["roof"] },
+  { label: "Framer", ids: ["wall", "floor"] },
+  { label: "Foundation", ids: ["sitework", "foundation"] },
+  { label: "Plumber", ids: ["plumbing"] },
+  { label: "Electrician", ids: ["electrical"] },
+  { label: "HVAC", ids: ["hvac"] },
+  { label: "MEP", ids: ["plumbing", "electrical", "hvac"] },
+];
+
+function readVisibleTabs(): Set<string> {
+  try {
+    const saved = localStorage.getItem(VISIBLE_TABS_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved) as string[];
+      if (Array.isArray(parsed) && parsed.length > 0) return new Set(parsed);
+    }
+  } catch { /* ignore */ }
+  return new Set(ALL_TAB_IDS);
+}
+
+function TabConfigPanel({
+  visibleTabIds, setVisibleTabIds, onClose,
+}: {
+  visibleTabIds: Set<string>;
+  setVisibleTabIds: (v: Set<string>) => void;
+  onClose: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [onClose]);
+
+  const toggle = (id: string) => {
+    const next = new Set(visibleTabIds);
+    if (next.has(id) && next.size === 1) return; // keep at least one
+    next.has(id) ? next.delete(id) : next.add(id);
+    setVisibleTabIds(next);
+  };
+
+  const applyPreset = (ids: string[]) => setVisibleTabIds(new Set(ids));
+
+  const structural = TABS.filter(t => t.group === "structural");
+  const mep = TABS.filter(t => t.group === "mep");
+
+  return (
+    <div ref={ref} className="absolute right-0 top-full mt-1 z-50 bg-white border border-[#DDD8D0] shadow-lg w-72">
+      {/* Header */}
+      <div className="bg-[#1A1A1A] text-white px-4 py-2.5 flex justify-between items-center">
+        <span className="text-xs font-bold uppercase tracking-widest">Customize Tabs</span>
+        <button onClick={onClose} className="text-white/50 hover:text-white transition-colors"><X size={13} /></button>
+      </div>
+
+      {/* Presets */}
+      <div className="px-4 pt-3 pb-2">
+        <div className="text-[10px] font-bold uppercase tracking-widest text-[#BBB] mb-2">Quick Presets</div>
+        <div className="flex flex-wrap gap-1.5">
+          {TAB_PRESETS.map(p => {
+            const active = p.ids.length === visibleTabIds.size && p.ids.every(id => visibleTabIds.has(id));
+            return (
+              <button key={p.label} onClick={() => applyPreset(p.ids)}
+                className={`px-2.5 py-1 text-xs font-semibold border transition-colors ${active ? "bg-[#E85D26] text-white border-[#E85D26]" : "bg-white text-[#555] border-[#DDD8D0] hover:border-[#E85D26] hover:text-[#E85D26]"}`}>
+                {p.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="border-t border-[#F0EDE8] mx-4" />
+
+      {/* Checkboxes */}
+      <div className="px-4 py-3 space-y-3">
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-[#BBB] mb-1.5">Structural</div>
+          <div className="space-y-1">
+            {structural.map(t => (
+              <label key={t.id} className="flex items-center gap-2.5 cursor-pointer group">
+                <div onClick={() => toggle(t.id)}
+                  className={`w-4 h-4 border flex items-center justify-center flex-shrink-0 transition-colors ${visibleTabIds.has(t.id) ? "bg-[#E85D26] border-[#E85D26]" : "border-[#CCC] group-hover:border-[#E85D26]"}`}>
+                  {visibleTabIds.has(t.id) && <Check size={10} className="text-white" strokeWidth={3} />}
+                </div>
+                <span onClick={() => toggle(t.id)} className="text-sm text-[#333] select-none">{t.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div className="text-[10px] font-bold uppercase tracking-widest text-[#BBB] mb-1.5">Rough Systems</div>
+          <div className="space-y-1">
+            {mep.map(t => (
+              <label key={t.id} className="flex items-center gap-2.5 cursor-pointer group">
+                <div onClick={() => toggle(t.id)}
+                  className={`w-4 h-4 border flex items-center justify-center flex-shrink-0 transition-colors ${visibleTabIds.has(t.id) ? "bg-[#E85D26] border-[#E85D26]" : "border-[#CCC] group-hover:border-[#E85D26]"}`}>
+                  {visibleTabIds.has(t.id) && <Check size={10} className="text-white" strokeWidth={3} />}
+                </div>
+                <span onClick={() => toggle(t.id)} className="text-sm text-[#333] select-none">{t.label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Footer note */}
+      <div className="px-4 py-2 bg-[#FAF8F5] border-t border-[#F0EDE8] text-[10px] text-[#AAA]">
+        Summary tab is always visible. Your selection is saved automatically.
+      </div>
+    </div>
+  );
+}
 
 function EstimatorUserNav() {
   const { user } = useUser();
@@ -4035,6 +4152,22 @@ export default function Estimator({ sharedToken, sharedName }: { sharedToken?: s
   const [inviteModal, setInviteModal] = useState<{ url: string; name: string } | null>(null);
   const [inviteCreating, setInviteCreating] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved">("saved");
+  const [visibleTabIds, setVisibleTabIdsRaw] = useState<Set<string>>(readVisibleTabs);
+  const [showTabConfig, setShowTabConfig] = useState(false);
+  const tabConfigAnchorRef = useRef<HTMLDivElement>(null);
+
+  const setVisibleTabIds = useCallback((next: Set<string>) => {
+    setVisibleTabIdsRaw(next);
+    try { localStorage.setItem(VISIBLE_TABS_KEY, JSON.stringify([...next])); } catch { /* ignore */ }
+  }, []);
+
+  // If the active tab gets hidden, jump to the first visible tab (or summary)
+  useEffect(() => {
+    if (tab !== "summary" && !visibleTabIds.has(tab)) {
+      const first = ALL_TAB_IDS.find(id => visibleTabIds.has(id));
+      setTab((first as Tab | undefined) ?? "summary");
+    }
+  }, [visibleTabIds, tab]);
 
   const printAccess = useFeatureAccess("print");
   const { refresh: refreshPlan, isXPlan } = useSubscription();
@@ -4224,6 +4357,16 @@ export default function Estimator({ sharedToken, sharedName }: { sharedToken?: s
                 className="flex items-center gap-1.5 px-3 py-2 text-xs text-[#888] hover:text-[#1A1A1A] transition-colors">
                 <Printer size={14} />
               </button>
+              {/* Customize tabs — mobile */}
+              <div className="relative">
+                <button onClick={() => setShowTabConfig(v => !v)} title="Customize tabs"
+                  className={`flex items-center gap-1.5 px-3 py-2 text-xs transition-colors font-semibold ${showTabConfig ? "text-[#E85D26]" : "text-[#888] hover:text-[#E85D26]"}`}>
+                  <SlidersHorizontal size={14} />
+                </button>
+                {showTabConfig && (
+                  <TabConfigPanel visibleTabIds={visibleTabIds} setVisibleTabIds={setVisibleTabIds} onClose={() => setShowTabConfig(false)} />
+                )}
+              </div>
             </div>
 
             {/* Tab strip + toolbar (desktop) */}
@@ -4231,25 +4374,35 @@ export default function Estimator({ sharedToken, sharedName }: { sharedToken?: s
               {/* Scrollable tab area */}
               <div className="flex-1 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
                 <div className="flex min-w-max">
-                  <div className="flex items-center gap-0">
-                    <span className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-[#BBB] pr-3 whitespace-nowrap">Structural</span>
-                    {TABS.filter(t => t.group === "structural").map(t => (
-                      <button key={t.id} onClick={() => setTab(t.id)}
-                        className={`px-3 md:px-5 py-3 font-bold uppercase tracking-wider text-xs md:text-sm transition-all border-b-2 -mb-[2px] whitespace-nowrap ${tab === t.id ? "border-[#E85D26] text-[#E85D26]" : "border-transparent text-[#888] hover:text-[#1A1A1A]"}`}>
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="hidden md:block w-px bg-[#DDD8D0] mx-2 self-stretch" />
-                  <div className="flex items-center gap-0 ml-1 md:ml-0 md:mx-4">
-                    <span className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-[#BBB] pr-3 whitespace-nowrap">Rough Systems</span>
-                    {TABS.filter(t => t.group === "mep").map(t => (
-                      <button key={t.id} onClick={() => setTab(t.id)}
-                        className={`px-3 md:px-5 py-3 font-bold uppercase tracking-wider text-xs md:text-sm transition-all border-b-2 -mb-[2px] whitespace-nowrap ${tab === t.id ? "border-[#E85D26] text-[#E85D26]" : "border-transparent text-[#888] hover:text-[#1A1A1A]"}`}>
-                        {t.label}
-                      </button>
-                    ))}
-                  </div>
+                  {/* Structural group — only shown if any structural tabs are visible */}
+                  {TABS.filter(t => t.group === "structural" && visibleTabIds.has(t.id)).length > 0 && (
+                    <div className="flex items-center gap-0">
+                      <span className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-[#BBB] pr-3 whitespace-nowrap">Structural</span>
+                      {TABS.filter(t => t.group === "structural" && visibleTabIds.has(t.id)).map(t => (
+                        <button key={t.id} onClick={() => setTab(t.id)}
+                          className={`px-3 md:px-5 py-3 font-bold uppercase tracking-wider text-xs md:text-sm transition-all border-b-2 -mb-[2px] whitespace-nowrap ${tab === t.id ? "border-[#E85D26] text-[#E85D26]" : "border-transparent text-[#888] hover:text-[#1A1A1A]"}`}>
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {/* Only show divider if both groups have visible tabs */}
+                  {TABS.filter(t => t.group === "structural" && visibleTabIds.has(t.id)).length > 0 &&
+                   TABS.filter(t => t.group === "mep" && visibleTabIds.has(t.id)).length > 0 && (
+                    <div className="hidden md:block w-px bg-[#DDD8D0] mx-2 self-stretch" />
+                  )}
+                  {/* MEP group */}
+                  {TABS.filter(t => t.group === "mep" && visibleTabIds.has(t.id)).length > 0 && (
+                    <div className="flex items-center gap-0 ml-1 md:ml-0 md:mx-4">
+                      <span className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-[#BBB] pr-3 whitespace-nowrap">Rough Systems</span>
+                      {TABS.filter(t => t.group === "mep" && visibleTabIds.has(t.id)).map(t => (
+                        <button key={t.id} onClick={() => setTab(t.id)}
+                          className={`px-3 md:px-5 py-3 font-bold uppercase tracking-wider text-xs md:text-sm transition-all border-b-2 -mb-[2px] whitespace-nowrap ${tab === t.id ? "border-[#E85D26] text-[#E85D26]" : "border-transparent text-[#888] hover:text-[#1A1A1A]"}`}>
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <div className="hidden md:block w-px bg-[#DDD8D0] mx-2 self-stretch" />
                   <button onClick={() => setTab("summary")}
                     className={`px-3 md:px-5 py-3 font-bold uppercase tracking-wider text-xs md:text-sm transition-all border-b-2 -mb-[2px] whitespace-nowrap ${tab === "summary" ? "border-[#E85D26] text-[#E85D26]" : "border-transparent text-[#888] hover:text-[#1A1A1A]"}`}>
@@ -4291,6 +4444,17 @@ export default function Estimator({ sharedToken, sharedName }: { sharedToken?: s
                   <Printer size={16} />
                   <span>Print</span>
                 </button>
+                {/* Customize tabs — desktop */}
+                <div className="relative" ref={tabConfigAnchorRef}>
+                  <button onClick={() => setShowTabConfig(v => !v)} title="Customize tabs"
+                    className={`flex items-center gap-2 px-4 py-3 text-sm transition-colors whitespace-nowrap font-semibold ${showTabConfig ? "text-[#E85D26]" : "text-[#888] hover:text-[#E85D26]"}`}>
+                    <SlidersHorizontal size={15} />
+                    <span>Tabs</span>
+                  </button>
+                  {showTabConfig && (
+                    <TabConfigPanel visibleTabIds={visibleTabIds} setVisibleTabIds={setVisibleTabIds} onClose={() => setShowTabConfig(false)} />
+                  )}
+                </div>
               </div>
             </div>
           </div>
