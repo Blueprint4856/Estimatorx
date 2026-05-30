@@ -3731,7 +3731,7 @@ function HvacTab() {
 /* ─────────────────────────────────────────────
    SUMMARY TAB
 ───────────────────────────────────────────── */
-function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "summary">) => void; onPrint: () => void }) {
+function SummaryTab({ onNavigate, onPrint, visibleTabIds }: { onNavigate: (t: Exclude<Tab, "summary">) => void; onPrint: () => void; visibleTabIds: Set<string> }) {
   // Read all tab states — same keys as individual tabs; fresh on every mount
   const [project] = useProject();
   const [siteInputs] = useLocalStorage<SiteWorkInputs>(SK.sitework, DEFAULT_SITEWORK);
@@ -3854,7 +3854,8 @@ function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "sum
     computeTab("Heating & Cooling", "hvac", getHvacMatItems(hvacEff), hvacCM, hvacMP, hvacMQtys, getHvacLaborItems(hvacEff), hvacSR, hvacLQtys, hvacCL, (parseFloat(hvacEff.sqft) || 0) > 0),
   ];
 
-  const filledRows = rows.filter(r => r.hasData);
+  const visibleRows = rows.filter(r => visibleTabIds.has(r.tabId));
+  const filledRows = visibleRows.filter(r => r.hasData);
   const totalMat = filledRows.reduce((s, r) => s + r.mat, 0);
   const totalLab = filledRows.reduce((s, r) => s + r.lab, 0);
   const subtotal = totalMat + totalLab;
@@ -3876,9 +3877,11 @@ function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "sum
         <div className="p-10 text-center border-2 border-dashed border-[#DDD8D0]">
           <div className="text-4xl mb-4">📋</div>
           <div className="text-lg font-bold text-[#1A1A1A] mb-2">No estimate data yet</div>
-          <p className="text-sm text-[#888] mb-6 max-w-sm mx-auto">Fill in at least one tab — Site Work, Foundation, Walls, Floors, Roofing, Plumbing, Electrical, or HVAC — to see your project total here.</p>
-          <button onClick={() => onNavigate("sitework")} className="bg-[#E85D26] text-white font-bold px-6 py-2.5 hover:bg-[#c94d1f] transition-colors text-sm">
-            Start with Site Work
+          <p className="text-sm text-[#888] mb-6 max-w-sm mx-auto">
+            Fill in at least one of your selected tabs to see your project total here.
+          </p>
+          <button onClick={() => onNavigate(visibleRows[0]?.tabId ?? "sitework")} className="bg-[#E85D26] text-white font-bold px-6 py-2.5 hover:bg-[#c94d1f] transition-colors text-sm">
+            Start with {visibleRows[0]?.label ?? "Site Work"}
           </button>
         </div>
       ) : (
@@ -3898,7 +3901,7 @@ function SummaryTab({ onNavigate, onPrint }: { onNavigate: (t: Exclude<Tab, "sum
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F0EDE8]">
-                {rows.map(r => (
+                {visibleRows.map(r => (
                   <tr key={r.tabId} className={r.hasData ? "hover:bg-[#FAF8F5]" : "opacity-35"}>
                     <td className="px-6 py-3 font-medium text-[#1A1A1A]">
                       <div className="flex items-center gap-3">
@@ -4472,7 +4475,7 @@ export default function Estimator({ sharedToken, sharedName }: { sharedToken?: s
             {tab === "plumbing" && <PlumbingTab />}
             {tab === "electrical" && <ElectricalTab />}
             {tab === "hvac" && <HvacTab />}
-            {tab === "summary" && <SummaryTab onNavigate={t => setTab(t)} onPrint={handlePrint} />}
+            {tab === "summary" && <SummaryTab onNavigate={t => setTab(t)} onPrint={handlePrint} visibleTabIds={visibleTabIds} />}
           </div>
 
           <div className="no-print mt-6 p-4 border border-[#DDD8D0] bg-white text-xs text-[#999] leading-relaxed">
