@@ -3942,7 +3942,14 @@ function SummaryTab({ onNavigate, onPrint, visibleTabIds }: { onNavigate: (t: Ex
                   <span className="text-lg font-bold text-[#888]">%</span>
                   <span className="text-sm text-[#888]">= <strong className="text-[#1A1A1A]">${fmt(markupAmt)}</strong> markup</span>
                 </div>
-                <p className="text-xs text-[#AAA] mt-1.5">Applied to combined materials + labor subtotal</p>
+                {markupPct > 0 && (
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="text-xs text-[#AAA]">Gross margin:</span>
+                    <span className="text-xs font-bold text-[#E85D26]">{fmt(markupPct / (100 + markupPct) * 100)}%</span>
+                    <span className="text-xs text-[#BBB]">of selling price</span>
+                  </div>
+                )}
+                <p className="text-xs text-[#AAA] mt-1">Applied to combined materials + labor subtotal</p>
               </div>
               <div className="sm:text-right">
                 <div className="text-xs font-bold uppercase tracking-widest text-[#777] mb-1">Base Subtotal</div>
