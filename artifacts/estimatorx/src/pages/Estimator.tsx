@@ -4026,13 +4026,16 @@ function TabConfigPanel({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  // Keep a stable ref to onClose so the effect never needs to re-run
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+
   useEffect(() => {
-    function handler(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
-    }
+    // Close on any mousedown that isn't stopped by the panel itself
+    const handler = () => onCloseRef.current();
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
-  }, [onClose]);
+  }, []); // empty deps — registered once, never re-registered
 
   const toggle = (id: string) => {
     const next = new Set(visibleTabIds);
@@ -4047,7 +4050,7 @@ function TabConfigPanel({
   const mep = TABS.filter(t => t.group === "mep");
 
   return (
-    <div ref={ref} className="absolute right-0 top-full mt-1 z-50 bg-white border border-[#DDD8D0] shadow-lg w-72">
+    <div ref={ref} onMouseDown={e => e.stopPropagation()} className="absolute right-0 top-full mt-1 z-50 bg-white border border-[#DDD8D0] shadow-lg w-72">
       {/* Header */}
       <div className="bg-[#1A1A1A] text-white px-4 py-2.5 flex justify-between items-center">
         <span className="text-xs font-bold uppercase tracking-widest">Customize Tabs</span>
