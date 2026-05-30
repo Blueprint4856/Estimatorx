@@ -599,16 +599,17 @@ function MaterialsTable({ rows, prices, onPriceChange, qtys, onQtyChange, onRese
   const total = rows.reduce((s, r) => s + effectiveQty(r, qtys) * effectiveMatPrice(r, prices), 0);
   return (
     <div className="border border-[#DDD8D0] overflow-hidden">
-      <div className="bg-[#2C2825] text-white px-6 py-3 flex justify-between items-center">
+      <div className="bg-[#2C2825] text-white px-4 md:px-6 py-3 flex justify-between items-center">
         <span className="font-bold uppercase tracking-widest text-xs">Materials</span>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 md:gap-4">
           <button onClick={onReset} className="no-print flex items-center gap-1.5 text-xs text-white/50 hover:text-[#E85D26] transition-colors">
-            <RotateCcw size={11} /> Reset prices & qtys
+            <RotateCcw size={11} /><span className="hidden sm:inline"> Reset prices & qtys</span>
           </button>
           <span className="text-[#E85D26] font-black text-base">${fmt(total)}</span>
         </div>
       </div>
-      <table className="w-full text-sm">
+      <div className="overflow-x-auto">
+      <table className="w-full text-sm min-w-[540px]">
         <thead className="bg-[#F7F4F0] border-b border-[#DDD8D0]">
           <tr>
             <th className="text-left px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[#777]">Item</th>
@@ -655,6 +656,7 @@ function MaterialsTable({ rows, prices, onPriceChange, qtys, onQtyChange, onRese
           })}
         </tbody>
       </table>
+      </div>
       <div className="px-5 py-2.5 bg-[#FAF8F5] border-t border-[#DDD8D0] text-[10px] text-[#AAA]">
         Unit prices are national averages. Edit any price or quantity above to match your local conditions.
       </div>
@@ -671,7 +673,8 @@ function CustomMatRows({ items, onChange }: { items: CustomMatRow[]; onChange: (
   return (
     <div className="border border-[#DDD8D0] border-t-0 overflow-hidden">
       {items.length > 0 && (
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[500px]">
           <thead className="bg-[#FAF8F5] border-b border-[#DDD8D0]">
             <tr>
               <th className="text-left px-5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#AAA]">Custom Item</th>
@@ -716,6 +719,7 @@ function CustomMatRows({ items, onChange }: { items: CustomMatRow[]; onChange: (
             })}
           </tbody>
         </table>
+        </div>
       )}
       <div className="flex items-center justify-between px-5 py-2 bg-[#FAF8F5] border-t border-[#DDD8D0]">
         <button onClick={add} className="no-print flex items-center gap-1.5 text-xs text-[#888] hover:text-[#E85D26] transition-colors font-medium">
@@ -736,7 +740,8 @@ function CustomLaborRows({ items, onChange }: { items: CustomLaborRow[]; onChang
   return (
     <div className="border border-[#DDD8D0] border-t-0 overflow-hidden">
       {items.length > 0 && (
-        <table className="w-full text-sm">
+        <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[500px]">
           <thead className="bg-[#FAF8F5] border-b border-[#DDD8D0]">
             <tr>
               <th className="text-left px-5 py-1.5 text-[10px] font-bold uppercase tracking-widest text-[#AAA]">Custom Task</th>
@@ -781,6 +786,7 @@ function CustomLaborRows({ items, onChange }: { items: CustomLaborRow[]; onChang
             })}
           </tbody>
         </table>
+        </div>
       )}
       <div className="flex items-center justify-between px-5 py-2 bg-[#FAF8F5] border-t border-[#DDD8D0]">
         <button onClick={add} className="no-print flex items-center gap-1.5 text-xs text-[#888] hover:text-[#E85D26] transition-colors font-medium">
@@ -796,19 +802,20 @@ function LaborTable({ items, rates, onChange, qtys, onQtyChange, onReset }: { it
   const total = items.reduce((s, i) => s + effectiveQty(i, qtys) * effectiveRate(i, rates), 0);
   return (
     <div className="border border-[#DDD8D0] overflow-hidden">
-      <div className="bg-[#1A1A1A] text-white px-6 py-3 flex justify-between items-center">
-        <div className="flex items-center gap-3">
+      <div className="bg-[#1A1A1A] text-white px-4 md:px-6 py-3 flex justify-between items-center">
+        <div className="flex items-center gap-2 md:gap-3">
           <span className="font-bold uppercase tracking-widest text-xs">Labor</span>
-          <span className="text-[10px] bg-[#E85D26]/20 text-[#E85D26] border border-[#E85D26]/30 px-2 py-0.5 uppercase tracking-wider font-bold">RSMeans National Avg</span>
+          <span className="text-[10px] bg-[#E85D26]/20 text-[#E85D26] border border-[#E85D26]/30 px-2 py-0.5 uppercase tracking-wider font-bold hidden sm:inline">RSMeans National Avg</span>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 md:gap-4">
           <button onClick={onReset} className="no-print flex items-center gap-1.5 text-xs text-white/50 hover:text-[#E85D26] transition-colors">
-            <RotateCcw size={11} /> Reset rates & qtys
+            <RotateCcw size={11} /><span className="hidden sm:inline"> Reset rates & qtys</span>
           </button>
           <span className="text-[#E85D26] font-black text-base">${fmt(total)}</span>
         </div>
       </div>
-      <table className="w-full text-sm">
+      <div className="overflow-x-auto">
+      <table className="w-full text-sm min-w-[540px]">
         <thead className="bg-[#F7F4F0] border-b border-[#DDD8D0]">
           <tr>
             <th className="text-left px-5 py-2.5 text-xs font-bold uppercase tracking-wider text-[#777]">Task</th>
@@ -856,6 +863,7 @@ function LaborTable({ items, rates, onChange, qtys, onQtyChange, onReset }: { it
           })}
         </tbody>
       </table>
+      </div>
       <div className="px-5 py-2.5 bg-[#FAF8F5] border-t border-[#DDD8D0] text-[10px] text-[#AAA]">
         Rates are RSMeans national averages. Edit any rate or quantity above to match your region or trade costs.
       </div>
@@ -4143,12 +4151,12 @@ export default function Estimator({ sharedToken, sharedName }: { sharedToken?: s
       {inviteModal && <InviteModal url={inviteModal.url} estimateName={inviteModal.name} onClose={() => setInviteModal(null)} />}
 
       <header className="no-print sticky top-0 z-50 w-full border-b border-[#E0DAD3] bg-white shadow-sm">
-        <div className="container mx-auto px-4 h-20 flex items-center justify-between">
+        <div className="container mx-auto px-4 h-14 md:h-20 flex items-center justify-between">
           <Link href="/">
-            <img src="/logo.png" alt="EstimatorX.pro" className="h-16 object-contain cursor-pointer" />
+            <img src="/logo.png" alt="EstimatorX.pro" className="h-10 md:h-16 object-contain cursor-pointer" />
           </Link>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2 text-sm text-[#888]">
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="hidden sm:flex items-center gap-2 text-sm text-[#888]">
               <Link href="/" className="hover:text-[#E85D26] transition-colors">Home</Link>
               <ChevronRight size={14} />
               <span className="text-[#1A1A1A] font-semibold">Estimator</span>
@@ -4159,14 +4167,14 @@ export default function Estimator({ sharedToken, sharedName }: { sharedToken?: s
       </header>
 
       <main className="flex-1">
-        <div className="no-print bg-[#1A1A1A] text-white py-14">
+        <div className="no-print bg-[#1A1A1A] text-white py-8 md:py-14">
           <div className="container mx-auto px-4">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-[2px] bg-[#E85D26]" />
-              <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">Quick Estimating Tool</span>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 md:w-10 h-[2px] bg-[#E85D26]" />
+              <span className="text-[#E85D26] font-bold uppercase tracking-widest text-xs md:text-sm">Quick Estimating Tool</span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black font-serif uppercase mb-3">Material + Labor Estimator</h1>
-            <p className="text-gray-400 text-lg max-w-2xl">Site work, foundation, framing, floors, roofing, plumbing, electrical, and HVAC — all with RSMeans national average labor rates built in.</p>
+            <h1 className="text-2xl md:text-5xl font-black font-serif uppercase mb-2 md:mb-3">Material + Labor Estimator</h1>
+            <p className="text-gray-400 text-sm md:text-lg max-w-2xl">Site work, foundation, framing, floors, roofing, plumbing, electrical, and HVAC — all with RSMeans national average labor rates built in.</p>
             {sharedToken ? (
               <div className="mt-5 flex flex-wrap items-center gap-3">
                 <div className="flex items-center gap-2">
@@ -4184,79 +4192,111 @@ export default function Estimator({ sharedToken, sharedName }: { sharedToken?: s
           </div>
         </div>
 
-        <div className="container mx-auto px-4 py-10 max-w-5xl">
+        <div className="container mx-auto px-4 py-6 md:py-10 max-w-5xl">
           {/* Tab bar */}
-          <div className="no-print mb-8">
-            <div className="flex flex-wrap gap-y-0 border-b-2 border-[#DDD8D0]">
-              <div className="flex items-center gap-0 mr-4">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[#BBB] pr-3 whitespace-nowrap">Structural</span>
-                {TABS.filter(t => t.group === "structural").map(t => (
-                  <button key={t.id} onClick={() => setTab(t.id)}
-                    className={`px-5 py-3 font-bold uppercase tracking-wider text-sm transition-all border-b-2 -mb-[2px] whitespace-nowrap ${tab === t.id ? "border-[#E85D26] text-[#E85D26]" : "border-transparent text-[#888] hover:text-[#1A1A1A]"}`}>
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-              <div className="w-px bg-[#DDD8D0] mx-2 self-stretch" />
-              <div className="flex items-center gap-0 mx-4">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-[#BBB] pr-3 whitespace-nowrap">Rough Systems</span>
-                {TABS.filter(t => t.group === "mep").map(t => (
-                  <button key={t.id} onClick={() => setTab(t.id)}
-                    className={`px-5 py-3 font-bold uppercase tracking-wider text-sm transition-all border-b-2 -mb-[2px] whitespace-nowrap ${tab === t.id ? "border-[#E85D26] text-[#E85D26]" : "border-transparent text-[#888] hover:text-[#1A1A1A]"}`}>
-                    {t.label}
-                  </button>
-                ))}
-              </div>
-              <div className="w-px bg-[#DDD8D0] mx-2 self-stretch" />
-              {/* Summary tab */}
-              <button onClick={() => setTab("summary")}
-                className={`px-5 py-3 font-bold uppercase tracking-wider text-sm transition-all border-b-2 -mb-[2px] whitespace-nowrap ${tab === "summary" ? "border-[#E85D26] text-[#E85D26]" : "border-transparent text-[#888] hover:text-[#1A1A1A]"}`}>
-                Summary
+          <div className="no-print mb-6 md:mb-8">
+            {/* Toolbar row — icon-only on mobile, sits above the tab strip */}
+            <div className="flex items-center justify-end gap-1 border-b border-[#E8E4DF] pb-1 mb-0 md:hidden">
+              {!sharedToken && (
+                <button onClick={handlePlanImport} title="Import from plans PDF"
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs text-[#888] hover:text-[#E85D26] transition-colors">
+                  <FileUp size={14} /><span className="font-semibold">Import</span>
+                </button>
+              )}
+              {sharedToken ? (
+                <span className={`flex items-center gap-1.5 px-3 py-2 text-xs font-bold uppercase tracking-wider ${saveStatus === "saved" ? "text-green-600" : saveStatus === "saving" ? "text-yellow-500" : "text-red-500"}`}>
+                  {saveStatus === "saved" ? <Check size={13} /> : <RotateCcw size={13} className={saveStatus === "saving" ? "animate-spin" : ""} />}
+                  {saveStatus === "saved" ? "Saved" : saveStatus === "saving" ? "Saving…" : "Unsaved"}
+                </span>
+              ) : (
+                <button onClick={() => void handleInvite()} disabled={inviteCreating} title="Invite team member"
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs text-[#888] hover:text-[#E85D26] transition-colors disabled:opacity-50">
+                  <Users size={14} /><span className="font-semibold">{inviteCreating ? "Creating…" : "Invite"}</span>
+                </button>
+              )}
+              {!sharedToken && (
+                <button onClick={handleClear} title="Clear all"
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs text-[#888] hover:text-red-500 transition-colors">
+                  <Trash2 size={14} />
+                </button>
+              )}
+              <button onClick={handlePrint}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs text-[#888] hover:text-[#1A1A1A] transition-colors">
+                <Printer size={14} />
               </button>
-              {/* Toolbar */}
-              <div className="ml-auto flex items-center gap-1">
-                {/* Import Plans — hidden in shared mode */}
+            </div>
+
+            {/* Tab strip + toolbar (desktop) */}
+            <div className="flex items-stretch border-b-2 border-[#DDD8D0]">
+              {/* Scrollable tab area */}
+              <div className="flex-1 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+                <div className="flex min-w-max">
+                  <div className="flex items-center gap-0">
+                    <span className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-[#BBB] pr-3 whitespace-nowrap">Structural</span>
+                    {TABS.filter(t => t.group === "structural").map(t => (
+                      <button key={t.id} onClick={() => setTab(t.id)}
+                        className={`px-3 md:px-5 py-3 font-bold uppercase tracking-wider text-xs md:text-sm transition-all border-b-2 -mb-[2px] whitespace-nowrap ${tab === t.id ? "border-[#E85D26] text-[#E85D26]" : "border-transparent text-[#888] hover:text-[#1A1A1A]"}`}>
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="hidden md:block w-px bg-[#DDD8D0] mx-2 self-stretch" />
+                  <div className="flex items-center gap-0 ml-1 md:ml-0 md:mx-4">
+                    <span className="hidden md:inline text-[10px] font-bold uppercase tracking-widest text-[#BBB] pr-3 whitespace-nowrap">Rough Systems</span>
+                    {TABS.filter(t => t.group === "mep").map(t => (
+                      <button key={t.id} onClick={() => setTab(t.id)}
+                        className={`px-3 md:px-5 py-3 font-bold uppercase tracking-wider text-xs md:text-sm transition-all border-b-2 -mb-[2px] whitespace-nowrap ${tab === t.id ? "border-[#E85D26] text-[#E85D26]" : "border-transparent text-[#888] hover:text-[#1A1A1A]"}`}>
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="hidden md:block w-px bg-[#DDD8D0] mx-2 self-stretch" />
+                  <button onClick={() => setTab("summary")}
+                    className={`px-3 md:px-5 py-3 font-bold uppercase tracking-wider text-xs md:text-sm transition-all border-b-2 -mb-[2px] whitespace-nowrap ${tab === "summary" ? "border-[#E85D26] text-[#E85D26]" : "border-transparent text-[#888] hover:text-[#1A1A1A]"}`}>
+                    Summary
+                  </button>
+                </div>
+              </div>
+
+              {/* Toolbar — desktop only (mobile toolbar is above) */}
+              <div className="hidden md:flex items-center gap-1 flex-shrink-0 pl-2">
                 {!sharedToken && (
                   <button onClick={handlePlanImport} title="Import dimensions from building plans PDF"
                     className="flex items-center gap-2 px-4 py-3 text-sm text-[#888] hover:text-[#E85D26] transition-colors whitespace-nowrap">
                     <FileUp size={15} />
-                    <span className="hidden sm:inline">Import Plans</span>
+                    <span>Import Plans</span>
                   </button>
                 )}
-                {/* Share / Invite / Save status */}
                 {sharedToken ? (
-                  /* Shared mode: show save status only */
                   <span className={`flex items-center gap-2 px-4 py-3 text-sm font-bold uppercase tracking-wider whitespace-nowrap ${saveStatus === "saved" ? "text-green-600" : saveStatus === "saving" ? "text-yellow-500" : "text-red-500"}`}>
                     {saveStatus === "saved" ? <Check size={15} /> : <RotateCcw size={15} className={saveStatus === "saving" ? "animate-spin" : ""} />}
-                    <span className="hidden sm:inline">{saveStatus === "saved" ? "Saved" : saveStatus === "saving" ? "Saving…" : "Unsaved"}</span>
+                    {saveStatus === "saved" ? "Saved" : saveStatus === "saving" ? "Saving…" : "Unsaved"}
                   </span>
                 ) : (
-                  /* Invite button — X Plan only (non-X-Plan hits upgrade paywall) */
                   <button onClick={() => void handleInvite()} disabled={inviteCreating} title="Create an invite link for team members"
                     className="flex items-center gap-2 px-4 py-3 text-sm text-[#888] hover:text-[#E85D26] transition-colors whitespace-nowrap disabled:opacity-50">
                     <Users size={15} />
-                    <span className="hidden sm:inline">{inviteCreating ? "Creating…" : "Invite"}</span>
+                    <span>{inviteCreating ? "Creating…" : "Invite"}</span>
                   </button>
                 )}
-                {/* Clear — hidden in shared mode */}
                 {!sharedToken && (
                   <button onClick={handleClear} title="Clear all inputs and start over"
                     className="flex items-center gap-2 px-4 py-3 text-sm text-[#888] hover:text-red-500 transition-colors whitespace-nowrap">
                     <Trash2 size={15} />
-                    <span className="hidden sm:inline">Clear</span>
+                    <span>Clear</span>
                   </button>
                 )}
                 <button onClick={handlePrint}
                   className="flex items-center gap-2 px-4 py-3 text-sm text-[#888] hover:text-[#1A1A1A] transition-colors whitespace-nowrap">
                   <Printer size={16} />
-                  <span className="hidden sm:inline">Print</span>
+                  <span>Print</span>
                 </button>
               </div>
             </div>
           </div>
 
           <ProjectSetupCard />
-          <div key={resetKey} className="bg-white border border-[#DDD8D0] p-8 shadow-sm">
+          <div key={resetKey} className="bg-white border border-[#DDD8D0] p-4 sm:p-8 shadow-sm">
             {tab === "sitework" && <SiteWorkTab />}
             {tab === "foundation" && <FoundationTab />}
             {tab === "wall" && <WallTab />}
