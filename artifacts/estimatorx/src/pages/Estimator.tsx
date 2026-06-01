@@ -331,7 +331,11 @@ export function deserializeState(encoded: string): SnapshotState | null {
 }
 export function primeLocalStorageFromSnapshot(state: SnapshotState) {
   const set = (key: string, val: unknown) => {
-    if (val != null) try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+    if (val != null) {
+      try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+    } else {
+      try { localStorage.removeItem(key); } catch {}
+    }
   };
   set(SK.sitework, state.sitework);     set(SK.siteworkRates, state.siteworkRates); set(SK.siteMatPrices, state.siteMatPrices);
   set(SK.siteCMat, state.siteCMat);     set(SK.siteCLab, state.siteCLab);
@@ -359,7 +363,7 @@ export function primeLocalStorageFromSnapshot(state: SnapshotState) {
   set(SK.elecMatQtys, state.elecMatQtys); set(SK.elecLabQtys, state.elecLabQtys);
   set(SK.hvacMatQtys, state.hvacMatQtys); set(SK.hvacLabQtys, state.hvacLabQtys);
   set(SK.project, state.project);
-  if (state.visibleTabs != null) try { localStorage.setItem("exVisibleTabs", JSON.stringify(state.visibleTabs)); } catch {}
+  set("exVisibleTabs", state.visibleTabs);
 }
 function clearAllLocalStorage() {
   Object.values(SK).forEach(k => { try { localStorage.removeItem(k); } catch {} });
