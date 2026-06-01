@@ -295,12 +295,12 @@ export function readAllLocalStorage() {
     siteCMat: get(SK.siteCMat), siteCLab: get(SK.siteCLab),
     foundation: get(SK.foundation), foundationRates: get(SK.foundationRates), foundMatPrices: get(SK.foundMatPrices),
     foundCMat: get(SK.foundCMat), foundCLab: get(SK.foundCLab),
-    wall: get(SK.wall), wallRates: get(SK.wallRates),
-    floor: get(SK.floor), floorRates: get(SK.floorRates),
-    roof: get(SK.roof), roofRates: get(SK.roofRates),
-    plumbing: get(SK.plumbing), plumbingRates: get(SK.plumbingRates),
-    electrical: get(SK.electrical), electricalRates: get(SK.electricalRates),
-    hvac: get(SK.hvac), hvacRates: get(SK.hvacRates),
+    wall: get(SK.wall), wallRates: get(SK.wallRates), wallMatPrices: get(SK.wallMatPrices),
+    floor: get(SK.floor), floorRates: get(SK.floorRates), floorMatPrices: get(SK.floorMatPrices),
+    roof: get(SK.roof), roofRates: get(SK.roofRates), roofMatPrices: get(SK.roofMatPrices),
+    plumbing: get(SK.plumbing), plumbingRates: get(SK.plumbingRates), plumbMatPrices: get(SK.plumbMatPrices),
+    electrical: get(SK.electrical), electricalRates: get(SK.electricalRates), elecMatPrices: get(SK.elecMatPrices),
+    hvac: get(SK.hvac), hvacRates: get(SK.hvacRates), hvacMatPrices: get(SK.hvacMatPrices),
     wallCMat: get(SK.wallCMat), wallCLab: get(SK.wallCLab),
     floorCMat: get(SK.floorCMat), floorCLab: get(SK.floorCLab),
     roofCMat: get(SK.roofCMat), roofCLab: get(SK.roofCLab),
@@ -336,12 +336,12 @@ export function primeLocalStorageFromSnapshot(state: SnapshotState) {
   set(SK.siteCMat, state.siteCMat);     set(SK.siteCLab, state.siteCLab);
   set(SK.foundation, state.foundation); set(SK.foundationRates, state.foundationRates); set(SK.foundMatPrices, state.foundMatPrices);
   set(SK.foundCMat, state.foundCMat);   set(SK.foundCLab, state.foundCLab);
-  set(SK.wall, state.wall);             set(SK.wallRates, state.wallRates);
-  set(SK.floor, state.floor);           set(SK.floorRates, state.floorRates);
-  set(SK.roof, state.roof);             set(SK.roofRates, state.roofRates);
-  set(SK.plumbing, state.plumbing);     set(SK.plumbingRates, state.plumbingRates);
-  set(SK.electrical, state.electrical); set(SK.electricalRates, state.electricalRates);
-  set(SK.hvac, state.hvac);             set(SK.hvacRates, state.hvacRates);
+  set(SK.wall, state.wall);             set(SK.wallRates, state.wallRates);       set(SK.wallMatPrices, state.wallMatPrices);
+  set(SK.floor, state.floor);           set(SK.floorRates, state.floorRates);     set(SK.floorMatPrices, state.floorMatPrices);
+  set(SK.roof, state.roof);             set(SK.roofRates, state.roofRates);       set(SK.roofMatPrices, state.roofMatPrices);
+  set(SK.plumbing, state.plumbing);     set(SK.plumbingRates, state.plumbingRates); set(SK.plumbMatPrices, state.plumbMatPrices);
+  set(SK.electrical, state.electrical); set(SK.electricalRates, state.electricalRates); set(SK.elecMatPrices, state.elecMatPrices);
+  set(SK.hvac, state.hvac);             set(SK.hvacRates, state.hvacRates);       set(SK.hvacMatPrices, state.hvacMatPrices);
   set(SK.wallCMat, state.wallCMat);     set(SK.wallCLab, state.wallCLab);
   set(SK.floorCMat, state.floorCMat);   set(SK.floorCLab, state.floorCLab);
   set(SK.roofCMat, state.roofCMat);     set(SK.roofCLab, state.roofCLab);
