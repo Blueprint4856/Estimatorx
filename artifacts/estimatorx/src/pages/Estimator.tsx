@@ -317,6 +317,7 @@ export function readAllLocalStorage() {
     elecMatQtys: get(SK.elecMatQtys), elecLabQtys: get(SK.elecLabQtys),
     hvacMatQtys: get(SK.hvacMatQtys), hvacLabQtys: get(SK.hvacLabQtys),
     project: get(SK.project),
+    visibleTabs: get<string[]>("exVisibleTabs"),
   };
 }
 
@@ -358,6 +359,7 @@ export function primeLocalStorageFromSnapshot(state: SnapshotState) {
   set(SK.elecMatQtys, state.elecMatQtys); set(SK.elecLabQtys, state.elecLabQtys);
   set(SK.hvacMatQtys, state.hvacMatQtys); set(SK.hvacLabQtys, state.hvacLabQtys);
   set(SK.project, state.project);
+  if (state.visibleTabs != null) try { localStorage.setItem("exVisibleTabs", JSON.stringify(state.visibleTabs)); } catch {}
 }
 function clearAllLocalStorage() {
   Object.values(SK).forEach(k => { try { localStorage.removeItem(k); } catch {} });
