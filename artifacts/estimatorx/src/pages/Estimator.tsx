@@ -9,6 +9,7 @@ import { PlanImportModal } from "@/components/PlanImportModal";
 
 type Tab = "sitework" | "foundation" | "wall" | "floor" | "roof" | "plumbing" | "electrical" | "hvac" | "summary";
 const WASTE = 1.10;
+function wf(pct?: string): number { return 1 + (parseFloat(pct ?? "10") / 100); }
 
 /* ─────────────────────────────────────────────
    SHARED TYPES
@@ -906,8 +907,10 @@ function GrandTotal({ matTotal, laborTotal }: { matTotal: number; laborTotal: nu
 function EmptyState({ text }: { text: string }) {
   return <div className="mt-8 p-8 border-2 border-dashed border-[#DDD8D0] text-center text-[#BBB]">{text}</div>;
 }
-function ResultNote() {
-  return <p className="text-[10px] text-[#AAA]">Includes 10% material waste factor. Labor rates are RSMeans national averages — edit above. Delivery, permits, equipment rental, and tax not included.</p>;
+function ResultNote({ waste }: { waste?: string }) {
+  const pct = parseFloat(waste ?? "10") || 10;
+  const pctStr = pct % 1 === 0 ? pct.toFixed(0) : pct.toFixed(1);
+  return <p className="text-[10px] text-[#AAA]">Includes {pctStr}% material waste factor. Labor rates are RSMeans national averages — edit above. Delivery, permits, equipment rental, and tax not included.</p>;
 }
 function UndoBtn({ onUndo }: { onUndo: () => void }) {
   return (
@@ -940,6 +943,7 @@ interface SiteWorkInputs {
   wellDepthFt: string;
   septicBedrooms: string;
   septicType: SepticType;
+  waste?: string;
 }
 
 const DEFAULT_SITEWORK: SiteWorkInputs = {
@@ -957,6 +961,7 @@ const DEFAULT_SITEWORK: SiteWorkInputs = {
   wellDepthFt: "200",
   septicBedrooms: "3",
   septicType: "gravity",
+  waste: "10",
 };
 
 function septicTankSpec(br: number): { label: string; price: number } {
@@ -967,6 +972,7 @@ function septicTankSpec(br: number): { label: string; price: number } {
 }
 
 function getSiteWorkMatItems(inputs: SiteWorkInputs): MatItem[] {
+  const WASTE = wf(inputs.waste);
   const lot = parseFloat(inputs.lotSqft) || 0;
   const fp = parseFloat(inputs.footprintSqft) || 0;
   const cut = parseFloat(inputs.cutDepthIn) || 6;
@@ -1152,6 +1158,12 @@ function SiteWorkTab() {
           <p className="text-sm text-[#888]">Clearing, grading, excavation, utilities, and driveway — everything before the foundation goes in.</p>
         </div>
         {canUndo && <UndoBtn onUndo={undo} />}
+      </div>
+
+      <div className="mb-6 no-print max-w-xs">
+        <Field label="Material Waste %" note="Extra material ordered for cuts & errors (default 10%)">
+          <NumberInput value={tabInputs.waste ?? "10"} onChange={v => set("waste", v)} placeholder="10" />
+        </Field>
       </div>
 
       {/* ── Grading & Excavation ── */}
@@ -1475,6 +1487,7 @@ interface FoundationInputs {
   climate: FoundationClimate;
   basementDepth: BasementDepth;
   haulSpoil: boolean;
+  waste?: string;
 }
 
 const DEFAULT_FOUNDATION: FoundationInputs = {
@@ -1485,9 +1498,11 @@ const DEFAULT_FOUNDATION: FoundationInputs = {
   climate: "cold",
   basementDepth: "8",
   haulSpoil: true,
+  waste: "10",
 };
 
 function getFoundationMatItems(inputs: FoundationInputs): MatItem[] {
+  const WASTE = wf(inputs.waste);
   const sqft = parseFloat(inputs.sqft) || 0;
   const autoPerim = Math.ceil(Math.sqrt(sqft) * 4);
   const perim = inputs.perimeterOverride ? (parseFloat(inputs.perimeter) || autoPerim) : autoPerim;
@@ -1655,6 +1670,12 @@ function FoundationTab() {
           <p className="text-sm text-[#888]">Configure your foundation type and footprint — materials and labor auto-calculate.</p>
         </div>
         {canUndo && <UndoBtn onUndo={undo} />}
+      </div>
+
+      <div className="mb-6 no-print max-w-xs">
+        <Field label="Material Waste %" note="Extra material ordered for cuts & errors (default 10%)">
+          <NumberInput value={tabInputs.waste ?? "10"} onChange={v => set("waste", v)} placeholder="10" />
+        </Field>
       </div>
 
       {/* Inputs */}
@@ -1952,6 +1973,7 @@ interface WallInputs {
   baseMoldingLF: string;
   buildType: "full" | "addition";
   sharedWallLF: string;
+  waste?: string;
 }
 
 const STUD_CONFIG: Record<StudSize, { studLabel: string; plateLabel: string; studPrice: number; platePrice: number; ocSpacing: number; insulLabel: string; insulPrice: number }> = {
@@ -1995,6 +2017,7 @@ const DEFAULT_WALL: WallInputs = {
   extDoorGarSingleCount: "", extDoorGarDoubleCount: "",
   includeIntDoorUnits: false, intDoorType: "hollow_prehung",
   includeTrim: false, trimStyle: "craftsman", baseMoldingLF: "",
+  waste: "10",
 };
 
 const WINDOW_TYPES: Record<string, { label: string; price: number }> = {
@@ -2021,6 +2044,7 @@ const TRIM_STYLES: Record<string, { label: string; basePrice: number; casingPric
 };
 
 function getWallMatItems(inputs: WallInputs): MatItem[] {
+  const WASTE = wf(inputs.waste);
   const sharedWall = inputs.buildType === "addition" ? (parseFloat(inputs.sharedWallLF) || 0) : 0;
   const lf = Math.max(0, (parseFloat(inputs.linearFeet) || 0) - sharedWall);
   const h = parseFloat(inputs.ceilingHeight) || 9;
@@ -2270,6 +2294,11 @@ function WallTab() {
   return (
     <div>
       {canUndo && <div className="flex justify-end mb-3 no-print"><UndoBtn onUndo={undo} /></div>}
+      <div className="mb-6 no-print max-w-xs">
+        <Field label="Material Waste %" note="Extra material ordered for cuts & errors (default 10%)">
+          <NumberInput value={tabInputs.waste ?? "10"} onChange={v => setInputs(p => ({ ...p, waste: v }))} placeholder="10" />
+        </Field>
+      </div>
       {/* ── Exterior Walls ── */}
       <div className="no-print">
         <SectionHeader title="Exterior Walls" note="Choose stud size, sheathing, insulation & drywall" />
@@ -2483,7 +2512,7 @@ function WallTab() {
           <CustomLaborRows items={customLabor} onChange={setCustomLabor} />
           <div className="mt-3" />
           <GrandTotal matTotal={matTotal} laborTotal={laborTotal} />
-          <div className="mt-2"><ResultNote /></div>
+          <div className="mt-2"><ResultNote waste={inputs.waste} /></div>
         </div>
       ) : <EmptyState text="Enter exterior or interior wall dimensions above to see your estimate." />}
     </div>
@@ -2516,6 +2545,7 @@ interface FloorInputs {
   basementRisers: string;
   includeInteriorStairs: boolean;
   interiorRisers: string;
+  waste?: string;
 }
 
 const FLOOR_MAT_PRICES: Record<string, number> = { lvp: 3.45, carpet: 2.65, carpet_pad: 3.25, hardwood: 7.45, tile: 4.25, none: 0 };
@@ -2563,6 +2593,7 @@ const DEFAULT_FLOOR: FloorInputs = {
   stories: "",
   includeBasementStairs: false, basementRisers: "13",
   includeInteriorStairs: false, interiorRisers: "14",
+  waste: "10",
 };
 
 const ADHESIVE_CONFIG: Record<AdhesiveType, { label: string; coverage: number; unit: string; price: number }> = {
@@ -2723,6 +2754,7 @@ function getFloorFramingLaborItems(inputs: FloorInputs): LaborItem[] {
 }
 
 function getFloorMatItems(inputs: FloorInputs): MatItem[] {
+  const WASTE = wf(inputs.waste);
   const sqft = (parseFloat(inputs.buildingWidth) || 0) * (parseFloat(inputs.buildingLength) || 0);
   const storiesCount = parseInt(inputs.stories ?? "1") || 1;
   const totalSqft = sqft * storiesCount;
@@ -2797,6 +2829,11 @@ function FloorTab() {
   return (
     <div>
       {canUndo && <div className="flex justify-end mb-3 no-print"><UndoBtn onUndo={undo} /></div>}
+      <div className="mb-6 no-print max-w-xs">
+        <Field label="Material Waste %" note="Extra material ordered for cuts & errors (default 10%)">
+          <NumberInput value={tabInputs.waste ?? "10"} onChange={v => set("waste", v)} placeholder="10" />
+        </Field>
+      </div>
       <div className="flex flex-col gap-6 no-print">
 
         {/* ── Building dimensions + story count ── */}
@@ -2966,7 +3003,7 @@ function FloorTab() {
           <CustomLaborRows items={customLabor} onChange={setCustomLabor} />
           <div className="mt-3" />
           <GrandTotal matTotal={matTotal} laborTotal={laborTotal} />
-          <div className="mt-2"><ResultNote /></div>
+          <div className="mt-2"><ResultNote waste={inputs.waste} /></div>
         </div>
       ) : <EmptyState text="Enter floor area above to see your estimate." />}
     </div>
@@ -2984,9 +3021,10 @@ interface RoofInputs {
   buildingWidth: string;
   buildingLength: string;
   roofSpacing: "16" | "24";
+  waste?: string;
 }
 const PITCH_FACTORS: Record<string, number> = { "2:12": 1.014, "4:12": 1.054, "5:12": 1.083, "6:12": 1.118, "7:12": 1.158, "8:12": 1.202, "9:12": 1.250, "10:12": 1.302, "12:12": 1.414 };
-const DEFAULT_ROOF: RoofInputs = { footprintSqft: "", pitch: "", archShingles: true, iceWater: true, includeDecking: false, roofSystem: "truss", roofType: "pitched", rafterSize: "", buildingWidth: "", buildingLength: "", roofSpacing: "24" };
+const DEFAULT_ROOF: RoofInputs = { footprintSqft: "", pitch: "", archShingles: true, iceWater: true, includeDecking: false, roofSystem: "truss", roofType: "pitched", rafterSize: "", buildingWidth: "", buildingLength: "", roofSpacing: "24", waste: "10" };
 
 // Truss price by full span
 const TRUSS_PRICE_TIERS: { maxSpan: number; price: number }[] = [
@@ -3016,6 +3054,7 @@ const STD_BOARD_LENGTHS = [8, 10, 12, 14, 16, 18, 20];
 function nextStdLen(lf: number): number { return STD_BOARD_LENGTHS.find(l => l >= lf) ?? 20; }
 
 function getRoofMatItems(inputs: RoofInputs): MatItem[] {
+  const WASTE = wf(inputs.waste);
   const fp = parseFloat(inputs.footprintSqft) || 0;
   const factor = PITCH_FACTORS[inputs.pitch] ?? 1.118;
   const actual = fp * factor;
@@ -3195,6 +3234,11 @@ function RoofTab() {
   return (
     <div>
       {canUndo && <div className="flex justify-end mb-3 no-print"><UndoBtn onUndo={undo} /></div>}
+      <div className="mb-6 no-print max-w-xs">
+        <Field label="Material Waste %" note="Extra material ordered for cuts & errors (default 10%)">
+          <NumberInput value={tabInputs.waste ?? "10"} onChange={v => setInputs(p => ({ ...p, waste: v }))} placeholder="10" />
+        </Field>
+      </div>
       <div className="no-print">
         {/* ── Framing System ── */}
         <SH title="Roof Framing System" note="Trusses are factory-built; rafters are site-cut — leave dimensions blank to skip framing" />
@@ -3295,7 +3339,7 @@ function RoofTab() {
           <CustomLaborRows items={customLabor} onChange={setCustomLabor} />
           <div className="mt-3" />
           <GrandTotal matTotal={matTotal} laborTotal={laborTotal} />
-          <div className="mt-2"><ResultNote /></div>
+          <div className="mt-2"><ResultNote waste={inputs.waste} /></div>
         </div>
       ) : <EmptyState text="Enter building dimensions above to see framing, or enter roof footprint for shingles & decking." />}
     </div>
@@ -3305,10 +3349,11 @@ function RoofTab() {
 /* ─────────────────────────────────────────────
    PLUMBING TAB
 ───────────────────────────────────────────── */
-interface PlumbingInputs { homeSqft: string; fullBaths: number; halfBaths: number; hasKitchen: boolean; hasLaundry: boolean; spigots: number; }
-const DEFAULT_PLUMBING: PlumbingInputs = { homeSqft: "", fullBaths: 1, halfBaths: 0, hasKitchen: true, hasLaundry: true, spigots: 2 };
+interface PlumbingInputs { homeSqft: string; fullBaths: number; halfBaths: number; hasKitchen: boolean; hasLaundry: boolean; spigots: number; waste?: string; }
+const DEFAULT_PLUMBING: PlumbingInputs = { homeSqft: "", fullBaths: 1, halfBaths: 0, hasKitchen: true, hasLaundry: true, spigots: 2, waste: "10" };
 
 function getPlumbingMatItems(i: PlumbingInputs): MatItem[] {
+  const WASTE = wf(i.waste);
   const sqft = parseFloat(i.homeSqft) || 0;
   const pf = sqft > 0 ? Math.max(1.0, Math.sqrt(sqft / 1000)) : 1;
   const pex12Branch = (i.fullBaths * 45) + (i.halfBaths * 25) + (i.hasKitchen ? 20 : 0) + (i.hasLaundry ? 15 : 0);
@@ -3390,6 +3435,11 @@ function PlumbingTab() {
         </Field>
         {sqftVal > 0 && <div className="mt-2 text-xs text-[#888]">Pipe run distance factor: <strong>{pf.toFixed(2)}×</strong></div>}
       </div>
+      <div className="mb-6 no-print max-w-xs">
+        <Field label="Material Waste %" note="Extra material ordered for cuts & errors (default 10%)">
+          <NumberInput value={tabInputs.waste ?? "10"} onChange={v => setInputs(p => ({ ...p, waste: v }))} placeholder="10" />
+        </Field>
+      </div>
       <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-8 mb-8 no-print">
         <Stepper label="Full Bathrooms" value={inputs.fullBaths} onChange={v => setInputs(p => ({ ...p, fullBaths: v }))} max={8} note="Toilet + sink + tub or shower" />
         <Stepper label="Half Baths / Powder Rooms" value={inputs.halfBaths} onChange={v => setInputs(p => ({ ...p, halfBaths: v }))} max={4} note="Toilet + sink only" />
@@ -3410,7 +3460,7 @@ function PlumbingTab() {
           <CustomLaborRows items={customLabor} onChange={setCustomLabor} />
           <div className="mt-3" />
           <GrandTotal matTotal={matTotal} laborTotal={laborTotal} />
-          <div className="mt-2"><ResultNote /></div>
+          <div className="mt-2"><ResultNote waste={inputs.waste} /></div>
         </div>
       ) : <EmptyState text="Select at least one room or fixture above to see your estimate." />}
     </div>
@@ -3423,12 +3473,15 @@ function PlumbingTab() {
 interface ElectricalInputs {
   sqft: string; bedrooms: number; bathrooms: number;
   appliances: { electricRange: boolean; electricDryer: boolean; dishwasher: boolean; evCharger: boolean; garage: boolean; hotTub: boolean; };
+  waste?: string;
 }
 const DEFAULT_ELECTRICAL: ElectricalInputs = {
   sqft: "", bedrooms: 3, bathrooms: 2,
   appliances: { electricRange: false, electricDryer: false, dishwasher: true, evCharger: false, garage: false, hotTub: false },
+  waste: "10",
 };
 function getElectricalMatItems(inp: ElectricalInputs): MatItem[] {
+  const WASTE = wf(inp.waste);
   const sqft = parseFloat(inp.sqft) || 0;
   const { bedrooms, bathrooms, appliances } = inp;
   const lightingCircuits = Math.max(1, Math.ceil(sqft / 600));
@@ -3512,6 +3565,11 @@ function ElectricalTab() {
         <Stepper label="Bedrooms" value={inputs.bedrooms} onChange={v => setInputs(p => ({ ...p, bedrooms: v }))} min={1} max={8} />
         <Stepper label="Bathrooms" value={inputs.bathrooms} onChange={v => setInputs(p => ({ ...p, bathrooms: v }))} min={1} max={8} />
       </div>
+      <div className="mb-6 no-print max-w-xs">
+        <Field label="Material Waste %" note="Extra material ordered for cuts & errors (default 10%)">
+          <NumberInput value={tabInputs.waste ?? "10"} onChange={v => setInputs(p => ({ ...p, waste: v }))} placeholder="10" />
+        </Field>
+      </div>
       <div className="mb-2 text-xs font-bold uppercase tracking-widest text-[#777] no-print">Which of these does your home have?</div>
       <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-3 mb-4 no-print">
         <CheckCard checked={inputs.appliances.dishwasher} onChange={v => setApp("dishwasher", v)} label="Dishwasher" description="Dedicated 20A circuit" />
@@ -3531,7 +3589,7 @@ function ElectricalTab() {
           <CustomLaborRows items={customLabor} onChange={setCustomLabor} />
           <div className="mt-3" />
           <GrandTotal matTotal={matTotal} laborTotal={laborTotal} />
-          <div className="mt-2"><ResultNote /></div>
+          <div className="mt-2"><ResultNote waste={inputs.waste} /></div>
         </div>
       ) : <EmptyState text="Enter your home size above to see your estimate." />}
     </div>
@@ -3541,8 +3599,8 @@ function ElectricalTab() {
 /* ─────────────────────────────────────────────
    HVAC TAB
 ───────────────────────────────────────────── */
-interface HvacInputs { sqft: string; stories: string; climate: string; system: string; gasFireplace: boolean; }
-const DEFAULT_HVAC: HvacInputs = { sqft: "", stories: "", climate: "mixed", system: "gas-central", gasFireplace: false };
+interface HvacInputs { sqft: string; stories: string; climate: string; system: string; gasFireplace: boolean; waste?: string; }
+const DEFAULT_HVAC: HvacInputs = { sqft: "", stories: "", climate: "mixed", system: "gas-central", gasFireplace: false, waste: "10" };
 const HEATING_BTU: Record<string, number> = { cold: 45, mixed: 35, hot: 25 };
 const COOLING_BTU: Record<string, number> = { cold: 20, mixed: 25, hot: 35 };
 
@@ -3569,6 +3627,7 @@ function sizeBoiler(btu: number): { label: string; price: number } {
   return { label: "120,000 BTU Condensing Boiler (On-Demand)", price: 4050 };
 }
 function getHvacMatItems(inp: HvacInputs): MatItem[] {
+  const WASTE = wf(inp.waste);
   const sqft = parseFloat(inp.sqft) || 0;
   const { climate, system, gasFireplace } = inp;
   const heatBtu = sqft * (HEATING_BTU[climate] ?? 35);
@@ -3677,6 +3736,11 @@ function HvacTab() {
     <div>
       {canUndo && <div className="flex justify-end mb-3 no-print"><UndoBtn onUndo={undo} /></div>}
       <p className="text-sm text-[#666] mb-6 no-print">Tell us about your home — we calculate the equipment size you need.</p>
+      <div className="mb-6 no-print max-w-xs">
+        <Field label="Material Waste %" note="Extra material ordered for cuts & errors (default 10%)">
+          <NumberInput value={tabInputs.waste ?? "10"} onChange={v => setInputs(p => ({ ...p, waste: v }))} placeholder="10" />
+        </Field>
+      </div>
       <div className="grid md:grid-cols-2 gap-6 mb-6 no-print">
         <Field label="Home Size (sq ft)"><NumberInput value={inputs.sqft} onChange={v => setInputs(p => ({ ...p, sqft: v }))} placeholder="e.g. 2000" />{!tabInputs.sqft && project.sqft && <ProjectBadge />}</Field>
         <Field label="Number of Stories">
@@ -3733,7 +3797,7 @@ function HvacTab() {
           <CustomLaborRows items={customLabor} onChange={setCustomLabor} />
           <div className="mt-3" />
           <GrandTotal matTotal={matTotal} laborTotal={laborTotal} />
-          <div className="mt-2"><ResultNote /></div>
+          <div className="mt-2"><ResultNote waste={inputs.waste} /></div>
         </div>
       ) : <EmptyState text="Enter your home size above to see your HVAC estimate." />}
     </div>
