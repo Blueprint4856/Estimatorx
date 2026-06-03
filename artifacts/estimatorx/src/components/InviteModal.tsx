@@ -78,7 +78,7 @@ export function InviteModal({ url, estimateName, onClose }: InviteModalProps) {
           </div>
 
           <div className="mt-5 p-3 bg-[#FFF8F5] border border-[#F0D8CC] text-xs text-[#8B4513] leading-relaxed">
-            <strong>Note:</strong> Each time you click Invite, a new unique link is generated. Old links remain active — share the most recent one with your team.
+            <strong>Note:</strong> This link stays active for this project. Your changes sync to collaborators automatically every few seconds — they just need to refresh to see the latest.
           </div>
         </div>
 

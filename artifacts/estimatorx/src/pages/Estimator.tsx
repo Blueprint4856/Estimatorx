@@ -100,6 +100,12 @@ function pmReadIndex(): ProjectMeta[] {
 }
 function pmWriteIndex(list: ProjectMeta[]): void { try { localStorage.setItem(PK.index, JSON.stringify(list)); } catch {} }
 function pmActivePid(): string | null { return localStorage.getItem(PK.activePid); }
+function pmGetShareToken(pid: string): string | null {
+  try { return localStorage.getItem(`ex.share.${pid}`); } catch { return null; }
+}
+function pmSetShareToken(pid: string, token: string): void {
+  try { localStorage.setItem(`ex.share.${pid}`, token); } catch {}
+}
 function pmSaveSnapshot(pid: string): void {
   const snap: Record<string, string | null> = {};
   for (const key of ALL_SK_KEYS) snap[key] = localStorage.getItem(key);
@@ -4171,6 +4177,10 @@ export default function Estimator({ sharedToken, sharedName }: { sharedToken?: s
   const [inviteModal, setInviteModal] = useState<{ url: string; name: string } | null>(null);
   const [inviteCreating, setInviteCreating] = useState(false);
   const [saveStatus, setSaveStatus] = useState<"saved" | "saving" | "unsaved">("saved");
+  const [ownerShareToken, setOwnerShareToken] = useState<string | null>(() => {
+    const pid = pmActivePid();
+    return pid ? pmGetShareToken(pid) : null;
+  });
   const [visibleTabIds, setVisibleTabIdsRaw] = useState<Set<string>>(readVisibleTabs);
   const [showTabConfig, setShowTabConfig] = useState(false);
   const tabConfigAnchorRef = useRef<HTMLDivElement>(null);
@@ -4255,6 +4265,22 @@ export default function Estimator({ sharedToken, sharedName }: { sharedToken?: s
     const projects = pmReadIndex();
     const estimateName = projects.find(p => p.id === pid)?.name ?? "Shared Estimate";
     const base = import.meta.env.BASE_URL as string;
+    const basePath = base.replace(/\/$/, "");
+
+    // Reuse existing token for this project — push latest snapshot and return same link
+    const existingToken = pid ? pmGetShareToken(pid) : null;
+    if (existingToken) {
+      void fetch(`${base}api/shared/${existingToken}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ snapshot }),
+      });
+      const url = `${window.location.origin}${basePath}/shared/${existingToken}`;
+      setInviteModal({ url, name: estimateName });
+      return;
+    }
+
     setInviteCreating(true);
     try {
       const res = await fetch(`${base}api/shared`, {
@@ -4265,7 +4291,8 @@ export default function Estimator({ sharedToken, sharedName }: { sharedToken?: s
       });
       if (res.ok) {
         const data = await res.json() as { token: string };
-        const basePath = base.replace(/\/$/, "");
+        if (pid) pmSetShareToken(pid, data.token);
+        setOwnerShareToken(data.token);
         const url = `${window.location.origin}${basePath}/shared/${data.token}`;
         setInviteModal({ url, name: estimateName });
       }
@@ -4295,6 +4322,27 @@ export default function Estimator({ sharedToken, sharedName }: { sharedToken?: s
     }, 5000);
     return () => clearInterval(interval);
   }, [sharedToken]);
+
+  // Owner auto-save: push changes to the shared snapshot every 5 s so collaborators
+  // always get the latest state when they refresh (mirrors the collaborator loop above).
+  const ownerLastSavedRef = useRef<string>("");
+  useEffect(() => {
+    if (sharedToken || !ownerShareToken) return;
+    ownerLastSavedRef.current = serializeState(readAllLocalStorage());
+    const interval = setInterval(() => {
+      const current = serializeState(readAllLocalStorage());
+      if (current === ownerLastSavedRef.current) return;
+      const base = import.meta.env.BASE_URL as string;
+      void fetch(`${base}api/shared/${ownerShareToken}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ snapshot: current }),
+      }).then(r => {
+        if (r.ok) ownerLastSavedRef.current = current;
+      }).catch(() => {});
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [sharedToken, ownerShareToken]);
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-[#F7F4F0] text-[#1A1A1A]">
