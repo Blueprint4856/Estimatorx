@@ -4248,6 +4248,8 @@ export default function Estimator({ sharedToken, sharedName }: { sharedToken?: s
   const [visibleTabIds, setVisibleTabIdsRaw] = useState<Set<string>>(readVisibleTabs);
   const [showTabConfig, setShowTabConfig] = useState(false);
   const tabConfigAnchorRef = useRef<HTMLDivElement>(null);
+  const tabScrollRef = useRef<HTMLDivElement>(null);
+  const tabDragRef = useRef({ isDown: false, startX: 0, scrollLeft: 0 });
 
   const setVisibleTabIds = useCallback((next: Set<string>) => {
     setVisibleTabIdsRaw(next);
@@ -4503,7 +4505,31 @@ export default function Estimator({ sharedToken, sharedName }: { sharedToken?: s
             {/* Tab strip + toolbar (desktop) */}
             <div className="flex items-stretch border-b-2 border-[#DDD8D0]">
               {/* Scrollable tab area */}
-              <div className="flex-1 overflow-x-auto" style={{ scrollbarWidth: "none" }}>
+              <div
+                ref={tabScrollRef}
+                className="flex-1 overflow-x-auto select-none"
+                style={{ scrollbarWidth: "none", cursor: tabDragRef.current.isDown ? "grabbing" : "grab" }}
+                onMouseDown={e => {
+                  const el = tabScrollRef.current; if (!el) return;
+                  tabDragRef.current = { isDown: true, startX: e.pageX - el.offsetLeft, scrollLeft: el.scrollLeft };
+                  el.style.cursor = "grabbing";
+                }}
+                onMouseLeave={() => {
+                  tabDragRef.current.isDown = false;
+                  if (tabScrollRef.current) tabScrollRef.current.style.cursor = "grab";
+                }}
+                onMouseUp={() => {
+                  tabDragRef.current.isDown = false;
+                  if (tabScrollRef.current) tabScrollRef.current.style.cursor = "grab";
+                }}
+                onMouseMove={e => {
+                  if (!tabDragRef.current.isDown) return;
+                  e.preventDefault();
+                  const el = tabScrollRef.current; if (!el) return;
+                  const x = e.pageX - el.offsetLeft;
+                  el.scrollLeft = tabDragRef.current.scrollLeft - (x - tabDragRef.current.startX);
+                }}
+              >
                 <div className="flex min-w-max">
                   {/* Structural group — only shown if any structural tabs are visible */}
                   {TABS.filter(t => t.group === "structural" && visibleTabIds.has(t.id)).length > 0 && (
