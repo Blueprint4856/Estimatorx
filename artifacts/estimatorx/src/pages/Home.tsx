@@ -223,7 +223,7 @@ export default function Home() {
         {/* ── Built from the field ── */}
         <section className="py-24 bg-[#1A1A1A] text-white relative overflow-hidden">
           <div className="absolute right-0 top-0 w-1/2 h-full hidden lg:block">
-            <img src="/subdivision.png" alt="Subdivision aerial" className="w-full h-full object-cover opacity-20" />
+            <img src="/subdivision.png" alt="Subdivision aerial" className="w-full h-full object-cover opacity-20" loading="lazy" />
           </div>
           <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-2xl">
