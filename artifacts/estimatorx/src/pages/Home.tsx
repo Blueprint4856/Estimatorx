@@ -71,7 +71,7 @@ export default function Home() {
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium tracking-wide">
             <a href="#how-it-works" className="text-[#444] hover:text-[#E85D26] transition-colors">HOW IT WORKS</a>
             <a href="#trades" className="text-[#444] hover:text-[#E85D26] transition-colors">WHAT'S INSIDE</a>
-            <a href="#for-pros" className="text-[#444] hover:text-[#E85D26] transition-colors">FOR PROS</a>
+            <a href="#for-pros" className="text-[#444] hover:text-[#E85D26] transition-colors">WHO IT'S FOR</a>
             {isLoaded && user ? (
               <>
                 <Link href="/estimator" className="bg-[#E85D26] text-white px-6 py-2.5 hover:bg-[#D44A15] transition-colors font-bold uppercase tracking-wider">
@@ -100,7 +100,7 @@ export default function Home() {
           <div className="md:hidden absolute top-20 left-0 w-full bg-white border-b border-[#E0DAD3] py-4 px-4 flex flex-col gap-4 shadow-lg">
             <a href="#how-it-works" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium text-[#444]">How It Works</a>
             <a href="#trades" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium text-[#444]">What's Inside</a>
-            <a href="#for-pros" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium text-[#444]">For Pros</a>
+            <a href="#for-pros" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium text-[#444]">Who It's For</a>
             {isLoaded && user ? (
               <>
                 <Link href="/estimator" onClick={() => setIsMenuOpen(false)} className="bg-[#E85D26] text-white px-6 py-3 text-center font-bold uppercase">Open Estimator</Link>
@@ -130,13 +130,13 @@ export default function Home() {
             <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="max-w-3xl">
               <motion.div variants={fadeIn} className="inline-flex items-center gap-2 bg-[#E85D26]/10 border border-[#E85D26]/30 px-4 py-2 mb-8">
                 <HardHat size={16} className="text-[#E85D26]" />
-                <span className="text-[#E85D26] font-bold uppercase tracking-widest text-xs">Built by a Contractor. For Contractors.</span>
+                <span className="text-[#E85D26] font-bold uppercase tracking-widest text-xs">Pro-Grade Formulas. Zero Experience Required.</span>
               </motion.div>
               <motion.h1 variants={fadeIn} className="text-5xl md:text-7xl lg:text-8xl font-serif font-black leading-[1.05] mb-8 uppercase text-[#1A1A1A]">
-                DO YOUR OWN<br />ESTIMATES.<br /><span className="text-[#E85D26]">GET IT RIGHT.</span>
+                KNOW WHAT<br />IT COSTS.<br /><span className="text-[#E85D26]">BEFORE YOU BUILD.</span>
               </motion.h1>
               <motion.p variants={fadeIn} className="text-xl md:text-2xl text-[#3A3530] max-w-xl mb-12 font-light leading-relaxed">
-                Professional-grade material and labor estimating across all 8 trades — with 38 years of field knowledge and RSMeans national labor rates baked in. No spreadsheets. No guesswork.
+                Fast, honest construction estimates for anyone — homeowner, DIYer, or seasoned contractor. Built on 38 years of field knowledge so you don't have to be an expert to get real numbers.
               </motion.p>
               <motion.div variants={fadeIn} className="flex flex-wrap gap-4">
                 <Link href="/sign-up" className="bg-[#E85D26] text-white px-8 py-4 font-bold text-lg hover:bg-[#D44A15] transition-all flex items-center gap-2 uppercase tracking-wide shadow-md">
@@ -167,8 +167,8 @@ export default function Home() {
                 <div className="text-white/90 font-medium uppercase tracking-wider text-sm">Labor Rates Built In</div>
               </div>
               <div className="text-center px-4">
-                <div className="text-4xl md:text-5xl font-black font-serif text-white mb-2">DIY</div>
-                <div className="text-white/90 font-medium uppercase tracking-wider text-sm">You Run It. You Own It.</div>
+                <div className="text-4xl md:text-5xl font-black font-serif text-white mb-2">ANY</div>
+                <div className="text-white/90 font-medium uppercase tracking-wider text-sm">Project. Any Experience Level.</div>
               </div>
             </div>
           </div>
@@ -182,8 +182,8 @@ export default function Home() {
                 <div className="w-12 h-[2px] bg-[#E85D26]" />
                 <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">No Black Boxes</span>
               </div>
-              <h2 className="text-4xl md:text-6xl font-black font-serif uppercase mb-6">Field Knowledge.<br /><span className="text-[#E85D26]">Built Into the App.</span></h2>
-              <p className="text-xl text-gray-600 leading-relaxed">We didn't start with a spreadsheet template and call it software. Every formula in EstimatorX came from decades of actual field work — real take-offs, real bids, real projects delivered.</p>
+              <h2 className="text-4xl md:text-6xl font-black font-serif uppercase mb-6">Real Numbers.<br /><span className="text-[#E85D26]">In Minutes.</span></h2>
+              <p className="text-xl text-gray-600 leading-relaxed">You don't need to know what a "take-off" is to use EstimatorX. Enter what you know — square footage, room count, lot size — and the app does the estimating math, the same way a 38-year contractor would.</p>
             </motion.div>
 
             <div className="grid md:grid-cols-3 gap-8">
@@ -191,20 +191,20 @@ export default function Home() {
                 {
                   step: "01",
                   icon: FileText,
-                  title: "Enter Your Dimensions",
-                  desc: "Type in square footage, lot size, bay counts, stud spacing — whatever the trade needs. The app handles the take-off math automatically."
+                  title: "Enter What You Know",
+                  desc: "Square footage, number of rooms, lot size — plain inputs anyone can fill in. No construction jargon required. The app knows what to do with the numbers."
                 },
                 {
                   step: "02",
                   icon: BarChart2,
                   title: "Instant Material & Labor Breakdown",
-                  desc: "Every line item auto-calculates using field-proven formulas and RSMeans national average labor rates — organized by material and labor so you see exactly where the money goes."
+                  desc: "Every line item auto-calculates from field-proven formulas and RSMeans national labor rates. You see exactly what materials you need and what labor should cost — no black box totals."
                 },
                 {
                   step: "03",
                   icon: FileText,
                   title: "Print, Share & Adjust",
-                  desc: "Adjust labor rates to your market, tweak quantities, add custom line items, then print a clean report or share a live link with your client or partner."
+                  desc: "Tweak quantities, adjust labor rates to your area, add custom line items, then print a clean report or share a live link with a contractor, lender, or partner."
                 }
               ].map((item, i) => (
                 <motion.div key={i} initial="hidden" whileInView="visible" viewport={{ once: true }}
@@ -232,11 +232,11 @@ export default function Home() {
                 <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">Why This Exists</span>
               </div>
               <h2 className="text-4xl md:text-5xl font-black font-serif uppercase mb-8 text-white">
-                Built Because<br/>Nothing Else<br/><span className="text-[#E85D26]">Was Honest Enough.</span>
+                Built Because<br/>Getting a Real Number<br/><span className="text-[#E85D26]">Shouldn't Require a Contractor.</span>
               </h2>
               <div className="space-y-5 text-gray-300 text-lg leading-relaxed">
-                <p>After 38 years running residential projects — from single-lot custom homes to 24-lot subdivisions — I kept running into the same problem: estimating tools built by software companies, not contractors. The formulas were theoretical. The labor rates were generic. The output looked professional but produced numbers that would lose you money in the field.</p>
-                <p>So we built EstimatorX from the ground up using real take-off methodology, real waste factors, and RSMeans data anchored to how work is actually bid and executed. The app doesn't guess. It calculates the way an experienced estimator would — you just supply the dimensions.</p>
+                <p>After 38 years running residential projects — from single-lot custom homes to 24-lot subdivisions — I kept running into the same problem on both sides: homeowners who couldn't get a straight number without hiring someone, and contractors who spent hours on estimates that spreadsheets should handle in minutes.</p>
+                <p>So we built EstimatorX from the ground up using real take-off methodology, real waste factors, and RSMeans data anchored to how work is actually bid and priced. You don't need to understand the formulas — you just enter what you know, and the app calculates the rest the way an experienced estimator would.</p>
               </div>
               <div className="mt-10 flex flex-col sm:flex-row gap-4">
                 <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-6 py-4">
@@ -310,11 +310,11 @@ export default function Home() {
             <div className="max-w-3xl mx-auto text-center mb-16">
               <div className="flex items-center justify-center gap-3 mb-4">
                 <div className="w-12 h-[2px] bg-[#E85D26]" />
-                <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">Know Your Audience</span>
+                <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">For Everyone With a Project</span>
                 <div className="w-12 h-[2px] bg-[#E85D26]" />
               </div>
-              <h2 className="text-4xl md:text-5xl font-black font-serif uppercase mb-6">This Isn't a<br/><span className="text-[#E85D26]">Homeowner App.</span></h2>
-              <p className="text-xl text-gray-600">EstimatorX is purpose-built for professionals who already understand construction — and just need a faster, more reliable way to put numbers together.</p>
+              <h2 className="text-4xl md:text-5xl font-black font-serif uppercase mb-6">Simple Enough<br/>for Anyone.<br/><span className="text-[#E85D26]">Accurate Enough for Pros.</span></h2>
+              <p className="text-xl text-gray-600">Whether you've never swung a hammer or you've built a hundred houses, EstimatorX gives you the same field-grade numbers — fast, itemized, and ready to act on.</p>
             </div>
 
             <div className="grid md:grid-cols-2 gap-8 mb-16">
@@ -323,12 +323,12 @@ export default function Home() {
                 <h3 className="text-2xl font-bold font-serif uppercase mb-6">Built For</h3>
                 <ul className="space-y-4">
                   {[
-                    "Residential builders & spec home developers",
-                    "General contractors bidding new construction",
-                    "Design-build firms needing fast feasibility numbers",
-                    "Renovation contractors sizing up whole-house scopes",
-                    "Land developers budgeting subdivision infrastructure",
-                    "Project managers who want to verify sub bids"
+                    "Homeowners planning an addition, remodel, or new build",
+                    "DIYers who want real numbers before starting a project",
+                    "First-time builders figuring out what things actually cost",
+                    "Real estate investors running feasibility on a flip or rental",
+                    "General contractors who need fast, defensible bid numbers",
+                    "Developers budgeting subdivision or multi-unit projects"
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <CheckCircle2 size={18} className="text-[#E85D26] shrink-0 mt-0.5" />
@@ -343,12 +343,12 @@ export default function Home() {
                 <h3 className="text-2xl font-bold font-serif uppercase mb-6">What You Get</h3>
                 <ul className="space-y-4">
                   {[
-                    "Numbers you can defend in a client meeting",
-                    "Adjustable RSMeans labor rates for your market",
-                    "Configurable waste factor per trade",
-                    "Clean printable output — no logo watermarks on paid plans",
-                    "Multiple project tabs to compare scenarios",
-                    "Shareable estimate links for team collaboration"
+                    "Rough-to-detailed estimates in minutes, not days",
+                    "Itemized material lists you can take to a supplier",
+                    "Adjustable labor rates for your area and project type",
+                    "Clean printable output to share with a contractor or lender",
+                    "Multiple saved projects to compare scope or scenarios",
+                    "Shareable estimate links — no account needed to view"
                   ].map((item, i) => (
                     <li key={i} className="flex items-start gap-3">
                       <CheckCircle2 size={18} className="text-[#E85D26] shrink-0 mt-0.5" />
@@ -363,7 +363,7 @@ export default function Home() {
             <div className="max-w-4xl mx-auto">
               <div className="text-center mb-10">
                 <h3 className="text-2xl md:text-3xl font-black font-serif uppercase mb-2">Simple Pricing</h3>
-                <p className="text-gray-500">Start free. Upgrade when your project pipeline demands it.</p>
+                <p className="text-gray-500">Start free — no credit card, no commitment. Upgrade when you need more.</p>
               </div>
               <div className="grid md:grid-cols-2 gap-6">
                 <div className="border-2 border-[#EAE5DF] bg-[#FAF8F5] p-8">
@@ -385,7 +385,7 @@ export default function Home() {
                   <div className="absolute -top-3 right-6 bg-[#E85D26] text-white text-xs font-bold uppercase tracking-widest px-3 py-1">Most Popular</div>
                   <div className="text-sm font-bold uppercase tracking-widest text-[#E85D26] mb-2">X Plan</div>
                   <div className="text-4xl font-black font-serif mb-1">$29<span className="text-lg font-normal text-gray-500">/mo</span></div>
-                  <div className="text-gray-500 text-sm mb-6">Everything a working contractor needs</div>
+                  <div className="text-gray-500 text-sm mb-6">For active estimators and frequent builders</div>
                   <ul className="space-y-3 mb-8">
                     {[
                       "Everything in Free",
@@ -417,8 +417,8 @@ export default function Home() {
                 <div className="w-10 h-[2px] bg-[#E85D26]" />
                 <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">Get in Touch</span>
               </div>
-              <h2 className="text-3xl md:text-4xl font-black font-serif uppercase mb-2 text-[#1A1A1A]">Questions? Feedback?</h2>
-              <p className="text-gray-500 mb-8">Have a question about the app, want to suggest a trade we haven't covered, or found something that doesn't match how you work in the field? We want to hear it.</p>
+              <h2 className="text-3xl md:text-4xl font-black font-serif uppercase mb-2 text-[#1A1A1A]">Questions or Feedback?</h2>
+              <p className="text-gray-500 mb-8">Found something that doesn't match real-world pricing in your area? Want a trade or project type we haven't covered? Have a question before you sign up? We want to hear from you.</p>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
