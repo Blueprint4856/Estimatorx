@@ -30,30 +30,74 @@
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
-      "@type": "WebApplication",
-      "name": "EstimatorX.pro",
-      "url": "https://estimatorx.pro",
-      "description": "Free construction cost estimator covering all 8 trades — site work, foundation, framing, floors, roofing, plumbing, electrical, and HVAC. Built with 38 years of field knowledge and RSMeans national labor rates.",
-      "applicationCategory": "BusinessApplication",
-      "operatingSystem": "Web",
-      "offers": [
+      "@graph": [
         {
-          "@type": "Offer",
-          "price": "0",
-          "priceCurrency": "USD",
-          "description": "Free plan — all 8 trade estimators included"
+          "@type": "WebApplication",
+          "@id": "https://estimatorx.pro/#app",
+          "name": "EstimatorX.pro",
+          "url": "https://estimatorx.pro",
+          "description": "Free construction cost estimator covering all 8 trades — site work, foundation, framing, floors, roofing, plumbing, electrical, and HVAC. Built with 38 years of field knowledge and RSMeans national labor rates.",
+          "applicationCategory": "BusinessApplication",
+          "operatingSystem": "Web",
+          "image": "https://estimatorx.pro/opengraph.jpg",
+          "screenshot": "https://estimatorx.pro/opengraph.jpg",
+          "audience": {
+            "@type": "Audience",
+            "audienceType": "Homeowners, DIYers, real estate investors, general contractors, and developers who need fast construction cost estimates"
+          },
+          "featureList": [
+            "Site work estimating",
+            "Foundation estimating",
+            "Framing estimating",
+            "Flooring estimating",
+            "Roofing estimating",
+            "Plumbing estimating",
+            "Electrical estimating",
+            "HVAC estimating",
+            "RSMeans national labor rates",
+            "PDF building plan import",
+            "Shareable estimate links",
+            "Printable reports"
+          ],
+          "offers": [
+            {
+              "@type": "Offer",
+              "name": "Free",
+              "price": "0",
+              "priceCurrency": "USD",
+              "description": "All 8 trade estimators, RSMeans labor rates, 1 saved project. Print for $0.99 per estimate."
+            },
+            {
+              "@type": "Offer",
+              "name": "X Plan",
+              "price": "9.99",
+              "priceCurrency": "USD",
+              "priceSpecification": {
+                "@type": "UnitPriceSpecification",
+                "price": "9.99",
+                "priceCurrency": "USD",
+                "unitCode": "MON"
+              },
+              "description": "Unlimited saved projects, PDF building plan import, live shareable estimate links, no watermarks on print output, priority support."
+            }
+          ],
+          "creator": {
+            "@id": "https://estimatorx.pro/#organization"
+          }
         },
         {
-          "@type": "Offer",
-          "price": "9.99",
-          "priceCurrency": "USD",
-          "description": "X Plan — unlimited projects, PDF import, shareable links"
+          "@type": "Organization",
+          "@id": "https://estimatorx.pro/#organization",
+          "name": "EstimatorX.pro",
+          "url": "https://estimatorx.pro",
+          "logo": {
+            "@type": "ImageObject",
+            "url": "https://estimatorx.pro/logo.png"
+          },
+          "description": "EstimatorX.pro provides professional-grade construction cost estimation tools for homeowners, contractors, and developers.",
+          "sameAs": []
         }
-      ],
-      "creator": {
-        "@type": "Organization",
-        "name": "EstimatorX.pro"
-      }
+      ]
     }
     </script>
 
