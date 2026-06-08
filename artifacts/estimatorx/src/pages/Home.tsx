@@ -1,6 +1,10 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import { Calculator, HardHat, Building, PenTool, CheckCircle2, ChevronRight, Menu, X, ArrowRight, Activity, Globe, Scale } from "lucide-react";
+import {
+  HardHat, Layers, FileText, BarChart2, Users, CheckCircle2,
+  ChevronRight, Menu, X, ArrowRight, Globe, Zap, ShieldCheck,
+  Wrench, Building2, Hammer, Plug, Wind, Droplets
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useClerk } from "@clerk/react";
 import { Link } from "wouter";
@@ -12,12 +16,7 @@ const fadeIn = {
 
 const staggerContainer = {
   hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.1
-    }
-  }
+  visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
 };
 
 export default function Home() {
@@ -37,7 +36,7 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           access_key: "7dd5e3a9-8b16-4249-9e25-b3157759e919",
-          subject: "New Estimate Inquiry — EstimatorX.pro",
+          subject: "EstimatorX.pro — Contact Form",
           name: formData.name,
           email: formData.email,
           message: formData.message,
@@ -46,21 +45,12 @@ export default function Home() {
       const result = await response.json();
       if (result.success) {
         setFormData({ name: "", email: "", message: "" });
-        toast({
-          title: "Inquiry Sent",
-          description: "We'll be in touch shortly to discuss your estimating needs.",
-        });
+        toast({ title: "Message Sent", description: "We'll get back to you shortly." });
       } else {
-        toast({
-          title: "Something went wrong",
-          description: "Please try again or email directly.",
-        });
+        toast({ title: "Something went wrong", description: "Please try again or email us directly." });
       }
     } catch {
-      toast({
-        title: "Something went wrong",
-        description: "Please check your connection and try again.",
-      });
+      toast({ title: "Something went wrong", description: "Please check your connection and try again." });
     } finally {
       setIsSubmitting(false);
     }
@@ -68,7 +58,8 @@ export default function Home() {
 
   return (
     <div className="min-h-[100dvh] flex flex-col bg-[#F7F4F0] text-[#1A1A1A]">
-      {/* Header */}
+
+      {/* ── Header ── */}
       <header className="sticky top-0 z-50 w-full border-b border-[#E0DAD3] bg-white shadow-sm">
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -78,18 +69,15 @@ export default function Home() {
           </div>
 
           <nav className="hidden md:flex items-center gap-8 text-sm font-medium tracking-wide">
-            <a href="#expertise" className="text-[#444] hover:text-[#E85D26] transition-colors">EXPERTISE</a>
-            <a href="#services" className="text-[#444] hover:text-[#E85D26] transition-colors">SERVICES</a>
-            <a href="#experience" className="text-[#444] hover:text-[#E85D26] transition-colors">EXPERIENCE</a>
+            <a href="#how-it-works" className="text-[#444] hover:text-[#E85D26] transition-colors">HOW IT WORKS</a>
+            <a href="#trades" className="text-[#444] hover:text-[#E85D26] transition-colors">WHAT'S INSIDE</a>
+            <a href="#for-pros" className="text-[#444] hover:text-[#E85D26] transition-colors">FOR PROS</a>
             {isLoaded && user ? (
               <>
                 <Link href="/estimator" className="bg-[#E85D26] text-white px-6 py-2.5 hover:bg-[#D44A15] transition-colors font-bold uppercase tracking-wider">
-                  Estimator
+                  Open Estimator
                 </Link>
-                <button
-                  onClick={() => signOut({ redirectUrl: "/" })}
-                  className="text-[#444] hover:text-[#E85D26] transition-colors"
-                >
+                <button onClick={() => signOut({ redirectUrl: "/" })} className="text-[#444] hover:text-[#E85D26] transition-colors">
                   SIGN OUT
                 </button>
               </>
@@ -97,7 +85,7 @@ export default function Home() {
               <>
                 <Link href="/sign-in" className="text-[#444] hover:text-[#E85D26] transition-colors">SIGN IN</Link>
                 <Link href="/sign-up" className="bg-[#E85D26] text-white px-6 py-2.5 hover:bg-[#D44A15] transition-colors font-bold uppercase tracking-wider">
-                  GET STARTED
+                  START FREE
                 </Link>
               </>
             )}
@@ -108,21 +96,20 @@ export default function Home() {
           </button>
         </div>
 
-        {/* Mobile Menu */}
         {isMenuOpen && (
           <div className="md:hidden absolute top-20 left-0 w-full bg-white border-b border-[#E0DAD3] py-4 px-4 flex flex-col gap-4 shadow-lg">
-            <a href="#expertise" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium text-[#444]">Expertise</a>
-            <a href="#services" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium text-[#444]">Services</a>
-            <a href="#experience" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium text-[#444]">Experience</a>
+            <a href="#how-it-works" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium text-[#444]">How It Works</a>
+            <a href="#trades" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium text-[#444]">What's Inside</a>
+            <a href="#for-pros" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium text-[#444]">For Pros</a>
             {isLoaded && user ? (
               <>
-                <Link href="/estimator" onClick={() => setIsMenuOpen(false)} className="bg-[#E85D26] text-white px-6 py-3 text-center font-bold uppercase">Go to Estimator</Link>
+                <Link href="/estimator" onClick={() => setIsMenuOpen(false)} className="bg-[#E85D26] text-white px-6 py-3 text-center font-bold uppercase">Open Estimator</Link>
                 <button onClick={() => { setIsMenuOpen(false); signOut({ redirectUrl: "/" }); }} className="text-lg font-medium text-[#444] text-left">Sign Out</button>
               </>
             ) : (
               <>
                 <Link href="/sign-in" onClick={() => setIsMenuOpen(false)} className="text-lg font-medium text-[#444]">Sign In</Link>
-                <Link href="/sign-up" onClick={() => setIsMenuOpen(false)} className="bg-[#E85D26] text-white px-6 py-3 text-center font-bold uppercase">Get Started</Link>
+                <Link href="/sign-up" onClick={() => setIsMenuOpen(false)} className="bg-[#E85D26] text-white px-6 py-3 text-center font-bold uppercase">Start Free</Link>
               </>
             )}
           </div>
@@ -130,104 +117,102 @@ export default function Home() {
       </header>
 
       <main className="flex-1">
-        {/* Hero Section */}
+
+        {/* ── Hero ── */}
         <section className="relative pt-24 pb-32 md:pt-28 md:pb-44 overflow-hidden">
-          {/* Residential background image */}
           <div className="absolute inset-0 z-0">
-            <img
-              src="/hero-residential.png"
-              alt="Residential subdivision construction"
-              className="w-full h-full object-cover"
-            />
-            {/* Warm light overlay — heavier on the left where text sits, lighter on right */}
+            <img src="/hero-residential.png" alt="Residential subdivision construction" className="w-full h-full object-cover" />
             <div className="absolute inset-0 bg-gradient-to-r from-[#FAF7F3]/95 via-[#FAF7F3]/80 to-[#FAF7F3]/30" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#F7F4F0]/60 via-transparent to-transparent" />
           </div>
 
           <div className="container relative z-10 mx-auto px-4">
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              variants={staggerContainer}
-              className="max-w-3xl"
-            >
+            <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="max-w-3xl">
+              <motion.div variants={fadeIn} className="inline-flex items-center gap-2 bg-[#E85D26]/10 border border-[#E85D26]/30 px-4 py-2 mb-8">
+                <HardHat size={16} className="text-[#E85D26]" />
+                <span className="text-[#E85D26] font-bold uppercase tracking-widest text-xs">Built by a Contractor. For Contractors.</span>
+              </motion.div>
               <motion.h1 variants={fadeIn} className="text-5xl md:text-7xl lg:text-8xl font-serif font-black leading-[1.05] mb-8 uppercase text-[#1A1A1A]">
-                PRECISION<br />ESTIMATING.<br /><span className="text-[#E85D26]">ZERO FLUFF.</span>
+                DO YOUR OWN<br />ESTIMATES.<br /><span className="text-[#E85D26]">GET IT RIGHT.</span>
               </motion.h1>
               <motion.p variants={fadeIn} className="text-xl md:text-2xl text-[#3A3530] max-w-xl mb-12 font-light leading-relaxed">
-                38 years of ground-level residential construction experience. From spec homes to 24-lot subdivisions. The remote estimating partner you can trust to get the numbers right.
+                Professional-grade material and labor estimating across all 8 trades — with 38 years of field knowledge and RSMeans national labor rates baked in. No spreadsheets. No guesswork.
               </motion.p>
               <motion.div variants={fadeIn} className="flex flex-wrap gap-4">
-                <a href="#contact" className="bg-[#E85D26] text-white px-8 py-4 font-bold text-lg hover:bg-[#D44A15] transition-all flex items-center gap-2 uppercase tracking-wide shadow-md">
-                  Discuss Your Project <ArrowRight size={20} />
-                </a>
-                <a href="#expertise" className="border-2 border-[#1A1A1A] text-[#1A1A1A] px-8 py-4 font-bold text-lg hover:bg-[#1A1A1A] hover:text-white transition-all uppercase tracking-wide">
-                  View Expertise
+                <Link href="/sign-up" className="bg-[#E85D26] text-white px-8 py-4 font-bold text-lg hover:bg-[#D44A15] transition-all flex items-center gap-2 uppercase tracking-wide shadow-md">
+                  Start Estimating Free <ArrowRight size={20} />
+                </Link>
+                <a href="#how-it-works" className="border-2 border-[#1A1A1A] text-[#1A1A1A] px-8 py-4 font-bold text-lg hover:bg-[#1A1A1A] hover:text-white transition-all uppercase tracking-wide">
+                  See How It Works
                 </a>
               </motion.div>
             </motion.div>
           </div>
         </section>
 
-        {/* Stats Bar */}
+        {/* ── Stats Bar ── */}
         <section className="bg-[#E85D26] py-12 border-y border-[#C94A1A]">
           <div className="container mx-auto px-4">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-8 divide-x divide-white/25">
               <div className="text-center px-4">
+                <div className="text-4xl md:text-5xl font-black font-serif text-white mb-2">8</div>
+                <div className="text-white/90 font-medium uppercase tracking-wider text-sm">Trade Categories</div>
+              </div>
+              <div className="text-center px-4">
                 <div className="text-4xl md:text-5xl font-black font-serif text-white mb-2">38+</div>
-                <div className="text-white/90 font-medium uppercase tracking-wider text-sm">Years Experience</div>
+                <div className="text-white/90 font-medium uppercase tracking-wider text-sm">Years Field Input</div>
               </div>
               <div className="text-center px-4">
-                <div className="text-4xl md:text-5xl font-black font-serif text-white mb-2">24</div>
-                <div className="text-white/90 font-medium uppercase tracking-wider text-sm">Active Lot Subdivision</div>
+                <div className="text-4xl md:text-5xl font-black font-serif text-white mb-2">RSM</div>
+                <div className="text-white/90 font-medium uppercase tracking-wider text-sm">Labor Rates Built In</div>
               </div>
               <div className="text-center px-4">
-                <div className="text-4xl md:text-5xl font-black font-serif text-white mb-2">100%</div>
-                <div className="text-white/90 font-medium uppercase tracking-wider text-sm">Remote Capable</div>
-              </div>
-              <div className="text-center px-4">
-                <div className="text-4xl md:text-5xl font-black font-serif text-white mb-2">USA</div>
-                <div className="text-white/90 font-medium uppercase tracking-wider text-sm">Nationwide Service</div>
+                <div className="text-4xl md:text-5xl font-black font-serif text-white mb-2">DIY</div>
+                <div className="text-white/90 font-medium uppercase tracking-wider text-sm">You Run It. You Own It.</div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Expertise Section */}
-        <section id="expertise" className="py-24 bg-white text-[#1A1A1A]">
+        {/* ── How It Works ── */}
+        <section id="how-it-works" className="py-24 bg-white text-[#1A1A1A]">
           <div className="container mx-auto px-4">
-            <motion.div
-              initial="hidden"
-              whileInView="visible"
-              viewport={{ once: true, margin: "-100px" }}
-              variants={fadeIn}
-              className="mb-16 md:flex justify-between items-end"
-            >
-              <div className="max-w-2xl">
-                <h2 className="text-4xl md:text-6xl font-black font-serif uppercase mb-6 text-[#1A1A1A]">Core <span className="text-[#E85D26]">Competencies</span></h2>
-                <p className="text-xl text-gray-600">Deep command of construction financials and ground-level execution. Not just theoretical numbers — practical, buildable budgets.</p>
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={fadeIn} className="mb-16 max-w-2xl">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-[2px] bg-[#E85D26]" />
+                <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">No Black Boxes</span>
               </div>
+              <h2 className="text-4xl md:text-6xl font-black font-serif uppercase mb-6">Field Knowledge.<br /><span className="text-[#E85D26]">Built Into the App.</span></h2>
+              <p className="text-xl text-gray-600 leading-relaxed">We didn't start with a spreadsheet template and call it software. Every formula in EstimatorX came from decades of actual field work — real take-offs, real bids, real projects delivered.</p>
             </motion.div>
 
             <div className="grid md:grid-cols-3 gap-8">
               {[
-                { icon: Calculator, title: "Cost Estimating", desc: "Precise residential cost estimating with detailed take-offs and quantity analysis." },
-                { icon: Building, title: "Land Development", desc: "End-to-end subdivision & land development budgeting and forecasting." },
-                { icon: Scale, title: "Financial Reconciliation", desc: "Rigorous financial tracking and audit-ready reporting for major projects." },
-                { icon: HardHat, title: "Builder Coordination", desc: "Seamless coordination between builders, subcontractors, civil engineers, and vendors." },
-                { icon: PenTool, title: "Permitting & Entitlements", desc: "Navigating complex municipal requirements and regulatory approvals." },
-                { icon: Activity, title: "WOACE.co Software", desc: "Built proprietary construction accounting software — demonstrating deep technical finance knowledge." }
+                {
+                  step: "01",
+                  icon: FileText,
+                  title: "Enter Your Dimensions",
+                  desc: "Type in square footage, lot size, bay counts, stud spacing — whatever the trade needs. The app handles the take-off math automatically."
+                },
+                {
+                  step: "02",
+                  icon: BarChart2,
+                  title: "Instant Material & Labor Breakdown",
+                  desc: "Every line item auto-calculates using field-proven formulas and RSMeans national average labor rates — organized by material and labor so you see exactly where the money goes."
+                },
+                {
+                  step: "03",
+                  icon: FileText,
+                  title: "Print, Share & Adjust",
+                  desc: "Adjust labor rates to your market, tweak quantities, add custom line items, then print a clean report or share a live link with your client or partner."
+                }
               ].map((item, i) => (
-                <motion.div
-                  key={i}
-                  initial="hidden"
-                  whileInView="visible"
-                  viewport={{ once: true }}
-                  variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { delay: i * 0.1 } } }}
-                  className="p-8 border-2 border-[#EAE5DF] hover:border-[#E85D26] transition-colors group bg-[#FAF8F5]"
-                >
-                  <item.icon size={40} className="text-[#E85D26] mb-6 group-hover:scale-110 transition-transform" />
-                  <h3 className="text-2xl font-bold font-serif mb-4 uppercase">{item.title}</h3>
+                <motion.div key={i} initial="hidden" whileInView="visible" viewport={{ once: true }}
+                  variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { delay: i * 0.15 } } }}
+                  className="relative p-8 border-2 border-[#EAE5DF] hover:border-[#E85D26] transition-colors group bg-[#FAF8F5]">
+                  <div className="text-6xl font-black font-serif text-[#EAE5DF] group-hover:text-[#E85D26]/20 transition-colors absolute top-6 right-6 leading-none">{item.step}</div>
+                  <item.icon size={40} className="text-[#E85D26] mb-6" />
+                  <h3 className="text-xl font-bold font-serif mb-4 uppercase">{item.title}</h3>
                   <p className="text-gray-600 leading-relaxed">{item.desc}</p>
                 </motion.div>
               ))}
@@ -235,143 +220,251 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Experience Spotlight */}
-        <section id="experience" className="py-24 bg-[#F0EDE8] border-t border-[#DDD8D0] relative overflow-hidden">
+        {/* ── Built from the field ── */}
+        <section className="py-24 bg-[#1A1A1A] text-white relative overflow-hidden">
           <div className="absolute right-0 top-0 w-1/2 h-full hidden lg:block">
-            <img src="/subdivision.png" alt="Subdivision aerial" className="w-full h-full object-cover opacity-60" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#F0EDE8] via-[#F0EDE8]/70 to-transparent" />
+            <img src="/subdivision.png" alt="Subdivision aerial" className="w-full h-full object-cover opacity-20" />
           </div>
-
           <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-2xl">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-[2px] bg-[#E85D26]"></div>
-                <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">Proven Track Record</span>
+                <div className="w-12 h-[2px] bg-[#E85D26]" />
+                <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">Why This Exists</span>
               </div>
-              <h2 className="text-4xl md:text-5xl font-black font-serif uppercase mb-8 text-[#1A1A1A]">Multiple Subdivision<br/>Projects Delivered</h2>
-
-              <div className="space-y-6 text-[#3A3530] text-lg">
-                <p>Led multiple residential subdivision projects from raw land through final turnover — managing every phase with the same financial discipline on a 10-lot infill as a 100-lot master-planned community.</p>
-
-                <ul className="space-y-4">
-                  {[
-                    "Land Development & Grading",
-                    "Permitting & Entitlements",
-                    "Builder & Subcontractor Coordination",
-                    "Lot Sales & Final Turnovers"
-                  ].map((item, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <CheckCircle2 className="text-[#E85D26] shrink-0 mt-1" />
-                      <span className="font-medium text-[#1A1A1A]">{item}</span>
-                    </li>
-                  ))}
-                </ul>
+              <h2 className="text-4xl md:text-5xl font-black font-serif uppercase mb-8 text-white">
+                Built Because<br/>Nothing Else<br/><span className="text-[#E85D26]">Was Honest Enough.</span>
+              </h2>
+              <div className="space-y-5 text-gray-300 text-lg leading-relaxed">
+                <p>After 38 years running residential projects — from single-lot custom homes to 24-lot subdivisions — I kept running into the same problem: estimating tools built by software companies, not contractors. The formulas were theoretical. The labor rates were generic. The output looked professional but produced numbers that would lose you money in the field.</p>
+                <p>So we built EstimatorX from the ground up using real take-off methodology, real waste factors, and RSMeans data anchored to how work is actually bid and executed. The app doesn't guess. It calculates the way an experienced estimator would — you just supply the dimensions.</p>
               </div>
-
-              <div className="mt-12 p-6 border-l-4 border-[#E85D26] bg-white shadow-sm">
-                <h4 className="text-[#E85D26] font-bold uppercase tracking-wider text-sm mb-2">Corporate Leadership Background</h4>
-                <p className="text-[#3A3530]">Decades of executive leadership overseeing large-scale capital projects and infrastructure builds — bringing corporate-grade financial rigor to residential construction estimating.</p>
+              <div className="mt-10 flex flex-col sm:flex-row gap-4">
+                <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-6 py-4">
+                  <ShieldCheck size={24} className="text-[#E85D26] shrink-0" />
+                  <span className="text-white font-medium">Field-proven formulas, not textbook theory</span>
+                </div>
+                <div className="flex items-center gap-3 bg-white/5 border border-white/10 px-6 py-4">
+                  <Zap size={24} className="text-[#E85D26] shrink-0" />
+                  <span className="text-white font-medium">RSMeans labor rates, adjustable to your market</span>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
-        {/* Services & Arrangements */}
-        <section id="services" className="py-24 bg-white text-[#1A1A1A]">
+        {/* ── Trades / What's Inside ── */}
+        <section id="trades" className="py-24 bg-[#F7F4F0]">
           <div className="container mx-auto px-4">
-            <div className="text-center max-w-3xl mx-auto mb-16">
-              <h2 className="text-4xl md:text-5xl font-black font-serif uppercase mb-6">Flexible <span className="text-[#E85D26]">Arrangements</span></h2>
-              <p className="text-xl text-gray-600">Serving residential builders, developers, and construction firms nationwide. Available for remote work with travel as needed.</p>
+            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true, margin: "-100px" }} variants={fadeIn} className="mb-16 text-center max-w-3xl mx-auto">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <div className="w-12 h-[2px] bg-[#E85D26]" />
+                <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">All 8 Trades. One Tool.</span>
+                <div className="w-12 h-[2px] bg-[#E85D26]" />
+              </div>
+              <h2 className="text-4xl md:text-6xl font-black font-serif uppercase mb-6">Every Trade.<br/><span className="text-[#E85D26]">Every Line Item.</span></h2>
+              <p className="text-xl text-gray-600">From clearing the lot to setting the condenser — EstimatorX covers the full residential build scope with trade-specific inputs and itemized output for each discipline.</p>
+            </motion.div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {[
+                { icon: Layers, label: "Site Work", desc: "Clearing, grading, excavation, utilities, driveway" },
+                { icon: Building2, label: "Foundation", desc: "Slab, crawl space, full basement — concrete & forming" },
+                { icon: Hammer, label: "Walls & Framing", desc: "Exterior walls, interior partitions, sheathing, insulation" },
+                { icon: Layers, label: "Floor Systems", desc: "Joist sizing, subfloor, beam spans, post count" },
+                { icon: Wrench, label: "Roof", desc: "Trusses or rafters, decking, underlayment, shingles or metal" },
+                { icon: Droplets, label: "Plumbing", desc: "Supply & DWV rough-in, fixtures, water heater" },
+                { icon: Plug, label: "Electrical", desc: "Service panel, circuits, outlets, lighting, appliances" },
+                { icon: Wind, label: "HVAC", desc: "Equipment sizing, ductwork, linesets, thermostats" }
+              ].map((trade, i) => (
+                <motion.div key={i} initial="hidden" whileInView="visible" viewport={{ once: true }}
+                  variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0, transition: { delay: i * 0.07 } } }}
+                  className="bg-white border-2 border-[#EAE5DF] hover:border-[#E85D26] transition-all group p-6">
+                  <trade.icon size={28} className="text-[#E85D26] mb-4 group-hover:scale-110 transition-transform" />
+                  <h3 className="text-lg font-bold font-serif uppercase mb-2">{trade.label}</h3>
+                  <p className="text-sm text-gray-500 leading-relaxed">{trade.desc}</p>
+                </motion.div>
+              ))}
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="mt-12 grid md:grid-cols-3 gap-6">
               {[
-                { title: "Per-Project", desc: "Fixed-fee estimating for specific residential builds or developments." },
-                { title: "Part-Time", desc: "Dedicated weekly hours to supplement your in-house estimating team." },
-                { title: "Fractional", desc: "Ongoing executive-level estimating and financial oversight." },
-                { title: "Contract", desc: "Long-term arrangements for continuous residential project pipelines." }
-              ].map((item, i) => (
-                <div key={i} className="bg-[#FAF8F5] p-8 border-2 border-[#EAE5DF] hover:border-[#E85D26] hover:shadow-lg transition-all group">
-                  <div className="w-10 h-1 bg-[#E85D26] mb-6" />
-                  <h3 className="text-xl font-bold font-serif uppercase mb-4 text-[#1A1A1A]">{item.title}</h3>
-                  <p className="text-gray-600">{item.desc}</p>
+                { icon: BarChart2, title: "Itemized Takeoffs", desc: "Every material quantity broken out line by line — board feet, cubic yards, linear feet, each count. No black-box totals." },
+                { icon: Users, title: "Share with Your Team", desc: "Generate a shareable link so your foreman, partner, or client can view the same estimate in real time." },
+                { icon: FileText, title: "PDF Plan Import", desc: "Upload a building plan PDF and let the app extract dimensions automatically — skip manual input on straightforward plans." }
+              ].map((feat, i) => (
+                <div key={i} className="flex gap-4 bg-white border border-[#EAE5DF] p-6">
+                  <feat.icon size={28} className="text-[#E85D26] shrink-0 mt-1" />
+                  <div>
+                    <h4 className="font-bold uppercase text-sm mb-2 tracking-wide">{feat.title}</h4>
+                    <p className="text-sm text-gray-600 leading-relaxed">{feat.desc}</p>
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </section>
 
-        {/* CTA / Contact */}
+        {/* ── For Pros ── */}
+        <section id="for-pros" className="py-24 bg-white text-[#1A1A1A]">
+          <div className="container mx-auto px-4">
+            <div className="max-w-3xl mx-auto text-center mb-16">
+              <div className="flex items-center justify-center gap-3 mb-4">
+                <div className="w-12 h-[2px] bg-[#E85D26]" />
+                <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">Know Your Audience</span>
+                <div className="w-12 h-[2px] bg-[#E85D26]" />
+              </div>
+              <h2 className="text-4xl md:text-5xl font-black font-serif uppercase mb-6">This Isn't a<br/><span className="text-[#E85D26]">Homeowner App.</span></h2>
+              <p className="text-xl text-gray-600">EstimatorX is purpose-built for professionals who already understand construction — and just need a faster, more reliable way to put numbers together.</p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8 mb-16">
+              <div className="bg-[#FAF8F5] border-2 border-[#EAE5DF] p-8">
+                <div className="w-10 h-1 bg-[#E85D26] mb-6" />
+                <h3 className="text-2xl font-bold font-serif uppercase mb-6">Built For</h3>
+                <ul className="space-y-4">
+                  {[
+                    "Residential builders & spec home developers",
+                    "General contractors bidding new construction",
+                    "Design-build firms needing fast feasibility numbers",
+                    "Renovation contractors sizing up whole-house scopes",
+                    "Land developers budgeting subdivision infrastructure",
+                    "Project managers who want to verify sub bids"
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <CheckCircle2 size={18} className="text-[#E85D26] shrink-0 mt-0.5" />
+                      <span className="text-[#3A3530]">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="bg-[#1A1A1A] p-8 text-white">
+                <div className="w-10 h-1 bg-[#E85D26] mb-6" />
+                <h3 className="text-2xl font-bold font-serif uppercase mb-6">What You Get</h3>
+                <ul className="space-y-4">
+                  {[
+                    "Numbers you can defend in a client meeting",
+                    "Adjustable RSMeans labor rates for your market",
+                    "Configurable waste factor per trade",
+                    "Clean printable output — no logo watermarks on paid plans",
+                    "Multiple project tabs to compare scenarios",
+                    "Shareable estimate links for team collaboration"
+                  ].map((item, i) => (
+                    <li key={i} className="flex items-start gap-3">
+                      <CheckCircle2 size={18} className="text-[#E85D26] shrink-0 mt-0.5" />
+                      <span className="text-gray-300">{item}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* Pricing */}
+            <div className="max-w-4xl mx-auto">
+              <div className="text-center mb-10">
+                <h3 className="text-2xl md:text-3xl font-black font-serif uppercase mb-2">Simple Pricing</h3>
+                <p className="text-gray-500">Start free. Upgrade when your project pipeline demands it.</p>
+              </div>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="border-2 border-[#EAE5DF] bg-[#FAF8F5] p-8">
+                  <div className="text-sm font-bold uppercase tracking-widest text-[#888] mb-2">Free</div>
+                  <div className="text-4xl font-black font-serif mb-1">$0</div>
+                  <div className="text-gray-500 text-sm mb-6">Always free — no credit card</div>
+                  <ul className="space-y-3 mb-8">
+                    {["All 8 trade estimators", "RSMeans labor rates included", "1 saved project", "Printable output"].map((f, i) => (
+                      <li key={i} className="flex items-center gap-2 text-sm text-[#3A3530]">
+                        <CheckCircle2 size={16} className="text-[#E85D26]" /> {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href="/sign-up" className="block w-full text-center border-2 border-[#1A1A1A] text-[#1A1A1A] py-3 font-bold uppercase tracking-wide hover:bg-[#1A1A1A] hover:text-white transition-all">
+                    Get Started Free
+                  </Link>
+                </div>
+                <div className="border-2 border-[#E85D26] bg-white p-8 relative">
+                  <div className="absolute -top-3 right-6 bg-[#E85D26] text-white text-xs font-bold uppercase tracking-widest px-3 py-1">Most Popular</div>
+                  <div className="text-sm font-bold uppercase tracking-widest text-[#E85D26] mb-2">X Plan</div>
+                  <div className="text-4xl font-black font-serif mb-1">$29<span className="text-lg font-normal text-gray-500">/mo</span></div>
+                  <div className="text-gray-500 text-sm mb-6">Everything a working contractor needs</div>
+                  <ul className="space-y-3 mb-8">
+                    {[
+                      "Everything in Free",
+                      "Unlimited saved projects",
+                      "PDF building plan import",
+                      "Live shareable estimate links",
+                      "No watermarks on print output",
+                      "Priority support"
+                    ].map((f, i) => (
+                      <li key={i} className="flex items-center gap-2 text-sm text-[#3A3530]">
+                        <CheckCircle2 size={16} className="text-[#E85D26]" /> {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link href="/sign-up" className="block w-full text-center bg-[#E85D26] text-white py-3 font-bold uppercase tracking-wide hover:bg-[#D44A15] transition-all">
+                    Start X Plan
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ── Contact ── */}
         <section id="contact" className="py-24 relative overflow-hidden bg-[#F0EDE8] border-t border-[#DDD8D0]">
           <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-3xl mx-auto bg-white p-8 md:p-12 border border-[#DDD8D0] shadow-lg">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-[2px] bg-[#E85D26]"></div>
+                <div className="w-10 h-[2px] bg-[#E85D26]" />
                 <span className="text-[#E85D26] font-bold uppercase tracking-widest text-sm">Get in Touch</span>
               </div>
-              <h2 className="text-3xl md:text-4xl font-black font-serif uppercase mb-2 text-[#1A1A1A]">Request an Estimate</h2>
-              <p className="text-gray-500 mb-8">Send project details to discuss contract, fractional, or per-project estimating.</p>
+              <h2 className="text-3xl md:text-4xl font-black font-serif uppercase mb-2 text-[#1A1A1A]">Questions? Feedback?</h2>
+              <p className="text-gray-500 mb-8">Have a question about the app, want to suggest a trade we haven't covered, or found something that doesn't match how you work in the field? We want to hear it.</p>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-sm font-bold uppercase tracking-wider text-[#555]">Name / Company</label>
-                    <input
-                      required
-                      type="text"
-                      value={formData.name}
+                    <input required type="text" value={formData.name}
                       onChange={(e) => setFormData({...formData, name: e.target.value})}
                       className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-3 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors"
-                      placeholder="John Doe Construction"
-                    />
+                      placeholder="John Doe Construction" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-sm font-bold uppercase tracking-wider text-[#555]">Email Address</label>
-                    <input
-                      required
-                      type="email"
-                      value={formData.email}
+                    <input required type="email" value={formData.email}
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
                       className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-3 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors"
-                      placeholder="john@example.com"
-                    />
+                      placeholder="john@example.com" />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-sm font-bold uppercase tracking-wider text-[#555]">Project Details</label>
-                  <textarea
-                    required
-                    rows={4}
-                    value={formData.message}
+                  <label className="text-sm font-bold uppercase tracking-wider text-[#555]">Message</label>
+                  <textarea required rows={4} value={formData.message}
                     onChange={(e) => setFormData({...formData, message: e.target.value})}
                     className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-3 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors resize-none"
-                    placeholder="Briefly describe the scope, location, and timeline..."
-                  />
+                    placeholder="Tell us what you're working on or what you'd like to see improved..." />
                 </div>
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full bg-[#E85D26] text-white py-4 font-bold uppercase tracking-widest hover:bg-[#D44A15] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md"
-                >
-                  {isSubmitting ? "Sending..." : "Submit Inquiry"} <ChevronRight size={20} />
+                <button type="submit" disabled={isSubmitting}
+                  className="w-full bg-[#E85D26] text-white py-4 font-bold uppercase tracking-widest hover:bg-[#D44A15] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md">
+                  {isSubmitting ? "Sending..." : "Send Message"} <ChevronRight size={20} />
                 </button>
               </form>
             </div>
           </div>
         </section>
+
       </main>
 
       <footer className="bg-[#2C2825] py-12 border-t border-black/20">
         <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <img src="/logo.png" alt="EstimatorX.pro Logo" className="h-12 object-contain brightness-0 invert opacity-70 hover:opacity-100 transition-all" />
-          </div>
-          <div className="text-[#A09890] text-sm flex items-center gap-6">
+          <img src="/logo.png" alt="EstimatorX.pro Logo" className="h-12 object-contain brightness-0 invert opacity-70 hover:opacity-100 transition-all" />
+          <div className="text-[#A09890] text-sm flex items-center gap-6 flex-wrap justify-center">
             <span>&copy; {new Date().getFullYear()} EstimatorX.pro. All rights reserved.</span>
-            <span className="flex items-center gap-1"><Globe size={14}/> Nationwide / Remote</span>
+            <span className="flex items-center gap-1"><Globe size={14} /> Nationwide / Remote</span>
           </div>
         </div>
       </footer>
+
     </div>
   );
 }
