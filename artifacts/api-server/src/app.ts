@@ -9,6 +9,7 @@ import {
   getClerkProxyHost,
 } from "./middlewares/clerkProxyMiddleware";
 import router from "./routes";
+import sharedPreviewRouter from "./routes/sharedPreview";
 import { logger } from "./lib/logger";
 
 const app: Express = express();
@@ -62,6 +63,11 @@ app.use(
     ),
   })),
 );
+
+// Shared estimate preview pages — served at /shared/:token (not under /api).
+// Returns meta-rich HTML for crawlers and social media bots.
+// Browsers are redirected to the interactive React SPA at /app/shared/:token.
+app.use(sharedPreviewRouter);
 
 app.use("/api", router);
 

@@ -339,7 +339,9 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/estimator" component={ProtectedEstimator} />
-      <Route path="/shared/:token" component={SharedEstimatorPage} />
+      {/* /shared/:token is handled server-side by the API server for SEO.
+          /app/shared/:token is the interactive React SPA entry point. */}
+      <Route path="/app/shared/:token" component={SharedEstimatorPage} />
       <Route path="/admin" component={Admin} />
       <Route path="/sign-in/*?" component={OTPSignInPage} />
       <Route path="/sign-up/*?" component={OTPSignInPage} />

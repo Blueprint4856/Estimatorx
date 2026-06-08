@@ -22,8 +22,48 @@ build = [ "pnpm", "--filter", "@workspace/estimatorx", "run", "build" ]
 publicDir = "artifacts/estimatorx/dist/public"
 serve = "static"
 
+# Rewrite only the known SPA routes to index.html.
+# Unknown paths fall through to a real 404 — no more soft-404 for garbage URLs.
+# /shared/:token is handled by the API server (proper HTML + real 404 for bad tokens).
+
 [[services.production.rewrites]]
-from = "/*"
+from = "/sign-in"
+to = "/index.html"
+
+[[services.production.rewrites]]
+from = "/sign-in/*"
+to = "/index.html"
+
+[[services.production.rewrites]]
+from = "/sign-up"
+to = "/index.html"
+
+[[services.production.rewrites]]
+from = "/sign-up/*"
+to = "/index.html"
+
+[[services.production.rewrites]]
+from = "/estimator"
+to = "/index.html"
+
+[[services.production.rewrites]]
+from = "/estimator/*"
+to = "/index.html"
+
+[[services.production.rewrites]]
+from = "/admin"
+to = "/index.html"
+
+[[services.production.rewrites]]
+from = "/admin/*"
+to = "/index.html"
+
+[[services.production.rewrites]]
+from = "/app"
+to = "/index.html"
+
+[[services.production.rewrites]]
+from = "/app/*"
 to = "/index.html"
 
 [services.env]
