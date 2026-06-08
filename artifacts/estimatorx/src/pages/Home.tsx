@@ -121,7 +121,20 @@ export default function Home() {
         {/* ── Hero ── */}
         <section className="relative pt-24 pb-32 md:pt-28 md:pb-44 overflow-hidden">
           <div className="absolute inset-0 z-0">
-            <img src="/hero-residential.png" alt="Residential subdivision construction" className="w-full h-full object-cover" />
+            <picture>
+              <source
+                type="image/webp"
+                srcSet="/hero-residential-800.webp 800w, /hero-residential-1400.webp 1400w, /hero-residential.webp 1408w"
+                sizes="100vw"
+              />
+              <img
+                src="/hero-residential.png"
+                alt="Residential subdivision construction"
+                className="w-full h-full object-cover"
+                fetchPriority="high"
+                decoding="async"
+              />
+            </picture>
             <div className="absolute inset-0 bg-gradient-to-r from-[#FAF7F3]/95 via-[#FAF7F3]/80 to-[#FAF7F3]/30" />
             <div className="absolute inset-0 bg-gradient-to-t from-[#F7F4F0]/60 via-transparent to-transparent" />
           </div>
@@ -132,9 +145,12 @@ export default function Home() {
                 <HardHat size={16} className="text-[#E85D26]" />
                 <span className="text-[#E85D26] font-bold uppercase tracking-widest text-xs">Pro-Grade Formulas. Zero Experience Required.</span>
               </motion.div>
-              <motion.h1 variants={fadeIn} className="text-5xl md:text-7xl lg:text-8xl font-serif font-black leading-[1.05] mb-8 uppercase text-[#1A1A1A]">
-                KNOW WHAT<br />IT COSTS.<br /><span className="text-[#E85D26]">BEFORE YOU BUILD.</span>
+              <motion.h1 variants={fadeIn} className="text-5xl md:text-7xl lg:text-8xl font-serif font-black leading-[1.05] mb-4 uppercase text-[#1A1A1A]">
+                Residential<br />Construction<br /><span className="text-[#E85D26]">Cost Estimator</span>
               </motion.h1>
+              <motion.p variants={fadeIn} className="text-2xl md:text-3xl font-serif font-bold text-[#1A1A1A] mb-6 uppercase tracking-wide">
+                Know what it costs before you build.
+              </motion.p>
               <motion.p variants={fadeIn} className="text-xl md:text-2xl text-[#3A3530] max-w-xl mb-12 font-light leading-relaxed">
                 Fast, honest construction estimates for anyone — homeowner, DIYer, or seasoned contractor. Built on 38 years of field knowledge so you don't have to be an expert to get real numbers.
               </motion.p>
@@ -223,7 +239,10 @@ export default function Home() {
         {/* ── Built from the field ── */}
         <section className="py-24 bg-[#1A1A1A] text-white relative overflow-hidden">
           <div className="absolute right-0 top-0 w-1/2 h-full hidden lg:block">
-            <img src="/subdivision.png" alt="Subdivision aerial" className="w-full h-full object-cover opacity-20" loading="lazy" />
+            <picture>
+              <source type="image/webp" srcSet="/subdivision.webp" />
+              <img src="/subdivision.png" alt="Subdivision aerial" className="w-full h-full object-cover opacity-20" loading="lazy" />
+            </picture>
           </div>
           <div className="container mx-auto px-4 relative z-10">
             <div className="max-w-2xl">
