@@ -4,5 +4,12 @@ Disallow: /estimator
 Disallow: /admin
 Disallow: /sign-in
 Disallow: /sign-up
+Disallow: /shared/
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
 
 Sitemap: https://estimatorx.pro/sitemap.xml

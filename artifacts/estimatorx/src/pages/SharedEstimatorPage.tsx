@@ -4,6 +4,30 @@ import Estimator, { deserializeState, primeLocalStorageFromSnapshot } from "./Es
 
 type LoadStatus = "loading" | "loaded" | "notfound" | "error";
 
+function useSharedPageMeta(token: string | undefined) {
+  useEffect(() => {
+    const canonical = document.querySelector<HTMLLinkElement>("link[rel='canonical']");
+    const prevCanonical = canonical?.href ?? "";
+
+    let noindexMeta = document.querySelector<HTMLMetaElement>("meta[name='robots']");
+    if (!noindexMeta) {
+      noindexMeta = document.createElement("meta");
+      noindexMeta.name = "robots";
+      document.head.appendChild(noindexMeta);
+    }
+    noindexMeta.content = "noindex, nofollow";
+
+    if (canonical && token) {
+      canonical.href = `https://estimatorx.pro/shared/${token}`;
+    }
+
+    return () => {
+      noindexMeta?.remove();
+      if (canonical) canonical.href = prevCanonical;
+    };
+  }, [token]);
+}
+
 function LoadingScreen() {
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-[#1A1A1A]">
@@ -55,6 +79,7 @@ function ErrorScreen() {
 export default function SharedEstimatorPage() {
   const params = useParams<{ token: string }>();
   const token = params.token;
+  useSharedPageMeta(token);
   const [status, setStatus] = useState<LoadStatus>("loading");
   const [name, setName] = useState("Shared Estimate");
 
