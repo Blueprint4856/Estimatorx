@@ -480,6 +480,8 @@ export default function Home() {
           <div className="text-[#A09890] text-sm flex items-center gap-6 flex-wrap justify-center">
             <span>&copy; {new Date().getFullYear()} EstimatorX.pro. All rights reserved.</span>
             <span className="flex items-center gap-1"><Globe size={14} /> Nationwide / Remote</span>
+            <Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-white transition-colors">Terms of Use</Link>
           </div>
         </div>
       </footer>

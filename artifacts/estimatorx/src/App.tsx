@@ -10,6 +10,8 @@ import Estimator from "@/pages/Estimator";
 import SharedEstimatorPage from "@/pages/SharedEstimatorPage";
 import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
+import PrivacyPolicy from "@/pages/PrivacyPolicy";
+import TermsOfUse from "@/pages/TermsOfUse";
 import { SubscriptionProvider } from "@/contexts/SubscriptionContext";
 
 const queryClient = new QueryClient();
@@ -345,6 +347,8 @@ function Router() {
       <Route path="/admin" component={Admin} />
       <Route path="/sign-in/*?" component={OTPSignInPage} />
       <Route path="/sign-up/*?" component={OTPSignInPage} />
+      <Route path="/privacy" component={PrivacyPolicy} />
+      <Route path="/terms" component={TermsOfUse} />
       <Route component={NotFound} />
     </Switch>
   );

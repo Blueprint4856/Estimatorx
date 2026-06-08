@@ -66,6 +66,14 @@ to = "/index.html"
 from = "/app/*"
 to = "/index.html"
 
+[[services.production.rewrites]]
+from = "/privacy"
+to = "/index.html"
+
+[[services.production.rewrites]]
+from = "/terms"
+to = "/index.html"
+
 [services.env]
 PORT = "22254"
 BASE_PATH = "/"
