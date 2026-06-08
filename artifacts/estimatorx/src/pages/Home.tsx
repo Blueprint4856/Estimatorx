@@ -371,7 +371,7 @@ export default function Home() {
                   <div className="text-4xl font-black font-serif mb-1">$0</div>
                   <div className="text-gray-500 text-sm mb-6">Always free — no credit card</div>
                   <ul className="space-y-3 mb-8">
-                    {["All 8 trade estimators", "RSMeans labor rates included", "1 saved project", "Printable output"].map((f, i) => (
+                    {["All 8 trade estimators", "RSMeans labor rates included", "1 saved project", "Print for $0.99 per estimate"].map((f, i) => (
                       <li key={i} className="flex items-center gap-2 text-sm text-[#3A3530]">
                         <CheckCircle2 size={16} className="text-[#E85D26]" /> {f}
                       </li>
@@ -384,7 +384,7 @@ export default function Home() {
                 <div className="border-2 border-[#E85D26] bg-white p-8 relative">
                   <div className="absolute -top-3 right-6 bg-[#E85D26] text-white text-xs font-bold uppercase tracking-widest px-3 py-1">Most Popular</div>
                   <div className="text-sm font-bold uppercase tracking-widest text-[#E85D26] mb-2">X Plan</div>
-                  <div className="text-4xl font-black font-serif mb-1">$29<span className="text-lg font-normal text-gray-500">/mo</span></div>
+                  <div className="text-4xl font-black font-serif mb-1">$9.99<span className="text-lg font-normal text-gray-500">/mo</span></div>
                   <div className="text-gray-500 text-sm mb-6">For active estimators and frequent builders</div>
                   <ul className="space-y-3 mb-8">
                     {[
