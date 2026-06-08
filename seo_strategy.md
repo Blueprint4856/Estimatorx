@@ -26,6 +26,8 @@
 - Public SEO-critical content for `/` lives in React components, not in server-rendered HTML.
 - Shared estimate links are public and socially shareable, so metadata quality matters even if they are not intended as acquisition pages.
 - Treat indexation of `/shared/:token` as an explicit product decision; these URLs behave more like share pages than canonical marketing landing pages.
+- If `/shared/:token` is kept out of search via page-level `noindex`, standard search crawlers must be allowed to fetch those pages so they can actually read the `noindex`.
+- AI crawlers should follow the same exclusions as standard bots for `/shared/`, auth routes, and app routes unless there is an explicit decision to expose those areas for AI retrieval.
 
 ## Dismissed categories
 - (None yet)
