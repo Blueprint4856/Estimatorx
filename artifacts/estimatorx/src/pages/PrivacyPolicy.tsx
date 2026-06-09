@@ -1,4 +1,5 @@
 import { Link } from "wouter";
+import SiteFooter from "@/components/SiteFooter";
 
 const EFFECTIVE = "June 5, 2026";
 const CONTACT = "privacy@estimatorx.pro";
@@ -127,11 +128,7 @@ export default function PrivacyPolicy() {
 
       </main>
 
-      <footer className="bg-[#2C2825] py-8 border-t border-black/20 mt-16">
-        <div className="container mx-auto px-4 text-center text-[#A09890] text-sm">
-          &copy; {new Date().getFullYear()} EstimatorX.pro. All rights reserved.
-        </div>
-      </footer>
+      <SiteFooter />
 
     </div>
   );
