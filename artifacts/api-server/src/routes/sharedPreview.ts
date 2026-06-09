@@ -67,8 +67,19 @@ function buildPreviewHtml(token: string, name: string): string {
          style="display:inline-block;background:#e85d26;color:#fff;padding:0.75rem 2rem;font-weight:700;text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;font-size:0.875rem;">
         View Estimate →
       </a>
-      <div style="margin-top:2rem;font-size:0.75rem;color:#555;">
-        Built with <a href="/" style="color:#e85d26;text-decoration:none;">EstimatorX.pro</a>
+      <div style="margin-top:3rem;padding-top:2rem;border-top:1px solid #2c2825;">
+        <p style="color:#a8a09a;font-size:0.8rem;margin:0 0 1rem;">Want accurate numbers for your own project?</p>
+        <a href="/sign-up"
+           style="display:inline-block;border:1px solid #e85d26;color:#e85d26;padding:0.6rem 1.5rem;font-weight:700;text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;font-size:0.8rem;margin-bottom:1rem;">
+          Build Your Free Construction Estimate →
+        </a>
+        <p style="color:#555;font-size:0.7rem;margin:0;">
+          Free to start · No contractor required · RSMeans labor rates built in
+        </p>
+      </div>
+      <div style="margin-top:1.5rem;font-size:0.7rem;color:#444;">
+        <a href="/" style="color:#e85d26;text-decoration:none;font-weight:700;">EstimatorX.pro</a>
+        &nbsp;&mdash; Residential construction cost estimator
       </div>
     </div>
   </div>

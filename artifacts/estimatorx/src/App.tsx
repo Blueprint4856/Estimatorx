@@ -293,6 +293,16 @@ function OTPSignInPage() {
         <p className="text-center text-[11px] text-[#6B6460] mt-6 leading-relaxed">
           New or returning — works the same either way.<br />No password ever.
         </p>
+
+        <div className="mt-8 pt-6 border-t border-[#2C2825] text-center">
+          <p className="text-[11px] text-[#555] mb-2 uppercase tracking-wider">Don't have an account?</p>
+          <p className="text-[12px] text-[#A8A09A] leading-relaxed mb-3">
+            Build accurate residential construction cost estimates free — no credit card required.
+          </p>
+          <a href="/" className="text-[11px] font-bold uppercase tracking-widest text-[#E85D26] hover:underline">
+            Learn about EstimatorX.pro →
+          </a>
+        </div>
       </div>
     </div>
   );
