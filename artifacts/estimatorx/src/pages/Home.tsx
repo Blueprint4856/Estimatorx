@@ -142,7 +142,6 @@ export default function Home() {
           <div className="container relative z-10 mx-auto px-4">
             <motion.div initial="hidden" animate="visible" variants={staggerContainer} className="max-w-3xl">
               <motion.div variants={fadeIn} className="inline-flex items-center gap-2 bg-[#E85D26]/10 border border-[#E85D26]/30 px-4 py-2 mb-8">
-                <HardHat size={16} className="text-[#E85D26]" />
                 <span className="text-[#E85D26] font-bold uppercase tracking-widest text-xs">Free to Use — No Credit Card Required.</span>
               </motion.div>
               <motion.h1 variants={fadeIn} className="text-5xl md:text-7xl lg:text-8xl font-serif font-black leading-[1.05] mb-4 uppercase text-[#1A1A1A]">
