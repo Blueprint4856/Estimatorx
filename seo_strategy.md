@@ -3,11 +3,12 @@
 ## In scope
 - Public marketing landing page (`/`)
 - Public shared estimate links (`/shared/:token`) because they are externally accessible and intended to be shareable
+- Supporting public legal pages (`/privacy`, `/terms`) when they are linked from the homepage or included in the sitemap
 
 ## Out of scope
 - Authenticated estimator experience (`/estimator`)
 - Admin routes (`/admin`)
-- Authentication screens (`/sign-in`, `/sign-up`) except where shared shell metadata affects them indirectly
+- Authentication screens (`/sign-in`, `/sign-up`) except where shared shell metadata or AI guidance files misrepresent them as canonical content
 
 ## Target audience
 - Homeowners planning builds, additions, remodels, or new homes
@@ -22,12 +23,13 @@
 - Construction cost calculator
 
 ## Notes
-- Current frontend is a Vite React SPA served as a static artifact with a catch-all rewrite to `/index.html`.
-- Public SEO-critical content for `/` lives in React components, not in server-rendered HTML.
+- The frontend is now hybrid rather than purely client-rendered: `/` is prerendered at build time, and `/shared/:token` is server-rendered by the API before redirecting users into the app.
+- `/privacy` and `/terms` are still SPA-only routes unless the build emits route-specific HTML for them.
 - Shared estimate links are public and socially shareable, so metadata quality matters even if they are not intended as acquisition pages.
 - Treat indexation of `/shared/:token` as an explicit product decision; these URLs behave more like share pages than canonical marketing landing pages.
 - If `/shared/:token` is kept out of search via page-level `noindex`, standard search crawlers must be allowed to fetch those pages so they can actually read the `noindex`.
-- AI crawlers should follow the same exclusions as standard bots for `/shared/`, auth routes, and app routes unless there is an explicit decision to expose those areas for AI retrieval.
+- `/app/shared/:token` should be treated as a non-canonical app path and should not become a crawl target for search or AI bots.
+- Authentication screens are utility routes and should not be presented as canonical brand content in `llms.txt`.
 
 ## Dismissed categories
 - (None yet)
