@@ -7,7 +7,7 @@ const useStaticLocation: BaseLocationHook = () => ["/", () => {}];
 
 export function render(): string {
   return renderToString(
-    <Router hook={useStaticLocation} base="/">
+    <Router hook={useStaticLocation}>
       <Home />
     </Router>
   );
