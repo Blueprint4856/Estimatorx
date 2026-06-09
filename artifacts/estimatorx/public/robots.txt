@@ -4,6 +4,7 @@ Disallow: /estimator
 Disallow: /admin
 Disallow: /sign-in
 Disallow: /sign-up
+Disallow: /app/
 
 User-agent: GPTBot
 Allow: /
@@ -11,6 +12,7 @@ Disallow: /estimator
 Disallow: /admin
 Disallow: /sign-in
 Disallow: /sign-up
+Disallow: /app/
 Disallow: /shared/
 
 User-agent: ClaudeBot
@@ -19,6 +21,7 @@ Disallow: /estimator
 Disallow: /admin
 Disallow: /sign-in
 Disallow: /sign-up
+Disallow: /app/
 Disallow: /shared/
 
 Sitemap: https://estimatorx.pro/sitemap.xml

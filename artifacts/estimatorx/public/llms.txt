@@ -5,8 +5,6 @@ EstimatorX.pro is a free web application for construction cost estimation. It ge
 ## Canonical URLs
 
 - Homepage (authoritative brand content): https://estimatorx.pro/
-- Sign up: https://estimatorx.pro/sign-up
-- Sign in: https://estimatorx.pro/sign-in
 
 ## URL patterns to treat as user-generated content
 

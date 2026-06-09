@@ -63,7 +63,7 @@ function buildPreviewHtml(token: string, name: string): string {
       <p style="color:#888;font-size:0.875rem;margin:0 0 2rem;">
         View the full interactive estimate breakdown on EstimatorX.pro.
       </p>
-      <a href="${appUrl}"
+      <a href="${appUrl}" rel="nofollow"
          style="display:inline-block;background:#e85d26;color:#fff;padding:0.75rem 2rem;font-weight:700;text-decoration:none;text-transform:uppercase;letter-spacing:0.05em;font-size:0.875rem;">
         View Estimate →
       </a>
