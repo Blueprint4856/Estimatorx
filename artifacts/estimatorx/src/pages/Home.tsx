@@ -65,7 +65,7 @@ export default function Home() {
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
-              <img src="/logo.png" alt="EstimatorX.pro Logo" className="h-16 object-contain" />
+              <img src="/logo.svg" alt="EstimatorX.pro Logo" className="h-16 object-contain" />
             </a>
           </div>
 

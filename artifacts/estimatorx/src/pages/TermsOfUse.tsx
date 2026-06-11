@@ -22,7 +22,7 @@ export default function TermsOfUse() {
       <header className="sticky top-0 z-50 w-full border-b border-[#E0DAD3] bg-white shadow-sm">
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
           <Link href="/">
-            <img src="/logo.png" alt="EstimatorX.pro Logo" className="h-16 object-contain" />
+            <img src="/logo.svg" alt="EstimatorX.pro Logo" className="h-16 object-contain" />
           </Link>
           <Link href="/" className="text-sm font-bold uppercase tracking-wider text-[#444] hover:text-[#E85D26] transition-colors">
             ← Back to Home
