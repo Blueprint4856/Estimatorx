@@ -78,7 +78,14 @@ const routes = [
             "name": "Privacy Policy",
             "description":
               "EstimatorX.pro Privacy Policy — what information we collect, how we use it, and your data rights.",
-            "isPartOf": { "@id": `${SITE}/#app` },
+            "isPartOf": { "@id": `${SITE}/#website` },
+            "publisher": { "@id": `${SITE}/#organization` },
+          },
+          {
+            "@type": "WebSite",
+            "@id": `${SITE}/#website`,
+            "name": "EstimatorX.pro",
+            "url": SITE,
             "publisher": { "@id": `${SITE}/#organization` },
           },
           {
@@ -128,7 +135,14 @@ const routes = [
             "name": "Terms of Use",
             "description":
               "EstimatorX.pro Terms of Use — terms governing your access to and use of the construction cost estimating application.",
-            "isPartOf": { "@id": `${SITE}/#app` },
+            "isPartOf": { "@id": `${SITE}/#website` },
+            "publisher": { "@id": `${SITE}/#organization` },
+          },
+          {
+            "@type": "WebSite",
+            "@id": `${SITE}/#website`,
+            "name": "EstimatorX.pro",
+            "url": SITE,
             "publisher": { "@id": `${SITE}/#organization` },
           },
           {

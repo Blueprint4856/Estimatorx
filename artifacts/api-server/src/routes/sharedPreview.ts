@@ -8,6 +8,11 @@ const router = Router();
 const esc = (str: string) =>
   str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
+/** Escape characters that can break a JSON-LD script block embedded in HTML. */
+const escJsonLd = (json: string) =>
+  json.replace(/&/g, "\\u0026").replace(/</g, "\\u003c").replace(/>/g, "\\u003e")
+      .replace(/\u2028/g, "\\u2028").replace(/\u2029/g, "\\u2029");
+
 function buildPreviewHtml(token: string, name: string): string {
   const safeName = esc(name);
   const pageTitle = `${safeName} — EstimatorX.pro`;
@@ -15,6 +20,43 @@ function buildPreviewHtml(token: string, name: string): string {
   const safeToken = esc(token);
   const canonicalUrl = `https://estimatorx.pro/shared/${safeToken}`;
   const appUrl = `/app/shared/${safeToken}`;
+
+  const rawDesc = `View shared construction estimate: ${name}. Built with EstimatorX.pro — fast, accurate material and labor estimates.`;
+  const jsonLd = JSON.stringify({
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": `https://estimatorx.pro/shared/${token}`,
+        "url": `https://estimatorx.pro/shared/${token}`,
+        "name": `${name} — EstimatorX.pro`,
+        "description": rawDesc,
+        "isPartOf": { "@id": "https://estimatorx.pro/#website" },
+        "about": {
+          "@type": "CreativeWork",
+          "name": name,
+        },
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://estimatorx.pro/#website",
+        "name": "EstimatorX.pro",
+        "url": "https://estimatorx.pro",
+        "publisher": { "@id": "https://estimatorx.pro/#organization" },
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://estimatorx.pro/#organization",
+        "name": "EstimatorX.pro",
+        "url": "https://estimatorx.pro",
+        "logo": {
+          "@type": "ImageObject",
+          "url": "https://estimatorx.pro/logo.png",
+        },
+      },
+    ],
+  }, null, 2);
+  const safeJsonLd = escJsonLd(jsonLd);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -42,6 +84,10 @@ function buildPreviewHtml(token: string, name: string): string {
   <meta name="twitter:image" content="https://estimatorx.pro/opengraph.jpg" />
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+  <script type="application/ld+json">
+  ${safeJsonLd}
+  </script>
 </head>
 <body style="margin:0;background:#1a1a1a;font-family:system-ui,-apple-system,sans-serif;">
   <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;">
