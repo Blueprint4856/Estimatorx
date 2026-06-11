@@ -23,8 +23,7 @@
 - Construction cost calculator
 
 ## Notes
-- The frontend is now hybrid rather than purely client-rendered: `/` is prerendered at build time, and `/shared/:token` is server-rendered by the API before redirecting users into the app.
-- `/privacy` and `/terms` are still SPA-only routes unless the build emits route-specific HTML for them.
+- The frontend is hybrid rather than purely client-rendered: `/`, `/privacy`, and `/terms` are prerendered at build time, and `/shared/:token` is server-rendered by the API before redirecting users into the app.
 - Shared estimate links are public and socially shareable, so metadata quality matters even if they are not intended as acquisition pages.
 - Treat indexation of `/shared/:token` as an explicit product decision; these URLs behave more like share pages than canonical marketing landing pages.
 - If `/shared/:token` is kept out of search via page-level `noindex`, standard search crawlers must be allowed to fetch those pages so they can actually read the `noindex`.
