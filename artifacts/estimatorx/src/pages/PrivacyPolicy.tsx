@@ -122,7 +122,7 @@ export default function PrivacyPolicy() {
         </div>
 
         <div className="mt-8 flex gap-6 text-sm text-[#888]">
-          <Link href="/terms" className="hover:text-[#E85D26] transition-colors">Terms of Use</Link>
+          <Link href="/terms/" className="hover:text-[#E85D26] transition-colors">Terms of Use</Link>
           <Link href="/" className="hover:text-[#E85D26] transition-colors">Back to Home</Link>
         </div>
 

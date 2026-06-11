@@ -94,7 +94,7 @@ export default function TermsOfUse() {
           </Section>
 
           <Section title="8. Privacy">
-            <p>Your use of the Service is also governed by our <Link href="/privacy" className="text-[#E85D26] hover:underline">Privacy Policy</Link>, which is incorporated into these Terms by reference.</p>
+            <p>Your use of the Service is also governed by our <Link href="/privacy/" className="text-[#E85D26] hover:underline">Privacy Policy</Link>, which is incorporated into these Terms by reference.</p>
           </Section>
 
           <Section title="9. Changes to These Terms">
@@ -117,7 +117,7 @@ export default function TermsOfUse() {
         </div>
 
         <div className="mt-8 flex gap-6 text-sm text-[#888]">
-          <Link href="/privacy" className="hover:text-[#E85D26] transition-colors">Privacy Policy</Link>
+          <Link href="/privacy/" className="hover:text-[#E85D26] transition-colors">Privacy Policy</Link>
           <Link href="/" className="hover:text-[#E85D26] transition-colors">Back to Home</Link>
         </div>
 

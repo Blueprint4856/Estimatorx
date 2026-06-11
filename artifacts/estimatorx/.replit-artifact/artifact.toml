@@ -25,6 +25,7 @@ serve = "static"
 # Rewrite only the known SPA routes to index.html.
 # Unknown paths fall through to a real 404 — no more soft-404 for garbage URLs.
 # /shared/:token is handled by the API server (proper HTML + real 404 for bad tokens).
+# /privacy/ and /terms/ are served from prerendered static files — no rewrite needed.
 
 [[services.production.rewrites]]
 from = "/sign-in"
@@ -64,14 +65,6 @@ to = "/index.html"
 
 [[services.production.rewrites]]
 from = "/app/*"
-to = "/index.html"
-
-[[services.production.rewrites]]
-from = "/privacy"
-to = "/index.html"
-
-[[services.production.rewrites]]
-from = "/terms"
 to = "/index.html"
 
 [services.env]
