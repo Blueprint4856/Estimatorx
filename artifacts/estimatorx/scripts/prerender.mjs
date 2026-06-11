@@ -42,7 +42,7 @@ const routes = [
     outPath: path.join(rootDir, "dist/public/index.html"),
     title: "EstimatorX.pro — Free Construction Cost Estimator",
     description:
-      "Get fast, accurate material and labor estimates for any construction project. Built on 38 years of field knowledge and RSMeans rates. Free to start — no experience required.",
+      "Get fast, accurate material and labor estimates for any construction project. Built on 38 years of field knowledge and RSMeans rates. Free to start.",
     canonical: `${SITE}/`,
     ogType: "website",
     ogTitle: "EstimatorX.pro — Free Construction Cost Estimator",
