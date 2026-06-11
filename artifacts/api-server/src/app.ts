@@ -65,8 +65,8 @@ app.use(
 );
 
 // Shared estimate preview pages — served at /shared/:token (not under /api).
-// Returns meta-rich HTML for crawlers and social media bots.
-// Browsers are redirected to the interactive React SPA at /app/shared/:token.
+// Returns meta-rich HTML for crawlers, social bots, and AI assistants.
+// Human visitors stay on /shared/:token and click through to /app/shared/:token.
 app.use(sharedPreviewRouter);
 
 app.use("/api", router);

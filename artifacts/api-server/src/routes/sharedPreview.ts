@@ -42,14 +42,6 @@ function buildPreviewHtml(token: string, name: string): string {
   <meta name="twitter:image" content="https://estimatorx.pro/opengraph.jpg" />
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-
-  <script>
-    // Redirect browsers to the interactive React app.
-    // Crawlers that don't execute JavaScript will see the content below.
-    if (typeof window !== 'undefined') {
-      window.location.replace(${JSON.stringify(appUrl)});
-    }
-  </script>
 </head>
 <body style="margin:0;background:#1a1a1a;font-family:system-ui,-apple-system,sans-serif;">
   <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;">
@@ -122,11 +114,12 @@ function build404Html(token: string): string {
 
 /* ── GET /shared/:token ─────────────────────────────────────────────────────
    Serve a meta-rich HTML preview page for shared estimates.
-   - Valid token → 200 HTML with OG tags + JS redirect to /app/shared/:token
+   - Valid token → 200 HTML with OG tags and a click-through to /app/shared/:token
    - Invalid format → 400
    - Token not found → 404 HTML
-   Crawlers and social bots see the estimate name and description immediately.
-   Browsers are instantly redirected to the interactive React SPA.
+   Crawlers, social bots, and AI assistants see the estimate name and metadata.
+   Human visitors stay on /shared/:token (the canonical share URL) and click
+   through to the interactive React SPA at /app/shared/:token.
 ──────────────────────────────────────────────────────────────────────────── */
 router.get("/shared/:token", async (req, res) => {
   const { token } = req.params;
