@@ -59,7 +59,7 @@ const routes = [
     title: "Privacy Policy — EstimatorX.pro",
     description:
       "Read the EstimatorX.pro Privacy Policy. Learn what information we collect, how we use it, and your rights regarding your data.",
-    canonical: `${SITE}/privacy`,
+    canonical: `${SITE}/privacy/`,
     ogType: "article",
     ogTitle: "Privacy Policy — EstimatorX.pro",
     ogDescription:
@@ -73,8 +73,8 @@ const routes = [
         "@graph": [
           {
             "@type": "WebPage",
-            "@id": `${SITE}/privacy`,
-            "url": `${SITE}/privacy`,
+            "@id": `${SITE}/privacy/`,
+            "url": `${SITE}/privacy/`,
             "name": "Privacy Policy",
             "description":
               "EstimatorX.pro Privacy Policy — what information we collect, how we use it, and your data rights.",
@@ -109,7 +109,7 @@ const routes = [
     title: "Terms of Use — EstimatorX.pro",
     description:
       "Read the EstimatorX.pro Terms of Use. These terms govern your access to and use of our construction cost estimating application.",
-    canonical: `${SITE}/terms`,
+    canonical: `${SITE}/terms/`,
     ogType: "article",
     ogTitle: "Terms of Use — EstimatorX.pro",
     ogDescription:
@@ -123,8 +123,8 @@ const routes = [
         "@graph": [
           {
             "@type": "WebPage",
-            "@id": `${SITE}/terms`,
-            "url": `${SITE}/terms`,
+            "@id": `${SITE}/terms/`,
+            "url": `${SITE}/terms/`,
             "name": "Terms of Use",
             "description":
               "EstimatorX.pro Terms of Use — terms governing your access to and use of the construction cost estimating application.",
