@@ -70,14 +70,34 @@ const routes = [
     jsonLd: JSON.stringify(
       {
         "@context": "https://schema.org",
-        "@type": "WebPage",
-        "@id": `${SITE}/privacy`,
-        "url": `${SITE}/privacy`,
-        "name": "Privacy Policy",
-        "description":
-          "EstimatorX.pro Privacy Policy — what information we collect, how we use it, and your data rights.",
-        "isPartOf": { "@id": `${SITE}/#app` },
-        "publisher": { "@id": `${SITE}/#organization` },
+        "@graph": [
+          {
+            "@type": "WebPage",
+            "@id": `${SITE}/privacy`,
+            "url": `${SITE}/privacy`,
+            "name": "Privacy Policy",
+            "description":
+              "EstimatorX.pro Privacy Policy — what information we collect, how we use it, and your data rights.",
+            "isPartOf": { "@id": `${SITE}/#app` },
+            "publisher": { "@id": `${SITE}/#organization` },
+          },
+          {
+            "@type": "WebApplication",
+            "@id": `${SITE}/#app`,
+            "name": "EstimatorX.pro",
+            "url": SITE,
+          },
+          {
+            "@type": "Organization",
+            "@id": `${SITE}/#organization`,
+            "name": "EstimatorX.pro",
+            "url": SITE,
+            "logo": {
+              "@type": "ImageObject",
+              "url": `${SITE}/logo.png`,
+            },
+          },
+        ],
       },
       null,
       2
@@ -100,14 +120,34 @@ const routes = [
     jsonLd: JSON.stringify(
       {
         "@context": "https://schema.org",
-        "@type": "WebPage",
-        "@id": `${SITE}/terms`,
-        "url": `${SITE}/terms`,
-        "name": "Terms of Use",
-        "description":
-          "EstimatorX.pro Terms of Use — terms governing your access to and use of the construction cost estimating application.",
-        "isPartOf": { "@id": `${SITE}/#app` },
-        "publisher": { "@id": `${SITE}/#organization` },
+        "@graph": [
+          {
+            "@type": "WebPage",
+            "@id": `${SITE}/terms`,
+            "url": `${SITE}/terms`,
+            "name": "Terms of Use",
+            "description":
+              "EstimatorX.pro Terms of Use — terms governing your access to and use of the construction cost estimating application.",
+            "isPartOf": { "@id": `${SITE}/#app` },
+            "publisher": { "@id": `${SITE}/#organization` },
+          },
+          {
+            "@type": "WebApplication",
+            "@id": `${SITE}/#app`,
+            "name": "EstimatorX.pro",
+            "url": SITE,
+          },
+          {
+            "@type": "Organization",
+            "@id": `${SITE}/#organization`,
+            "name": "EstimatorX.pro",
+            "url": SITE,
+            "logo": {
+              "@type": "ImageObject",
+              "url": `${SITE}/logo.png`,
+            },
+          },
+        ],
       },
       null,
       2
