@@ -2,6 +2,6 @@
   <rect width="50" height="50" x="3" y="3" fill="#E85D26"/>
   <line x1="16" y1="16" x2="38" y2="40" stroke="white" stroke-width="5.5" stroke-linecap="square"/>
   <line x1="38" y1="16" x2="16" y2="40" stroke="white" stroke-width="5.5" stroke-linecap="square"/>
-  <text x="65" y="31" font-family="'Arial Black', 'Helvetica Neue', sans-serif" font-size="19" font-weight="900" fill="#F7F4F0" letter-spacing="-0.5">ESTIMATOR</text>
-  <text x="65" y="49" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="400" fill="#A8A09A" letter-spacing="3">X.PRO</text>
+  <text x="65" y="31" font-family="'Arial Black', 'Helvetica Neue', sans-serif" font-size="19" font-weight="900" fill="#1A1A1A" letter-spacing="-0.5">ESTIMATOR</text>
+  <text x="65" y="49" font-family="Arial, Helvetica, sans-serif" font-size="12" font-weight="400" fill="#888077" letter-spacing="3">X.PRO</text>
 </svg>
