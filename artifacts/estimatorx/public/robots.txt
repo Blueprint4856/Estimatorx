@@ -13,6 +13,7 @@ Disallow: /admin
 Disallow: /sign-in
 Disallow: /sign-up
 Disallow: /app/
+Disallow: /shared/
 
 User-agent: ClaudeBot
 Allow: /
@@ -21,5 +22,24 @@ Disallow: /admin
 Disallow: /sign-in
 Disallow: /sign-up
 Disallow: /app/
+Disallow: /shared/
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /estimator
+Disallow: /admin
+Disallow: /sign-in
+Disallow: /sign-up
+Disallow: /app/
+Disallow: /shared/
+
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /estimator
+Disallow: /admin
+Disallow: /sign-in
+Disallow: /sign-up
+Disallow: /app/
+Disallow: /shared/
 
 Sitemap: https://estimatorx.pro/sitemap.xml

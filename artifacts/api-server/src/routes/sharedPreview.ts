@@ -17,6 +17,7 @@ function buildPreviewHtml(token: string, name: string): string {
   const safeName = esc(name);
   const pageTitle = `${safeName} — EstimatorX.pro`;
   const desc = `View shared construction estimate: ${safeName}. Built with EstimatorX.pro — fast, accurate material and labor estimates.`;
+  const socialDesc = desc.length > 155 ? desc.slice(0, 152) + "…" : desc;
   const safeToken = esc(token);
   const canonicalUrl = `https://estimatorx.pro/shared/${safeToken}`;
   const appUrl = `/app/shared/${safeToken}`;
@@ -71,7 +72,7 @@ function buildPreviewHtml(token: string, name: string): string {
   <meta property="og:type" content="website" />
   <meta property="og:url" content="${canonicalUrl}" />
   <meta property="og:title" content="${pageTitle}" />
-  <meta property="og:description" content="View this shared construction estimate on EstimatorX.pro. Built with field-proven formulas and RSMeans labor rates." />
+  <meta property="og:description" content="${esc(socialDesc)}" />
   <meta property="og:image" content="https://estimatorx.pro/opengraph.jpg" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -80,7 +81,7 @@ function buildPreviewHtml(token: string, name: string): string {
 
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title" content="${pageTitle}" />
-  <meta name="twitter:description" content="View this shared construction estimate on EstimatorX.pro." />
+  <meta name="twitter:description" content="${esc(socialDesc)}" />
   <meta name="twitter:image" content="https://estimatorx.pro/opengraph.jpg" />
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
