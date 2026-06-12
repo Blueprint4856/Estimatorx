@@ -12,11 +12,17 @@ function makeStaticHook(url: string): BaseLocationHook {
 function resolveComponent(url: string) {
   if (url === "/privacy") return PrivacyPolicy;
   if (url === "/terms") return TermsOfUse;
+  if (
+    url === "/sign-in" ||
+    url === "/sign-up" ||
+    url === "/app/shared"
+  ) return null;
   return Home;
 }
 
 export function render(url: string = "/"): string {
   const Component = resolveComponent(url);
+  if (!Component) return "";
   return renderToString(
     <Router hook={makeStaticHook(url)}>
       <Component />

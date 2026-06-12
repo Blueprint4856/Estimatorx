@@ -36,6 +36,30 @@ const OG_IMAGE = `${SITE}/opengraph.jpg`;
  * Route definitions. Each entry drives both the server render and all head
  * replacements so every output file is fully self-contained.
  */
+const MINIMAL_JSON_LD = JSON.stringify(
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": `${SITE}/#website`,
+        "name": "EstimatorX.pro",
+        "url": SITE,
+        "publisher": { "@id": `${SITE}/#organization` },
+      },
+      {
+        "@type": "Organization",
+        "@id": `${SITE}/#organization`,
+        "name": "EstimatorX.pro",
+        "url": SITE,
+        "logo": { "@type": "ImageObject", "url": `${SITE}/logo.png` },
+      },
+    ],
+  },
+  null,
+  2
+);
+
 const routes = [
   {
     url: "/",
@@ -43,6 +67,7 @@ const routes = [
     title: "EstimatorX.pro — Free Construction Cost Estimator",
     description:
       "Get fast, accurate material and labor estimates for any construction project. Built on 38 years of field knowledge and RSMeans rates. Free to start.",
+    robots: "index, follow",
     canonical: `${SITE}/`,
     ogType: "website",
     ogTitle: "EstimatorX.pro — Free Construction Cost Estimator",
@@ -59,6 +84,7 @@ const routes = [
     title: "Privacy Policy — EstimatorX.pro",
     description:
       "Read the EstimatorX.pro Privacy Policy. Learn what information we collect, how we use it, and your rights regarding your data.",
+    robots: "index, follow",
     canonical: `${SITE}/privacy/`,
     ogType: "article",
     ogTitle: "Privacy Policy — EstimatorX.pro",
@@ -116,6 +142,7 @@ const routes = [
     title: "Terms of Use — EstimatorX.pro",
     description:
       "Read the EstimatorX.pro Terms of Use. These terms govern your access to and use of our construction cost estimating application.",
+    robots: "index, follow",
     canonical: `${SITE}/terms/`,
     ogType: "article",
     ogTitle: "Terms of Use — EstimatorX.pro",
@@ -167,6 +194,61 @@ const routes = [
       2
     ),
   },
+
+  // ── Utility / noindex routes ──────────────────────────────────────────────
+  // These pages must not be indexed or mistaken for the homepage by bots,
+  // social crawlers, or AI systems that fetch raw HTML without running JS.
+  {
+    url: "/sign-in",
+    outPath: path.join(rootDir, "dist/public/sign-in/index.html"),
+    title: "Sign In — EstimatorX.pro",
+    description:
+      "Sign in or create your free EstimatorX.pro account to access your construction cost estimates.",
+    robots: "noindex, nofollow",
+    canonical: `${SITE}/sign-in/`,
+    ogType: "website",
+    ogTitle: "Sign In — EstimatorX.pro",
+    ogDescription: "Sign in or create your free EstimatorX.pro account.",
+    twitterTitle: "Sign In — EstimatorX.pro",
+    twitterDescription: "Sign in or create your free EstimatorX.pro account.",
+    jsonLd: MINIMAL_JSON_LD,
+  },
+  {
+    url: "/sign-up",
+    outPath: path.join(rootDir, "dist/public/sign-up/index.html"),
+    title: "Sign Up — EstimatorX.pro",
+    description:
+      "Create your free EstimatorX.pro account and start building accurate construction cost estimates today.",
+    robots: "noindex, nofollow",
+    canonical: `${SITE}/sign-up/`,
+    ogType: "website",
+    ogTitle: "Sign Up — EstimatorX.pro",
+    ogDescription:
+      "Create your free EstimatorX.pro account and start estimating.",
+    twitterTitle: "Sign Up — EstimatorX.pro",
+    twitterDescription: "Create your free EstimatorX.pro account.",
+    jsonLd: MINIMAL_JSON_LD,
+  },
+  {
+    // Generic shell for /app/shared/:token — the token is not known at build
+    // time, so we prerender a route-appropriate HTML shell that the static
+    // server delivers for any /app/shared/* request via an artifact rewrite.
+    // The shell carries noindex/nofollow and no homepage JSON-LD; the React
+    // client still hydrates and loads the interactive shared estimator.
+    url: "/app/shared",
+    outPath: path.join(rootDir, "dist/public/app/shared/index.html"),
+    title: "Shared Estimate — EstimatorX.pro",
+    description:
+      "View a shared construction cost estimate on EstimatorX.pro.",
+    robots: "noindex, nofollow",
+    canonical: null, // token is unknown at build time; client sets per-token canonical
+    ogType: "website",
+    ogTitle: "Shared Estimate — EstimatorX.pro",
+    ogDescription: "View a shared construction cost estimate on EstimatorX.pro.",
+    twitterTitle: "Shared Estimate — EstimatorX.pro",
+    twitterDescription: "View a shared construction cost estimate on EstimatorX.pro.",
+    jsonLd: MINIMAL_JSON_LD,
+  },
 ];
 
 // Load the shared HTML shell built by Vite (home page template).
@@ -216,11 +298,22 @@ for (const route of routes) {
     `<meta name="description" content="${escapeAttr(route.description)}" />`
   );
 
-  // <link rel="canonical">
+  // <meta name="robots">
   html = html.replace(
-    /<link\s+rel="canonical"\s+href="[^"]*"\s*\/>/,
-    `<link rel="canonical" href="${route.canonical}" />`
+    /<meta\s+name="robots"\s+content="[^"]*"\s*\/>/,
+    `<meta name="robots" content="${route.robots}" />`
   );
+
+  // <link rel="canonical"> — remove the tag entirely when canonical is null
+  // (used for dynamic-token routes where the canonical is set client-side)
+  if (route.canonical === null) {
+    html = html.replace(/<link\s+rel="canonical"\s+href="[^"]*"\s*\/>\n?/, "");
+  } else {
+    html = html.replace(
+      /<link\s+rel="canonical"\s+href="[^"]*"\s*\/>/,
+      `<link rel="canonical" href="${route.canonical}" />`
+    );
+  }
 
   // og:type
   html = html.replace(
@@ -228,11 +321,15 @@ for (const route of routes) {
     `$1${route.ogType}$2`
   );
 
-  // og:url
-  html = html.replace(
-    /(<meta\s+property="og:url"\s+content=")[^"]*(")/,
-    `$1${route.canonical}$2`
-  );
+  // og:url — use canonical when set, otherwise omit the tag
+  if (route.canonical === null) {
+    html = html.replace(/<meta\s+property="og:url"\s+content="[^"]*"\s*\/>\n?/, "");
+  } else {
+    html = html.replace(
+      /(<meta\s+property="og:url"\s+content=")[^"]*(")/,
+      `$1${route.canonical}$2`
+    );
+  }
 
   // og:title
   html = html.replace(
