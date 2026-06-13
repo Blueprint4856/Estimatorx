@@ -1948,7 +1948,7 @@ function FoundationTab() {
 /* ─────────────────────────────────────────────
    WALL TAB
 ───────────────────────────────────────────── */
-type StudSize = "2x4-16" | "2x6-16" | "2x6-24";
+type StudSize = "2x4-16" | "2x6-16" | "2x6-24" | "2x6-16-9";
 interface WallInputs {
   linearFeet: string; ceilingHeight: string; studSize: StudSize;
   exteriorSheathing: boolean; insulation: boolean; drywall: boolean;
@@ -1977,15 +1977,16 @@ interface WallInputs {
 }
 
 const STUD_CONFIG: Record<StudSize, { studLabel: string; plateLabel: string; studPrice: number; platePrice: number; ocSpacing: number; insulLabel: string; insulPrice: number }> = {
-  "2x4-16": { studLabel: "2×4×8 Studs (16\" OC)", plateLabel: "2×4×16 Plates (3 per run)", studPrice: 5.48, platePrice: 10.97, ocSpacing: 1.333, insulLabel: "R-13 Batt Insulation", insulPrice: 0.55 },
-  "2x6-16": { studLabel: "2×6×8 Studs (16\" OC)", plateLabel: "2×6×16 Plates (3 per run)", studPrice: 8.98, platePrice: 17.98, ocSpacing: 1.333, insulLabel: "R-21 Batt Insulation", insulPrice: 0.82 },
-  "2x6-24": { studLabel: "2×6×8 Studs (24\" OC)", plateLabel: "2×6×16 Plates (3 per run)", studPrice: 8.98, platePrice: 17.98, ocSpacing: 2.0,   insulLabel: "R-21 Batt Insulation", insulPrice: 0.82 },
+  "2x4-16":   { studLabel: "2×4×8 Studs (16\" OC)",        plateLabel: "2×4×16 Plates (3 per run)", studPrice: 5.48,  platePrice: 10.97, ocSpacing: 1.333, insulLabel: "R-13 Batt Insulation", insulPrice: 0.55 },
+  "2x6-16":   { studLabel: "2×6×8 Studs (16\" OC)",        plateLabel: "2×6×16 Plates (3 per run)", studPrice: 8.98,  platePrice: 17.98, ocSpacing: 1.333, insulLabel: "R-21 Batt Insulation", insulPrice: 0.82 },
+  "2x6-24":   { studLabel: "2×6×8 Studs (24\" OC)",        plateLabel: "2×6×16 Plates (3 per run)", studPrice: 8.98,  platePrice: 17.98, ocSpacing: 2.0,   insulLabel: "R-21 Batt Insulation", insulPrice: 0.82 },
+  "2x6-16-9": { studLabel: "2×6×104⅝\" Studs (16\" OC)",  plateLabel: "2×6×16 Plates (3 per run)", studPrice: 10.48, platePrice: 17.98, ocSpacing: 1.333, insulLabel: "R-21 Batt Insulation", insulPrice: 0.82 },
 };
 
 function migrateStudSize(v: unknown): StudSize {
   if (v === "2x4") return "2x4-16";
   if (v === "2x6") return "2x6-24";
-  if (v === "2x4-16" || v === "2x6-16" || v === "2x6-24") return v;
+  if (v === "2x4-16" || v === "2x6-16" || v === "2x6-24" || v === "2x6-16-9") return v;
   return "2x4-16";
 }
 
@@ -2337,16 +2338,20 @@ function WallTab() {
             </select>
           </Field>
           <Field label="Stud Size &amp; Spacing" note="2×6 uses R-21 insulation regardless of spacing">
-            <select value={inputs.studSize} onChange={e => setInputs(p => ({ ...p, studSize: e.target.value as StudSize }))}
+            <select value={inputs.studSize} onChange={e => {
+                const v = e.target.value as StudSize;
+                setInputs(p => ({ ...p, studSize: v, ...(v === "2x6-16-9" ? { ceilingHeight: "9" } : {}) }));
+              }}
               className="w-full bg-[#FAF8F5] border border-[#DDD8D0] px-4 py-2.5 text-[#1A1A1A] focus:outline-none focus:border-[#E85D26] transition-colors">
               <option value="2x4-16">2×4 @ 16″ OC</option>
               <option value="2x6-16">2×6 @ 16″ OC</option>
               <option value="2x6-24">2×6 @ 24″ OC</option>
+              <option value="2x6-16-9">2×6 @ 16″ OC — 9&apos; Precut (104⅝″)</option>
             </select>
           </Field>
           <div className="flex flex-col gap-4">
             <Toggle checked={inputs.exteriorSheathing} onChange={v => setInputs(p => ({ ...p, exteriorSheathing: v }))} label="Advantech Exterior Sheathing" />
-            <Toggle checked={inputs.insulation} onChange={v => setInputs(p => ({ ...p, insulation: v }))} label={(inputs.studSize === "2x6-16" || inputs.studSize === "2x6-24") ? "Insulation (R-21 Batts)" : "Insulation (R-13 Batts)"} />
+            <Toggle checked={inputs.insulation} onChange={v => setInputs(p => ({ ...p, insulation: v }))} label={(inputs.studSize === "2x6-16" || inputs.studSize === "2x6-24" || inputs.studSize === "2x6-16-9") ? "Insulation (R-21 Batts)" : "Insulation (R-13 Batts)"} />
             <Toggle checked={inputs.drywall} onChange={v => setInputs(p => ({ ...p, drywall: v }))} label='Drywall — Exterior Walls (½", one side)' />
           </div>
         </div>
