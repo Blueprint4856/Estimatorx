@@ -1,0 +1,86 @@
+kind = "web"
+previewPath = "/"
+title = "EstimatorX.pro"
+version = "1.0.0"
+id = "artifacts/estimatorx"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22254
+
+[services.development]
+run = "pnpm --filter @workspace/estimatorx run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/estimatorx", "run", "build" ]
+publicDir = "artifacts/estimatorx/dist/public"
+serve = "static"
+
+# Rewrite only the known SPA routes to their pre-rendered shells or index.html.
+# Unknown paths fall through to a real 404 — no more soft-404 for garbage URLs.
+# /shared/:token is handled by the API server (proper HTML + real 404 for bad tokens).
+# /privacy/ and /terms/ are served from prerendered static files — no rewrite needed.
+#
+# Utility routes (/sign-in, /sign-up, /app/shared/*) are rewritten to their own
+# prerendered HTML shells which carry noindex metadata instead of homepage metadata.
+# More-specific rewrites must appear before less-specific ones.
+
+[[services.production.rewrites]]
+from = "/sign-in"
+to = "/sign-in/index.html"
+
+[[services.production.rewrites]]
+from = "/sign-in/*"
+to = "/sign-in/index.html"
+
+[[services.production.rewrites]]
+from = "/sign-up"
+to = "/sign-up/index.html"
+
+[[services.production.rewrites]]
+from = "/sign-up/*"
+to = "/sign-up/index.html"
+
+[[services.production.rewrites]]
+from = "/estimator"
+to = "/index.html"
+
+[[services.production.rewrites]]
+from = "/estimator/*"
+to = "/index.html"
+
+[[services.production.rewrites]]
+from = "/admin"
+to = "/index.html"
+
+[[services.production.rewrites]]
+from = "/admin/*"
+to = "/index.html"
+
+# /app/shared/:token — serve the noindex shared-estimator shell (more specific first)
+[[services.production.rewrites]]
+from = "/app/shared"
+to = "/app/shared/index.html"
+
+[[services.production.rewrites]]
+from = "/app/shared/*"
+to = "/app/shared/index.html"
+
+# Remaining /app/* routes (e.g. future sub-apps) fall back to the main SPA shell
+[[services.production.rewrites]]
+from = "/app"
+to = "/index.html"
+
+[[services.production.rewrites]]
+from = "/app/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22254"
+BASE_PATH = "/"
