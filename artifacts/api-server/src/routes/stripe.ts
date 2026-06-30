@@ -52,7 +52,7 @@ router.post("/stripe/checkout/print", async (req, res) => {
   try {
     const stripe = getStripe();
     const customerId = await ensureUser(userId);
-    const origin = (req.headers.origin as string | undefined) ?? `https://${(process.env.REPLIT_DOMAINS ?? "").split(",")[0]}`;
+    const origin = (req.headers.origin as string | undefined) ?? process.env.APP_URL ?? "";
 
     const session = await stripe.checkout.sessions.create({
       mode: "payment",
@@ -154,7 +154,7 @@ router.post("/stripe/checkout/xplan", async (req, res) => {
     // Partial discount or no promo: redirect to Stripe Checkout
     const discounts = resolvedPromoId ? [{ promotion_code: resolvedPromoId }] : undefined;
     const customerId = existingCustomerId;
-    const origin = (req.headers.origin as string | undefined) ?? `https://${(process.env.REPLIT_DOMAINS ?? "").split(",")[0]}`;
+    const origin = (req.headers.origin as string | undefined) ?? process.env.APP_URL ?? "";
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",

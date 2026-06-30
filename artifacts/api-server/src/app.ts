@@ -36,9 +36,11 @@ app.use(
 
 app.use(CLERK_PROXY_PATH, clerkProxyMiddleware());
 
-const corsOrigin = process.env.REPLIT_DOMAINS
-  ? process.env.REPLIT_DOMAINS.split(",").map((d) => `https://${d.trim()}`)
-  : /\.replit\.dev$/;
+const corsOrigin = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map((d) => d.trim())
+  : process.env.NODE_ENV === "development"
+  ? true
+  : false;
 
 app.use(cors({ credentials: true, origin: corsOrigin }));
 

@@ -72,7 +72,7 @@ export default function PrivacyPolicy() {
             <ul className="list-disc pl-6 space-y-2">
               <li><strong>Clerk</strong> — authentication and user account management (<a href="https://clerk.com/privacy" className="text-[#E85D26] hover:underline" target="_blank" rel="noopener noreferrer">clerk.com/privacy</a>)</li>
               <li><strong>Stripe</strong> — payment processing (<a href="https://stripe.com/privacy" className="text-[#E85D26] hover:underline" target="_blank" rel="noopener noreferrer">stripe.com/privacy</a>)</li>
-              <li><strong>Replit</strong> — application hosting and infrastructure</li>
+              <li><strong>Vercel</strong> — application hosting and infrastructure (<a href="https://vercel.com/legal/privacy-policy" className="text-[#E85D26] hover:underline" target="_blank" rel="noopener noreferrer">vercel.com/legal/privacy-policy</a>)</li>
             </ul>
             <p>Each of these providers has their own privacy policy governing how they handle your data.</p>
           </Section>

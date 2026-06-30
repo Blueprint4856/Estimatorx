@@ -37,6 +37,11 @@ yarn-error.log
 testem.log
 /typings
 
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
 # System Files
 .DS_Store
 Thumbs.db
@@ -44,7 +49,7 @@ Thumbs.db
 .cursor/rules/nx-rules.mdc
 .github/instructions/nx.instructions.md
 
-# Replit
+# Platform artifacts
 .cache/
 .local/
 .agents/
