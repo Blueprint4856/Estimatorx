@@ -59,6 +59,7 @@ app.use((req, _res, next) => {
 
 app.use(
   clerkMiddleware((req) => ({
+    secretKey: process.env.CLERK_SECRET_KEY,
     publishableKey: publishableKeyFromHost(
       getClerkProxyHost(req) ?? "",
       process.env.CLERK_PUBLISHABLE_KEY,
