@@ -146,8 +146,9 @@ router.post("/plans/extract", async (req, res) => {
     req.log.info({ result }, "Plan extraction complete");
     res.json({ data: result as ExtractedPlanData });
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
     req.log.error({ err }, "Plan extraction failed");
-    res.status(500).json({ error: "Extraction failed — please try again" }); return;
+    res.status(500).json({ error: "Extraction failed — please try again", detail: msg }); return;
   }
 });
 
