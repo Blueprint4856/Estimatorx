@@ -113,22 +113,22 @@ router.post("/plans/extract", async (req, res) => {
 
     const openai = new OpenAI({ apiKey: openaiApiKey, baseURL: openaiBaseUrl });
 
-    const response = await openai.chat.completions.create({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const response = await (openai as any).responses.create({
       model: "gpt-4o",
-      max_tokens: 512,
-      messages: [
+      max_output_tokens: 512,
+      input: [
         {
           role: "user",
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           content: [
-            { type: "file", file: { filename: "building-plan.pdf", file_data: fileDataUrl } } as any,
-            { type: "text", text: EXTRACTION_PROMPT },
+            { type: "input_file", filename: "building-plan.pdf", file_data: fileDataUrl },
+            { type: "input_text", text: EXTRACTION_PROMPT },
           ],
         },
       ],
     });
 
-    const raw = response.choices[0]?.message?.content ?? "{}";
+    const raw: string = response.output_text ?? "{}";
     const jsonMatch = raw.match(/\{[\s\S]*\}/);
     if (!jsonMatch) throw new Error("AI returned no valid JSON");
 
