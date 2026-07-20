@@ -31,42 +31,61 @@ export default function SignInPage() {
     setStage("sending");
     setErrMsg("");
 
+    let needsSignUp = false;
+
+    // ── Existing-user path ───────────────────────────────────────────────────
     try {
       const attempt = await signIn.create({ identifier: email });
-      console.log("[Clerk] status:", attempt.status, "factors:", JSON.stringify(attempt.supportedFirstFactors));
-      const factor = attempt.supportedFirstFactors?.find(
-        (f) => f.strategy === "email_code",
-      );
-      if (!factor || factor.strategy !== "email_code") {
-        setErrMsg("Email verification is not available. Please try again.");
-        setStage("error");
+
+      if (attempt.status) {
+        // Sign-in created successfully — look for email_code factor
+        const factor = attempt.supportedFirstFactors?.find(
+          (f) => f.strategy === "email_code",
+        );
+        if (!factor || factor.strategy !== "email_code") {
+          setErrMsg("Email sign-in is not available for this account. Please contact support.");
+          setStage("error");
+          return;
+        }
+        await signIn.prepareFirstFactor({
+          strategy: "email_code",
+          emailAddressId: factor.emailAddressId,
+        });
+        modeRef.current = "signIn";
+        setStage("code");
         return;
       }
-      await signIn.prepareFirstFactor({
-        strategy: "email_code",
-        emailAddressId: factor.emailAddressId,
-      });
-      modeRef.current = "signIn";
-      setStage("code");
+
+      // Clerk v6 resolves (instead of throwing) when the sign-in 422s.
+      // status === undefined means the user was not found — try sign-up.
+      needsSignUp = true;
     } catch (err: unknown) {
       const clerkErr = err as ClerkError;
       const errCode = clerkErr.errors?.[0]?.code;
-      console.log("[Clerk] signIn.create error:", errCode, clerkErr.errors?.[0]?.message);
-
       if (errCode === "form_identifier_not_found") {
-        try {
-          const pw = crypto.randomUUID().replace(/-/g, "") + "Xx1!";
-          await signUp.create({ emailAddress: email, password: pw });
-          await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-          modeRef.current = "signUp";
-          setStage("code");
-        } catch (suErr: unknown) {
-          const e = suErr as ClerkError;
-          setErrMsg(e.errors?.[0]?.message ?? "Could not create your account. Please try again.");
-          setStage("error");
-        }
+        needsSignUp = true;
       } else {
         setErrMsg(clerkErr.errors?.[0]?.message ?? "Something went wrong. Please try again.");
+        setStage("error");
+        return;
+      }
+    }
+
+    // ── New-user path ────────────────────────────────────────────────────────
+    if (needsSignUp) {
+      try {
+        await signUp.create({ emailAddress: email });
+        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+        modeRef.current = "signUp";
+        setStage("code");
+      } catch (suErr: unknown) {
+        const e = suErr as ClerkError;
+        const suErrCode = e.errors?.[0]?.code;
+        if (suErrCode === "form_identifier_exists" || suErrCode === "email_address_exists") {
+          setErrMsg("An account with this email already exists. Please try again in a moment.");
+        } else {
+          setErrMsg(e.errors?.[0]?.message ?? "Could not create your account. Please try again.");
+        }
         setStage("error");
       }
     }
