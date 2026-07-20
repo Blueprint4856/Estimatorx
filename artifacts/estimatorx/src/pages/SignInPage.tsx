@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { useSignIn, useSignUp } from "@clerk/react";
 import { useLocation } from "wouter";
 
@@ -6,9 +6,11 @@ const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 type Stage = "email" | "sending" | "code" | "verifying" | "done" | "error";
 
+type ClerkError = { errors?: Array<{ code?: string; message: string }> };
+
 export default function SignInPage() {
-  const { signIn, fetchStatus: siFetch } = useSignIn();
-  const { signUp, fetchStatus: suFetch } = useSignUp();
+  const { signIn, isLoaded: siLoaded, setActive } = useSignIn();
+  const { signUp, isLoaded: suLoaded } = useSignUp();
   const [, setLocation] = useLocation();
 
   const [email, setEmail]   = useState("");
@@ -17,107 +19,112 @@ export default function SignInPage() {
   const [errMsg, setErrMsg] = useState("");
   const modeRef = useRef<"signIn" | "signUp">("signIn");
 
-  const isReady = siFetch === "idle" && suFetch === "idle";
-
-  useEffect(() => () => { void signIn.reset(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  const isReady = siLoaded && suLoaded;
 
   async function submitEmail(e: React.FormEvent) {
     e.preventDefault();
+    if (!signIn || !signUp) return;
     setStage("sending");
     setErrMsg("");
 
-    const { error: createErr } = await signIn.create({ identifier: email });
-
-    if (!createErr) {
-      const { error: sendErr } = await signIn.emailCode.sendCode({ emailAddress: email });
-      if (sendErr) {
-        setErrMsg(sendErr.message ?? "Could not send the verification code.");
+    try {
+      const attempt = await signIn.create({ identifier: email });
+      const factor = attempt.supportedFirstFactors?.find(
+        (f) => f.strategy === "email_code",
+      );
+      if (!factor || factor.strategy !== "email_code") {
+        setErrMsg("Email verification is not available. Please try again.");
         setStage("error");
         return;
       }
+      await signIn.prepareFirstFactor({
+        strategy: "email_code",
+        emailAddressId: factor.emailAddressId,
+      });
       modeRef.current = "signIn";
       setStage("code");
-      return;
-    }
+    } catch (err: unknown) {
+      const clerkErr = err as ClerkError;
+      const errCode = clerkErr.errors?.[0]?.code;
 
-    const isNotFound =
-      createErr.code === "form_identifier_not_found" ||
-      createErr.clerkError ||
-      createErr.message?.toLowerCase().includes("find") ||
-      createErr.message?.toLowerCase().includes("exist");
-
-    if (!isNotFound) {
-      setErrMsg(createErr.message ?? "Something went wrong. Please try again.");
-      setStage("error");
-      return;
+      if (errCode === "form_identifier_not_found") {
+        try {
+          const pw = crypto.randomUUID().replace(/-/g, "") + "Xx1!";
+          await signUp.create({ emailAddress: email, password: pw });
+          await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+          modeRef.current = "signUp";
+          setStage("code");
+        } catch (suErr: unknown) {
+          const e = suErr as ClerkError;
+          setErrMsg(e.errors?.[0]?.message ?? "Could not create your account. Please try again.");
+          setStage("error");
+        }
+      } else {
+        setErrMsg(clerkErr.errors?.[0]?.message ?? "Something went wrong. Please try again.");
+        setStage("error");
+      }
     }
-
-    const pw = crypto.randomUUID().replace(/-/g, "") + "Xx1!";
-    const { error: suErr } = await signUp.create({ emailAddress: email, password: pw });
-    if (suErr) {
-      setErrMsg(suErr.message ?? "Could not create your account. Please try again.");
-      setStage("error");
-      return;
-    }
-    const { error: sendErr } = await signUp.verifications.sendEmailCode();
-    if (sendErr) {
-      setErrMsg(sendErr.message ?? "Could not send the verification code.");
-      setStage("error");
-      return;
-    }
-    modeRef.current = "signUp";
-    setStage("code");
   }
 
   async function submitCode(e: React.FormEvent) {
     e.preventDefault();
+    if (!signIn || !signUp || !setActive) return;
     setStage("verifying");
     setErrMsg("");
 
-    if (modeRef.current === "signUp") {
-      const { error: verifyErr } = await signUp.verifications.verifyEmailCode({ code });
-      if (verifyErr) {
-        setErrMsg(verifyErr.message ?? "Incorrect code. Please try again.");
-        setStage("code");
-        return;
+    try {
+      if (modeRef.current === "signUp") {
+        const result = await signUp.attemptEmailAddressVerification({ code });
+        if (result.status === "complete") {
+          await setActive({ session: result.createdSessionId });
+          setStage("done");
+          setLocation("/estimator");
+        } else {
+          setErrMsg("Verification incomplete. Please try again.");
+          setStage("code");
+        }
+      } else {
+        const result = await signIn.attemptFirstFactor({ strategy: "email_code", code });
+        if (result.status === "complete") {
+          await setActive({ session: result.createdSessionId });
+          setStage("done");
+          setLocation("/estimator");
+        } else {
+          setErrMsg("Verification incomplete. Please try again.");
+          setStage("code");
+        }
       }
-      const { error: finalizeErr } = await signUp.finalize();
-      if (finalizeErr) {
-        setErrMsg(finalizeErr.message ?? "Sign-up could not be completed. Please try again.");
-        setStage("error");
-        return;
-      }
-    } else {
-      const { error: verifyErr } = await signIn.emailCode.verifyCode({ code });
-      if (verifyErr) {
-        setErrMsg(verifyErr.message ?? "Incorrect code. Please try again.");
-        setStage("code");
-        return;
-      }
-      const { error: finalizeErr } = await signIn.finalize();
-      if (finalizeErr) {
-        setErrMsg(finalizeErr.message ?? "Sign-in could not be completed. Please try again.");
-        setStage("error");
-        return;
-      }
+    } catch (err: unknown) {
+      const clerkErr = err as ClerkError;
+      setErrMsg(clerkErr.errors?.[0]?.message ?? "Incorrect code. Please try again.");
+      setStage("code");
     }
-
-    setStage("done");
-    setLocation("/estimator");
   }
 
   async function resend() {
+    if (!signIn || !signUp) return;
     setErrMsg("");
     setCode("");
-    if (modeRef.current === "signUp") {
-      await signUp.verifications.sendEmailCode();
-    } else {
-      await signIn.emailCode.sendCode({ emailAddress: email });
+    try {
+      if (modeRef.current === "signUp") {
+        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      } else {
+        const factor = signIn.supportedFirstFactors?.find(
+          (f) => f.strategy === "email_code",
+        );
+        if (factor && factor.strategy === "email_code") {
+          await signIn.prepareFirstFactor({
+            strategy: "email_code",
+            emailAddressId: factor.emailAddressId,
+          });
+        }
+      }
+    } catch {
+      // silently ignore resend errors
     }
   }
 
   function changeEmail() {
-    void (modeRef.current === "signUp" ? signUp.reset() : signIn.reset());
     setEmail("");
     setCode("");
     setStage("email");
