@@ -51,6 +51,7 @@ export default function SignInPage() {
     } catch (err: unknown) {
       const clerkErr = err as ClerkError;
       const errCode = clerkErr.errors?.[0]?.code;
+      console.log("[Clerk] signIn.create error:", errCode, clerkErr.errors?.[0]?.message);
 
       if (errCode === "form_identifier_not_found") {
         try {
