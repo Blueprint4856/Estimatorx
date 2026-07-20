@@ -5,6 +5,30 @@
       "destination": "https://estimatorx-production.up.railway.app/api/:path*"
     },
     {
+      "source": "/sign-in",
+      "destination": "/sign-in/index.html"
+    },
+    {
+      "source": "/sign-in/:path*",
+      "destination": "/sign-in/index.html"
+    },
+    {
+      "source": "/sign-up",
+      "destination": "/sign-up/index.html"
+    },
+    {
+      "source": "/sign-up/:path*",
+      "destination": "/sign-up/index.html"
+    },
+    {
+      "source": "/app/shared",
+      "destination": "/app/shared/index.html"
+    },
+    {
+      "source": "/app/shared/:path*",
+      "destination": "/app/shared/index.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
