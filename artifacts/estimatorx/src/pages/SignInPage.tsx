@@ -142,7 +142,7 @@ export default function SignInPage() {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-[#1A1A1A] px-4">
         <div className="w-full max-w-[420px] border border-[#3A3530] p-10">
-          <img src={`${basePath}/logo.svg`} alt="EstimatorX.pro" className="h-12 mx-auto mb-8" />
+          <img src={`${basePath}/logo-dark.svg`} alt="EstimatorX.pro" className="h-12 mx-auto mb-8" />
 
           <div className="w-14 h-14 bg-[#E85D26]/10 border-2 border-[#E85D26] flex items-center justify-center mx-auto mb-6">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E85D26" strokeWidth="2.5" strokeLinecap="round">
@@ -208,7 +208,7 @@ export default function SignInPage() {
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-[#1A1A1A] px-4">
       <div className="w-full max-w-[420px] border border-[#3A3530] p-10">
-        <img src={`${basePath}/logo.svg`} alt="EstimatorX.pro" className="h-12 mx-auto mb-8" />
+        <img src={`${basePath}/logo-dark.svg`} alt="EstimatorX.pro" className="h-12 mx-auto mb-8" />
         <h1 className="text-[#F7F4F0] font-black text-2xl uppercase tracking-tight text-center mb-2">
           Sign In
         </h1>
