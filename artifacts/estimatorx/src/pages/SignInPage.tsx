@@ -23,7 +23,11 @@ export default function SignInPage() {
 
   async function submitEmail(e: React.FormEvent) {
     e.preventDefault();
-    if (!signIn || !signUp) return;
+    if (!signIn || !signUp) {
+      setErrMsg("Authentication service is still loading — please wait a moment and try again.");
+      setStage("error");
+      return;
+    }
     setStage("sending");
     setErrMsg("");
 
@@ -244,11 +248,16 @@ export default function SignInPage() {
 
           <button
             type="submit"
-            disabled={busy || !isReady}
+            disabled={busy}
             className="w-full bg-[#E85D26] text-white py-3.5 font-bold uppercase tracking-widest hover:bg-[#D44A15] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {busy ? "Sending…" : "Send Code"}
           </button>
+          {!isReady && (
+            <p className="text-[10px] text-[#6B6460] text-center">
+              Connecting to auth service…
+            </p>
+          )}
         </form>
 
         <p className="text-center text-[11px] text-[#6B6460] mt-6 leading-relaxed">
