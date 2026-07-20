@@ -283,7 +283,9 @@ for (const route of routes) {
   // 3. Inject pre-rendered body.
   html = html.replace(
     placeholder,
-    `<div id="root" data-prerendered="true">${bodyHtml}</div>`
+    bodyHtml
+      ? `<div id="root" data-prerendered="true">${bodyHtml}</div>`
+      : `<div id="root"></div>`
   );
 
   // 4. Swap head metadata — use non-greedy regexes so only the first match
