@@ -33,6 +33,7 @@ export default function SignInPage() {
 
     try {
       const attempt = await signIn.create({ identifier: email });
+      console.log("[Clerk] status:", attempt.status, "factors:", JSON.stringify(attempt.supportedFirstFactors));
       const factor = attempt.supportedFirstFactors?.find(
         (f) => f.strategy === "email_code",
       );
