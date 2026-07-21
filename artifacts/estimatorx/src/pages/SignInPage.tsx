@@ -39,14 +39,15 @@ export default function SignInPage() {
     // client.signIn IS updated synchronously, but may already hold a stale
     // resource from a prior attempt. We detect a fresh create by comparing the
     // resource ID before vs. after — a changed ID means a new sign-in was made.
-    const prevSignInId = client?.signIn?.id ?? null;
     try {
       await signIn.create({ identifier: email });
+      // Clerk v6.25.x: the 422 "user not found" response updates client.signIn to
+      // status "needs_identifier". A successful create sets it to "needs_first_factor".
+      // Check for the specific success status so we never mistake a 422 for success.
       const liveSignIn = client?.signIn;
-      const signInCreated = Boolean(liveSignIn?.id && liveSignIn.id !== prevSignInId);
-      console.log("[si] prev:", prevSignInId, "live:", liveSignIn?.id, "created:", signInCreated);
+      console.log("[si] status:", liveSignIn?.status);
 
-      if (signInCreated && liveSignIn?.status) {
+      if (liveSignIn?.status === "needs_first_factor") {
         const factor = liveSignIn.supportedFirstFactors?.find(
           (f) => f.strategy === "email_code",
         );
@@ -64,7 +65,7 @@ export default function SignInPage() {
         return;
       }
 
-      // ID unchanged → 422 → user not found → try sign-up
+      // "needs_identifier" (422) or anything else → user not found → try sign-up
       needsSignUp = true;
     } catch (err: unknown) {
       const clerkErr = err as ClerkError;
@@ -81,17 +82,13 @@ export default function SignInPage() {
     // ── New-user path ────────────────────────────────────────────────────────
     if (needsSignUp) {
       try {
-        const prevSignUpId = client?.signUp?.id ?? null;
         await signUp.create({ emailAddress: email });
+        // Use client.signUp (live Clerk resource) which is updated from the
+        // API response; fall back to hook ref if client didn't update.
         const liveSignUp = client?.signUp;
-        const signUpCreated = Boolean(liveSignUp?.id && liveSignUp.id !== prevSignUpId);
-        console.log("[su] prev:", prevSignUpId, "live:", liveSignUp?.id, "created:", signUpCreated);
-
-        // Prefer the live resource if it was freshly created; otherwise fall back
-        // to the hook reference (which Clerk may have mutated in place).
-        // Cast needed because client.signUp is typed as SignUpFutureResource | SignUpResource.
+        console.log("[su] status:", liveSignUp?.status, "id:", liveSignUp?.id);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const resource = (signUpCreated ? liveSignUp! : signUp) as any;
+        const resource = (liveSignUp?.id ? liveSignUp : signUp) as any;
         await resource.prepareEmailAddressVerification({ strategy: "email_code" });
         modeRef.current = "signUp";
         setStage("code");
