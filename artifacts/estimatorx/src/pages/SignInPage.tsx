@@ -9,7 +9,7 @@ type Stage = "email" | "sending" | "code" | "verifying" | "done" | "error";
 type ClerkError = { errors?: Array<{ code?: string; message: string }> };
 
 export default function SignInPage() {
-  const { client } = useClerk();
+  const clerk = useClerk();
   const { signIn, isLoaded: siLoaded, setActive } = useSignIn();
   const { signUp, isLoaded: suLoaded } = useSignUp();
   const [, setLocation] = useLocation();
@@ -35,16 +35,13 @@ export default function SignInPage() {
     let needsSignUp = false;
 
     // ── Existing-user path ───────────────────────────────────────────────────
-    // Clerk v6.25.x bug: create() Promises resolve with stale hook state.
-    // client.signIn IS updated synchronously, but may already hold a stale
-    // resource from a prior attempt. We detect a fresh create by comparing the
-    // resource ID before vs. after — a changed ID means a new sign-in was made.
+    // Clerk v6.25.x: create() resolves with stale hook state. Access
+    // clerk.client lazily (through the singleton) to get the post-create value.
     try {
       await signIn.create({ identifier: email });
-      // Clerk v6.25.x: the 422 "user not found" response updates client.signIn to
-      // status "needs_identifier". A successful create sets it to "needs_first_factor".
-      // Check for the specific success status so we never mistake a 422 for success.
-      const liveSignIn = client?.signIn;
+      // clerk.client is accessed here (after create), not at render time,
+      // so it reflects the updated sign-in state from the API response.
+      const liveSignIn = clerk.client?.signIn;
       console.log("[si] status:", liveSignIn?.status);
 
       if (liveSignIn?.status === "needs_first_factor") {
@@ -83,9 +80,17 @@ export default function SignInPage() {
     if (needsSignUp) {
       try {
         await signUp.create({ emailAddress: email });
-        // Use the hook's signUp directly — Clerk mutates it in place when
-        // create() succeeds, so it carries the correct auth context.
-        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+        // Clerk v6.25.x does NOT mutate the hook's signUp in place after create().
+        // clerk.client.signUp (lazy access through the singleton) IS updated
+        // synchronously before the Promise resolves — use that for prepare.
+        const freshSignUp = clerk.client?.signUp as any;
+        console.log("[su] freshSignUp id:", freshSignUp?.id, "status:", freshSignUp?.status);
+        if (!freshSignUp?.id) {
+          setErrMsg("Could not create your account. Please try again.");
+          setStage("error");
+          return;
+        }
+        await freshSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
         modeRef.current = "signUp";
         setStage("code");
       } catch (suErr: unknown) {
