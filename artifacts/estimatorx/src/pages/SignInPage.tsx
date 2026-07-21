@@ -83,13 +83,9 @@ export default function SignInPage() {
     if (needsSignUp) {
       try {
         await signUp.create({ emailAddress: email });
-        // Use client.signUp (live Clerk resource) which is updated from the
-        // API response; fall back to hook ref if client didn't update.
-        const liveSignUp = client?.signUp;
-        console.log("[su] status:", liveSignUp?.status, "id:", liveSignUp?.id);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const resource = (liveSignUp?.id ? liveSignUp : signUp) as any;
-        await resource.prepareEmailAddressVerification({ strategy: "email_code" });
+        // Use the hook's signUp directly — Clerk mutates it in place when
+        // create() succeeds, so it carries the correct auth context.
+        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
         modeRef.current = "signUp";
         setStage("code");
       } catch (suErr: unknown) {
