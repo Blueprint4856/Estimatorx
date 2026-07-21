@@ -35,19 +35,22 @@ export default function SignInPage() {
     let needsSignUp = false;
 
     // ── Existing-user path ───────────────────────────────────────────────────
-    // Clerk v6.25.x bug: create() resolves with stale hook state (status: undefined)
-    // even on success. Read from client.signIn instead — it is updated synchronously
-    // when the API response is processed.
+    // Clerk v6.25.x bug: create() Promises resolve with stale hook state.
+    // client.signIn IS updated synchronously, but may already hold a stale
+    // resource from a prior attempt. We detect a fresh create by comparing the
+    // resource ID before vs. after — a changed ID means a new sign-in was made.
+    const prevSignInId = client?.signIn?.id ?? null;
     try {
       await signIn.create({ identifier: email });
       const liveSignIn = client?.signIn;
-      console.log("[si] client.signIn status:", liveSignIn?.status);
+      const signInCreated = Boolean(liveSignIn?.id && liveSignIn.id !== prevSignInId);
+      console.log("[si] prev:", prevSignInId, "live:", liveSignIn?.id, "created:", signInCreated);
 
-      if (liveSignIn?.status) {
+      if (signInCreated && liveSignIn?.status) {
         const factor = liveSignIn.supportedFirstFactors?.find(
           (f) => f.strategy === "email_code",
         );
-        if (!factor || factor.strategy !== "email_code") {
+        if (!factor) {
           setErrMsg("Email sign-in is not available for this account. Please contact support.");
           setStage("error");
           return;
@@ -61,7 +64,7 @@ export default function SignInPage() {
         return;
       }
 
-      // 422 → client.signIn is null → user not found → try sign-up
+      // ID unchanged → 422 → user not found → try sign-up
       needsSignUp = true;
     } catch (err: unknown) {
       const clerkErr = err as ClerkError;
@@ -78,17 +81,16 @@ export default function SignInPage() {
     // ── New-user path ────────────────────────────────────────────────────────
     if (needsSignUp) {
       try {
+        const prevSignUpId = client?.signUp?.id ?? null;
         await signUp.create({ emailAddress: email });
-        // Same Clerk v6.25.x bug — use client.signUp for the live resource
         const liveSignUp = client?.signUp;
-        console.log("[su] client.signUp id:", liveSignUp?.id, "status:", liveSignUp?.status);
+        const signUpCreated = Boolean(liveSignUp?.id && liveSignUp.id !== prevSignUpId);
+        console.log("[su] prev:", prevSignUpId, "live:", liveSignUp?.id, "created:", signUpCreated);
 
-        if (!liveSignUp?.id) {
-          setErrMsg("Could not create your account. Please try again.");
-          setStage("error");
-          return;
-        }
-        await liveSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
+        // Prefer the live resource if it was freshly created; otherwise fall back
+        // to the hook reference (which Clerk may have mutated in place).
+        const resource = signUpCreated ? liveSignUp! : signUp;
+        await resource.prepareEmailAddressVerification({ strategy: "email_code" });
         modeRef.current = "signUp";
         setStage("code");
       } catch (suErr: unknown) {
