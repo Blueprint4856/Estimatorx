@@ -36,6 +36,7 @@ export default function SignInPage() {
     // ── Existing-user path ───────────────────────────────────────────────────
     try {
       const attempt = await signIn.create({ identifier: email });
+      console.log("[si] create result — status:", attempt.status, "factors:", attempt.supportedFirstFactors?.length);
 
       if (attempt.status) {
         // Sign-in created successfully — look for email_code factor
@@ -62,6 +63,7 @@ export default function SignInPage() {
     } catch (err: unknown) {
       const clerkErr = err as ClerkError;
       const errCode = clerkErr.errors?.[0]?.code;
+      console.log("[si] threw — code:", errCode);
       if (errCode === "form_identifier_not_found") {
         needsSignUp = true;
       } else {
@@ -74,18 +76,19 @@ export default function SignInPage() {
     // ── New-user path ────────────────────────────────────────────────────────
     if (needsSignUp) {
       try {
+        console.log("[su] calling create");
         const su = await signUp.create({ emailAddress: email });
-        if (!su.status) {
-          setErrMsg("Could not create your account. Please try again.");
-          setStage("error");
-          return;
-        }
+        console.log("[su] create result — id:", su.id, "status:", su.status, "missing:", su.missingFields);
+
+        // Clerk v6 may resolve with status: null even on success; skip the
+        // status guard and let prepareEmailAddressVerification surface real errors.
         await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
         modeRef.current = "signUp";
         setStage("code");
       } catch (suErr: unknown) {
         const e = suErr as ClerkError;
         const suErrCode = e.errors?.[0]?.code;
+        console.log("[su] threw — code:", suErrCode, "msg:", e.errors?.[0]?.message);
         if (suErrCode === "form_identifier_exists" || suErrCode === "email_address_exists") {
           setErrMsg("An account with this email already exists. Please try again in a moment.");
         } else {
