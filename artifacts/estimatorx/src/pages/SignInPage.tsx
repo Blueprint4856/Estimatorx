@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { useClerk, useSignIn, useSignUp } from "@clerk/react";
 import { useLocation } from "wouter";
 
@@ -35,34 +35,9 @@ export default function SignInPage() {
   const [code, setCode]     = useState("");
   const [stage, setStage]   = useState<Stage>("email");
   const [errMsg, setErrMsg] = useState("");
-  const [needsPrepare, setNeedsPrepare] = useState(false);
   const modeRef = useRef<"signIn" | "signUp">("signIn");
 
   const isReady = siLoaded && suLoaded;
-
-  // After signUp.create() Clerk re-renders the component with a FutureResource
-  // that has id set. Once we see the id, call prepare_verification via FAPI.
-  useEffect(() => {
-    if (!needsPrepare) return;
-    const signUpId = (signUp as any)?.id as string | undefined;
-    if (!signUpId) return;
-    setNeedsPrepare(false);
-
-    fapiPost(`/v1/client/sign_ups/${signUpId}/prepare_verification`, {
-      strategy: "email_code",
-    })
-      .then(() => {
-        modeRef.current = "signUp";
-        setStage("code");
-      })
-      .catch((err: any) => {
-        setErrMsg(
-          err?.errors?.[0]?.message ??
-            "Could not send verification code. Please try again."
-        );
-        setStage("error");
-      });
-  }, [needsPrepare, signUp]);
 
   async function submitEmail(e: React.FormEvent) {
     e.preventDefault();
@@ -113,13 +88,24 @@ export default function SignInPage() {
     }
 
     // ── New-user path ─────────────────────────────────────────────────────────
-    // Use SDK only for create() — Turnstile requires it. After create(), signUp
-    // becomes a FutureResource (no methods). The useEffect above fires once React
-    // re-renders with the id available and calls prepare_verification via FAPI.
     if (needsSignUp) {
       try {
         await signUp.create({ emailAddress: email });
-        setNeedsPrepare(true);
+        // signUp (this closure) is the pre-create instance — it still has
+        // prepareEmailAddressVerification. Clerk's singleton (window.Clerk) is
+        // updated synchronously by create(), so its client.signUp.id is fresh.
+        // Inject that id onto the pre-create instance so the SDK builds the
+        // correct URL while using its own internal auth state for the request.
+        const freshId = (window as any).Clerk?.client?.signUp?.id as string | undefined;
+        if (!freshId) {
+          setErrMsg("Could not create your account. Please try again.");
+          setStage("error");
+          return;
+        }
+        (signUp as any).id = freshId;
+        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+        modeRef.current = "signUp";
+        setStage("code");
       } catch (suErr: unknown) {
         const e = suErr as ClerkError;
         const suErrCode = e.errors?.[0]?.code;
