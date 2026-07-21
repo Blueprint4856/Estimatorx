@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useClerk, useSignIn, useSignUp } from "@clerk/react";
 import { useLocation } from "wouter";
 
@@ -18,9 +18,37 @@ export default function SignInPage() {
   const [code, setCode]     = useState("");
   const [stage, setStage]   = useState<Stage>("email");
   const [errMsg, setErrMsg] = useState("");
+  const [needsPrepare, setNeedsPrepare] = useState(false);
   const modeRef = useRef<"signIn" | "signUp">("signIn");
 
   const isReady = siLoaded && suLoaded;
+
+  // After signUp.create() the hook's signUp isn't updated yet — Clerk notifies
+  // React, which re-renders, and THEN signUp.id is available. We set needsPrepare=true
+  // after create() and let this effect call prepareEmailAddressVerification once
+  // React has re-rendered with the fresh signUp (correct id + client token).
+  useEffect(() => {
+    if (!needsPrepare) return;
+    if (!signUp?.id) return; // wait for next render when Clerk updates the hook
+    setNeedsPrepare(false);
+
+    signUp
+      .prepareEmailAddressVerification({ strategy: "email_code" })
+      .then(() => {
+        modeRef.current = "signUp";
+        setStage("code");
+      })
+      .catch((err: unknown) => {
+        const e = err as ClerkError;
+        const code = e.errors?.[0]?.code;
+        if (code === "form_identifier_exists" || code === "email_address_exists") {
+          setErrMsg("An account with this email already exists. Please try again.");
+        } else {
+          setErrMsg(e.errors?.[0]?.message ?? "Could not send verification code. Please try again.");
+        }
+        setStage("error");
+      });
+  }, [needsPrepare, signUp]);
 
   async function submitEmail(e: React.FormEvent) {
     e.preventDefault();
@@ -35,12 +63,8 @@ export default function SignInPage() {
     let needsSignUp = false;
 
     // ── Existing-user path ───────────────────────────────────────────────────
-    // Clerk v6.25.x: create() resolves with stale hook state. Access
-    // clerk.client lazily (through the singleton) to get the post-create value.
     try {
       await signIn.create({ identifier: email });
-      // clerk.client is accessed here (after create), not at render time,
-      // so it reflects the updated sign-in state from the API response.
       const liveSignIn = clerk.client?.signIn;
       console.log("[si] status:", liveSignIn?.status);
 
@@ -62,7 +86,6 @@ export default function SignInPage() {
         return;
       }
 
-      // "needs_identifier" (422) or anything else → user not found → try sign-up
       needsSignUp = true;
     } catch (err: unknown) {
       const clerkErr = err as ClerkError;
@@ -77,31 +100,18 @@ export default function SignInPage() {
     }
 
     // ── New-user path ────────────────────────────────────────────────────────
+    // Only call create() here. prepareEmailAddressVerification is called by the
+    // useEffect above, which fires after React re-renders with the fresh signUp
+    // (correct id and client token). Using signUp directly here would carry
+    // stale auth context and return 401 "signed_out" from Clerk's server.
     if (needsSignUp) {
       try {
-        const created = await signUp.create({ emailAddress: email });
-        // Try every source in order of freshness:
-        // 1. Return value of create() — built from the 200 response body
-        // 2. window.Clerk.client.signUp — the raw browser singleton (not React-wrapped)
-        // 3. clerk.client.signUp — the IsomorphicClerk wrapper
-        const wClerk = (window as any).Clerk;
-        const freshSignUp: any =
-          (created as any)?.id ? created :
-          wClerk?.client?.signUp?.id ? wClerk.client.signUp :
-          clerk.client?.signUp;
-        console.log("[su] id:", freshSignUp?.id, "status:", freshSignUp?.status);
-        if (!freshSignUp?.id) {
-          setErrMsg("Could not create your account. Please try again.");
-          setStage("error");
-          return;
-        }
-        await freshSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
-        modeRef.current = "signUp";
-        setStage("code");
+        await signUp.create({ emailAddress: email });
+        setNeedsPrepare(true);
+        // Stage stays "sending" — the useEffect advances it to "code" or "error"
       } catch (suErr: unknown) {
         const e = suErr as ClerkError;
         const suErrCode = e.errors?.[0]?.code;
-        console.log("[su] threw — code:", suErrCode, "msg:", e.errors?.[0]?.message);
         if (suErrCode === "form_identifier_exists" || suErrCode === "email_address_exists") {
           setErrMsg("An account with this email already exists. Please try again in a moment.");
         } else {
