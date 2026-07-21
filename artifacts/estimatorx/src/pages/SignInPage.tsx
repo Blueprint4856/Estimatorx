@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useSignIn, useSignUp } from "@clerk/react";
+import { useClerk, useSignIn, useSignUp } from "@clerk/react";
 import { useLocation } from "wouter";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -9,6 +9,7 @@ type Stage = "email" | "sending" | "code" | "verifying" | "done" | "error";
 type ClerkError = { errors?: Array<{ code?: string; message: string }> };
 
 export default function SignInPage() {
+  const { client } = useClerk();
   const { signIn, isLoaded: siLoaded, setActive } = useSignIn();
   const { signUp, isLoaded: suLoaded } = useSignUp();
   const [, setLocation] = useLocation();
@@ -34,13 +35,16 @@ export default function SignInPage() {
     let needsSignUp = false;
 
     // ── Existing-user path ───────────────────────────────────────────────────
+    // Clerk v6.25.x bug: create() resolves with stale hook state (status: undefined)
+    // even on success. Read from client.signIn instead — it is updated synchronously
+    // when the API response is processed.
     try {
-      const attempt = await signIn.create({ identifier: email });
-      console.log("[si] create result — status:", attempt.status, "factors:", attempt.supportedFirstFactors?.length);
+      await signIn.create({ identifier: email });
+      const liveSignIn = client?.signIn;
+      console.log("[si] client.signIn status:", liveSignIn?.status);
 
-      if (attempt.status) {
-        // Sign-in created successfully — look for email_code factor
-        const factor = attempt.supportedFirstFactors?.find(
+      if (liveSignIn?.status) {
+        const factor = liveSignIn.supportedFirstFactors?.find(
           (f) => f.strategy === "email_code",
         );
         if (!factor || factor.strategy !== "email_code") {
@@ -48,7 +52,7 @@ export default function SignInPage() {
           setStage("error");
           return;
         }
-        await signIn.prepareFirstFactor({
+        await liveSignIn.prepareFirstFactor({
           strategy: "email_code",
           emailAddressId: factor.emailAddressId,
         });
@@ -57,13 +61,11 @@ export default function SignInPage() {
         return;
       }
 
-      // Clerk v6 resolves (instead of throwing) when the sign-in 422s.
-      // status === undefined means the user was not found — try sign-up.
+      // 422 → client.signIn is null → user not found → try sign-up
       needsSignUp = true;
     } catch (err: unknown) {
       const clerkErr = err as ClerkError;
       const errCode = clerkErr.errors?.[0]?.code;
-      console.log("[si] threw — code:", errCode);
       if (errCode === "form_identifier_not_found") {
         needsSignUp = true;
       } else {
@@ -76,13 +78,17 @@ export default function SignInPage() {
     // ── New-user path ────────────────────────────────────────────────────────
     if (needsSignUp) {
       try {
-        console.log("[su] calling create");
-        const su = await signUp.create({ emailAddress: email });
-        console.log("[su] create result — id:", su.id, "status:", su.status, "missing:", su.missingFields);
+        await signUp.create({ emailAddress: email });
+        // Same Clerk v6.25.x bug — use client.signUp for the live resource
+        const liveSignUp = client?.signUp;
+        console.log("[su] client.signUp id:", liveSignUp?.id, "status:", liveSignUp?.status);
 
-        // Clerk v6 may resolve with status: null even on success; skip the
-        // status guard and let prepareEmailAddressVerification surface real errors.
-        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+        if (!liveSignUp?.id) {
+          setErrMsg("Could not create your account. Please try again.");
+          setStage("error");
+          return;
+        }
+        await liveSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
         modeRef.current = "signUp";
         setStage("code");
       } catch (suErr: unknown) {
