@@ -1,32 +1,13 @@
 import { useState, useRef } from "react";
-import { useClerk, useSignIn, useSignUp } from "@clerk/react";
+import { useSignIn, useSignUp } from "@clerk/react";
 import { useLocation } from "wouter";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-// Clerk v6 delivers a SignUpFutureResource after create() — has id/status but
-// no operation methods. Call FAPI directly for sign-up verification steps.
-// credentials:'include' sends the updated __clerk_db_jwt cookie automatically.
-const CLERK_FAPI = "https://clerk.estimatorx.pro";
-const CLERK_PARAMS = "__clerk_api_version=2026-05-12&_clerk_js_version=6.25.3";
-
-async function fapiPost(path: string, body: Record<string, string>) {
-  const resp = await fetch(`${CLERK_FAPI}${path}?${CLERK_PARAMS}`, {
-    method: "POST",
-    credentials: "include",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams(body).toString(),
-  });
-  const data = await resp.json();
-  if (!resp.ok) throw data;
-  return data;
-}
 
 type Stage = "email" | "sending" | "code" | "verifying" | "done" | "error";
 type ClerkError = { errors?: Array<{ code?: string; message: string }> };
 
 export default function SignInPage() {
-  const clerk = useClerk();
   const { signIn, isLoaded: siLoaded, setActive } = useSignIn();
   const { signUp, isLoaded: suLoaded } = useSignUp();
   const [, setLocation] = useLocation();
@@ -49,15 +30,11 @@ export default function SignInPage() {
     setStage("sending");
     setErrMsg("");
 
-    let needsSignUp = false;
-
     // ── Existing-user path ────────────────────────────────────────────────────
     try {
-      await signIn.create({ identifier: email });
-      const liveSignIn = clerk.client?.signIn;
-
-      if (liveSignIn?.status === "needs_first_factor") {
-        const factor = liveSignIn.supportedFirstFactors?.find(
+      const si = await signIn.create({ identifier: email });
+      if (si.status === "needs_first_factor") {
+        const factor = si.supportedFirstFactors?.find(
           (f) => f.strategy === "email_code"
         );
         if (!factor) {
@@ -65,7 +42,7 @@ export default function SignInPage() {
           setStage("error");
           return;
         }
-        await liveSignIn.prepareFirstFactor({
+        await signIn.prepareFirstFactor({
           strategy: "email_code",
           emailAddressId: factor.emailAddressId,
         });
@@ -73,91 +50,53 @@ export default function SignInPage() {
         setStage("code");
         return;
       }
-
-      needsSignUp = true;
     } catch (err: unknown) {
       const clerkErr = err as ClerkError;
       const errCode = clerkErr.errors?.[0]?.code;
-      if (errCode === "form_identifier_not_found") {
-        needsSignUp = true;
-      } else {
+      if (errCode !== "form_identifier_not_found") {
         setErrMsg(clerkErr.errors?.[0]?.message ?? "Something went wrong. Please try again.");
         setStage("error");
         return;
       }
+      // form_identifier_not_found → fall through to sign-up
     }
 
     // ── New-user path ─────────────────────────────────────────────────────────
-    if (needsSignUp) {
-      try {
-        await signUp.create({ emailAddress: email });
-        // signUp (this closure) is the pre-create instance — it still has
-        // prepareEmailAddressVerification. Clerk's singleton (window.Clerk) is
-        // updated synchronously by create(), so its client.signUp.id is fresh.
-        // Inject that id onto the pre-create instance so the SDK builds the
-        // correct URL while using its own internal auth state for the request.
-        const freshId = (window as any).Clerk?.client?.signUp?.id as string | undefined;
-        if (!freshId) {
-          setErrMsg("Could not create your account. Please try again.");
-          setStage("error");
-          return;
-        }
-        (signUp as any).id = freshId;
-        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
-        modeRef.current = "signUp";
-        setStage("code");
-      } catch (suErr: unknown) {
-        const e = suErr as ClerkError;
-        const suErrCode = e.errors?.[0]?.code;
-        if (suErrCode === "form_identifier_exists" || suErrCode === "email_address_exists") {
-          setErrMsg("An account with this email already exists. Please try again in a moment.");
-        } else {
-          setErrMsg(e.errors?.[0]?.message ?? "Could not create your account. Please try again.");
-        }
-        setStage("error");
+    try {
+      await signUp.create({ emailAddress: email });
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      modeRef.current = "signUp";
+      setStage("code");
+    } catch (suErr: unknown) {
+      const e = suErr as ClerkError;
+      const suErrCode = e.errors?.[0]?.code;
+      if (suErrCode === "form_identifier_exists" || suErrCode === "email_address_exists") {
+        setErrMsg("An account with this email already exists. Please try again in a moment.");
+      } else {
+        setErrMsg(e.errors?.[0]?.message ?? "Could not create your account. Please try again.");
       }
+      setStage("error");
     }
   }
 
   async function submitCode(e: React.FormEvent) {
     e.preventDefault();
-    if (!signIn || !setActive) return;
+    if (!signIn || !signUp || !setActive) return;
     setStage("verifying");
     setErrMsg("");
 
     try {
       if (modeRef.current === "signUp") {
-        // SDK methods unavailable on FutureResource — use FAPI directly.
-        const signUpId = (signUp as any)?.id as string | undefined;
-        if (!signUpId) {
-          setErrMsg("Session expired. Please start over.");
-          setStage("error");
-          return;
-        }
-        const data = await fapiPost(
-          `/v1/client/sign_ups/${signUpId}/attempt_verification`,
-          { strategy: "email_code", code }
-        );
-        if (data.response?.status === "complete") {
-          const sessionId = data.response?.created_session_id;
-          if (sessionId) {
-            try {
-              await setActive({ session: sessionId });
-              setStage("done");
-              setLocation("/estimator");
-            } catch {
-              // SDK doesn't have the session cached yet — reload picks it up from cookie.
-              window.location.href = "/estimator";
-            }
-          } else {
-            window.location.href = "/estimator";
-          }
+        const result = await signUp.attemptEmailAddressVerification({ code });
+        if (result.status === "complete") {
+          await setActive({ session: result.createdSessionId });
+          setStage("done");
+          setLocation("/estimator");
         } else {
           setErrMsg("Verification incomplete. Please try again.");
           setStage("code");
         }
       } else {
-        // Sign-in path — SDK works fine for existing users.
         const result = await signIn.attemptFirstFactor({ strategy: "email_code", code });
         if (result.status === "complete") {
           await setActive({ session: result.createdSessionId });
@@ -176,16 +115,12 @@ export default function SignInPage() {
   }
 
   async function resend() {
-    if (!signIn) return;
+    if (!signIn || !signUp) return;
     setErrMsg("");
     setCode("");
     try {
       if (modeRef.current === "signUp") {
-        const signUpId = (signUp as any)?.id as string | undefined;
-        if (!signUpId) return;
-        await fapiPost(`/v1/client/sign_ups/${signUpId}/prepare_verification`, {
-          strategy: "email_code",
-        });
+        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       } else {
         const factor = signIn.supportedFirstFactors?.find(
           (f) => f.strategy === "email_code"
