@@ -89,7 +89,9 @@ export default function SignInPage() {
 
         // Prefer the live resource if it was freshly created; otherwise fall back
         // to the hook reference (which Clerk may have mutated in place).
-        const resource = signUpCreated ? liveSignUp! : signUp;
+        // Cast needed because client.signUp is typed as SignUpFutureResource | SignUpResource.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const resource = (signUpCreated ? liveSignUp! : signUp) as any;
         await resource.prepareEmailAddressVerification({ strategy: "email_code" });
         modeRef.current = "signUp";
         setStage("code");
