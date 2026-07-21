@@ -275,6 +275,9 @@ export default function SignInPage() {
 
           {stage === "error" && <p className="text-red-400 text-sm">{errMsg}</p>}
 
+          {/* Clerk mounts the Cloudflare Turnstile bot-protection widget here */}
+          <div id="clerk-captcha" />
+
           <button
             type="submit"
             disabled={busy}
