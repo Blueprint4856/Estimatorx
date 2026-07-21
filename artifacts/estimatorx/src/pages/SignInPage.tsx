@@ -75,14 +75,17 @@ export default function SignInPage() {
     if (needsSignUp) {
       try {
         const su = await signUp.create({ emailAddress: email });
-        console.log("[Clerk] signUp.create status:", su.status, "missing:", JSON.stringify(su.missingFields));
+        if (!su.status) {
+          setErrMsg("Could not create your account. Please try again.");
+          setStage("error");
+          return;
+        }
         await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
         modeRef.current = "signUp";
         setStage("code");
       } catch (suErr: unknown) {
         const e = suErr as ClerkError;
         const suErrCode = e.errors?.[0]?.code;
-        console.log("[Clerk] signUp error:", suErrCode, e.errors?.[0]?.message);
         if (suErrCode === "form_identifier_exists" || suErrCode === "email_address_exists") {
           setErrMsg("An account with this email already exists. Please try again in a moment.");
         } else {
@@ -269,7 +272,6 @@ export default function SignInPage() {
 
           {stage === "error" && <p className="text-red-400 text-sm">{errMsg}</p>}
 
-          <div id="clerk-captcha" />
           <button
             type="submit"
             disabled={busy}
