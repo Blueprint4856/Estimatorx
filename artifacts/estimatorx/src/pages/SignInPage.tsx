@@ -64,12 +64,30 @@ export default function SignInPage() {
     // ── New-user path ─────────────────────────────────────────────────────────
     try {
       await signUp.create({ emailAddress: email });
-      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+
+      // After create() with Turnstile, the hook's signUp can be a FutureResource
+      // (has id/status but no operation methods). Fall back to the live SDK object.
+      const wsu = (window as any).Clerk?.client?.signUp;
+      console.log("[su] hook.id:", (signUp as any)?.id, "wClerk.id:", wsu?.id);
+      console.log("[su] hook.prepare:", typeof (signUp as any)?.prepareEmailAddressVerification, "wClerk.prepare:", typeof wsu?.prepareEmailAddressVerification);
+
+      const suToUse: typeof signUp =
+        typeof (signUp as any).prepareEmailAddressVerification === "function"
+          ? signUp
+          : wsu;
+
+      if (!suToUse?.prepareEmailAddressVerification) {
+        console.error("[su] no prepareEmailAddressVerification on either object");
+        throw new Error("no_prepare_method");
+      }
+
+      await suToUse.prepareEmailAddressVerification({ strategy: "email_code" });
       modeRef.current = "signUp";
       setStage("code");
     } catch (suErr: unknown) {
       const e = suErr as ClerkError;
       const suErrCode = e.errors?.[0]?.code;
+      console.log("[su] catch — code:", suErrCode, "jsMsg:", (e as any)?.message, "clerkMsg:", e.errors?.[0]?.message);
       if (suErrCode === "form_identifier_exists" || suErrCode === "email_address_exists") {
         setErrMsg("An account with this email already exists. Please try again in a moment.");
       } else {
