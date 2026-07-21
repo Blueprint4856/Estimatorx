@@ -65,21 +65,22 @@ export default function SignInPage() {
     try {
       await signUp.create({ emailAddress: email });
 
-      // After create() with Turnstile, the hook's signUp can be a FutureResource
-      // (has id/status but no operation methods). Fall back to the live SDK object.
+      // Turnstile creates the sign-up under a new anonymous client but Clerk's
+      // SDK doesn't update its cached auth token until the client reloads.
+      // Force a client reload so prepare_verification uses the correct token.
+      try {
+        await (window as any).Clerk?.client?.reload?.();
+      } catch {
+        // reload() may not exist on all versions — fall through
+      }
+
       const wsu = (window as any).Clerk?.client?.signUp;
-      console.log("[su] hook.id:", (signUp as any)?.id, "wClerk.id:", wsu?.id);
-      console.log("[su] hook.prepare:", typeof (signUp as any)?.prepareEmailAddressVerification, "wClerk.prepare:", typeof wsu?.prepareEmailAddressVerification);
+      console.log("[su] after reload — wClerk.id:", wsu?.id, "prepare:", typeof wsu?.prepareEmailAddressVerification);
 
       const suToUse: typeof signUp =
         typeof (signUp as any).prepareEmailAddressVerification === "function"
           ? signUp
-          : wsu;
-
-      if (!suToUse?.prepareEmailAddressVerification) {
-        console.error("[su] no prepareEmailAddressVerification on either object");
-        throw new Error("no_prepare_method");
-      }
+          : (wsu ?? signUp);
 
       await suToUse.prepareEmailAddressVerification({ strategy: "email_code" });
       modeRef.current = "signUp";
