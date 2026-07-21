@@ -4,8 +4,25 @@ import { useLocation } from "wouter";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
-type Stage = "email" | "sending" | "code" | "verifying" | "done" | "error";
+// Clerk v6 delivers a SignUpFutureResource after create() — has id/status but
+// no operation methods. Call FAPI directly for sign-up verification steps.
+// credentials:'include' sends the updated __clerk_db_jwt cookie automatically.
+const CLERK_FAPI = "https://clerk.estimatorx.pro";
+const CLERK_PARAMS = "__clerk_api_version=2026-05-12&_clerk_js_version=6.25.3";
 
+async function fapiPost(path: string, body: Record<string, string>) {
+  const resp = await fetch(`${CLERK_FAPI}${path}?${CLERK_PARAMS}`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams(body).toString(),
+  });
+  const data = await resp.json();
+  if (!resp.ok) throw data;
+  return data;
+}
+
+type Stage = "email" | "sending" | "code" | "verifying" | "done" | "error";
 type ClerkError = { errors?: Array<{ code?: string; message: string }> };
 
 export default function SignInPage() {
@@ -23,29 +40,26 @@ export default function SignInPage() {
 
   const isReady = siLoaded && suLoaded;
 
-  // After signUp.create() the hook's signUp isn't updated yet — Clerk notifies
-  // React, which re-renders, and THEN signUp.id is available. We set needsPrepare=true
-  // after create() and let this effect call prepareEmailAddressVerification once
-  // React has re-rendered with the fresh signUp (correct id + client token).
+  // After signUp.create() Clerk re-renders the component with a FutureResource
+  // that has id set. Once we see the id, call prepare_verification via FAPI.
   useEffect(() => {
     if (!needsPrepare) return;
-    if (!signUp?.id) return; // wait for next render when Clerk updates the hook
+    const signUpId = (signUp as any)?.id as string | undefined;
+    if (!signUpId) return;
     setNeedsPrepare(false);
 
-    signUp
-      .prepareEmailAddressVerification({ strategy: "email_code" })
+    fapiPost(`/v1/client/sign_ups/${signUpId}/prepare_verification`, {
+      strategy: "email_code",
+    })
       .then(() => {
         modeRef.current = "signUp";
         setStage("code");
       })
-      .catch((err: unknown) => {
-        const e = err as ClerkError;
-        const code = e.errors?.[0]?.code;
-        if (code === "form_identifier_exists" || code === "email_address_exists") {
-          setErrMsg("An account with this email already exists. Please try again.");
-        } else {
-          setErrMsg(e.errors?.[0]?.message ?? "Could not send verification code. Please try again.");
-        }
+      .catch((err: any) => {
+        setErrMsg(
+          err?.errors?.[0]?.message ??
+            "Could not send verification code. Please try again."
+        );
         setStage("error");
       });
   }, [needsPrepare, signUp]);
@@ -62,15 +76,14 @@ export default function SignInPage() {
 
     let needsSignUp = false;
 
-    // ── Existing-user path ───────────────────────────────────────────────────
+    // ── Existing-user path ────────────────────────────────────────────────────
     try {
       await signIn.create({ identifier: email });
       const liveSignIn = clerk.client?.signIn;
-      console.log("[si] status:", liveSignIn?.status);
 
       if (liveSignIn?.status === "needs_first_factor") {
         const factor = liveSignIn.supportedFirstFactors?.find(
-          (f) => f.strategy === "email_code",
+          (f) => f.strategy === "email_code"
         );
         if (!factor) {
           setErrMsg("Email sign-in is not available for this account. Please contact support.");
@@ -99,16 +112,14 @@ export default function SignInPage() {
       }
     }
 
-    // ── New-user path ────────────────────────────────────────────────────────
-    // Only call create() here. prepareEmailAddressVerification is called by the
-    // useEffect above, which fires after React re-renders with the fresh signUp
-    // (correct id and client token). Using signUp directly here would carry
-    // stale auth context and return 401 "signed_out" from Clerk's server.
+    // ── New-user path ─────────────────────────────────────────────────────────
+    // Use SDK only for create() — Turnstile requires it. After create(), signUp
+    // becomes a FutureResource (no methods). The useEffect above fires once React
+    // re-renders with the id available and calls prepare_verification via FAPI.
     if (needsSignUp) {
       try {
         await signUp.create({ emailAddress: email });
         setNeedsPrepare(true);
-        // Stage stays "sending" — the useEffect advances it to "code" or "error"
       } catch (suErr: unknown) {
         const e = suErr as ClerkError;
         const suErrCode = e.errors?.[0]?.code;
@@ -124,22 +135,43 @@ export default function SignInPage() {
 
   async function submitCode(e: React.FormEvent) {
     e.preventDefault();
-    if (!signIn || !signUp || !setActive) return;
+    if (!signIn || !setActive) return;
     setStage("verifying");
     setErrMsg("");
 
     try {
       if (modeRef.current === "signUp") {
-        const result = await signUp.attemptEmailAddressVerification({ code });
-        if (result.status === "complete") {
-          await setActive({ session: result.createdSessionId });
-          setStage("done");
-          setLocation("/estimator");
+        // SDK methods unavailable on FutureResource — use FAPI directly.
+        const signUpId = (signUp as any)?.id as string | undefined;
+        if (!signUpId) {
+          setErrMsg("Session expired. Please start over.");
+          setStage("error");
+          return;
+        }
+        const data = await fapiPost(
+          `/v1/client/sign_ups/${signUpId}/attempt_verification`,
+          { strategy: "email_code", code }
+        );
+        if (data.response?.status === "complete") {
+          const sessionId = data.response?.created_session_id;
+          if (sessionId) {
+            try {
+              await setActive({ session: sessionId });
+              setStage("done");
+              setLocation("/estimator");
+            } catch {
+              // SDK doesn't have the session cached yet — reload picks it up from cookie.
+              window.location.href = "/estimator";
+            }
+          } else {
+            window.location.href = "/estimator";
+          }
         } else {
           setErrMsg("Verification incomplete. Please try again.");
           setStage("code");
         }
       } else {
+        // Sign-in path — SDK works fine for existing users.
         const result = await signIn.attemptFirstFactor({ strategy: "email_code", code });
         if (result.status === "complete") {
           await setActive({ session: result.createdSessionId });
@@ -158,15 +190,19 @@ export default function SignInPage() {
   }
 
   async function resend() {
-    if (!signIn || !signUp) return;
+    if (!signIn) return;
     setErrMsg("");
     setCode("");
     try {
       if (modeRef.current === "signUp") {
-        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+        const signUpId = (signUp as any)?.id as string | undefined;
+        if (!signUpId) return;
+        await fapiPost(`/v1/client/sign_ups/${signUpId}/prepare_verification`, {
+          strategy: "email_code",
+        });
       } else {
         const factor = signIn.supportedFirstFactors?.find(
-          (f) => f.strategy === "email_code",
+          (f) => f.strategy === "email_code"
         );
         if (factor && factor.strategy === "email_code") {
           await signIn.prepareFirstFactor({
@@ -209,17 +245,15 @@ export default function SignInPage() {
 
           <div className="w-14 h-14 bg-[#E85D26]/10 border-2 border-[#E85D26] flex items-center justify-center mx-auto mb-6">
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E85D26" strokeWidth="2.5" strokeLinecap="round">
-              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-              <polyline points="22,6 12,13 2,6"/>
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+              <polyline points="22,6 12,13 2,6" />
             </svg>
           </div>
 
           <h2 className="text-[#F7F4F0] font-black text-2xl uppercase tracking-tight text-center mb-2">
             Check Your Email
           </h2>
-          <p className="text-[#A8A09A] text-sm text-center mb-1">
-            We sent a 6-digit code to
-          </p>
+          <p className="text-[#A8A09A] text-sm text-center mb-1">We sent a 6-digit code to</p>
           <p className="text-[#E85D26] font-bold text-sm text-center mb-8 break-all">{email}</p>
 
           <form onSubmit={submitCode} className="space-y-4">
