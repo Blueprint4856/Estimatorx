@@ -79,12 +79,17 @@ export default function SignInPage() {
     // ── New-user path ────────────────────────────────────────────────────────
     if (needsSignUp) {
       try {
-        await signUp.create({ emailAddress: email });
-        // Clerk v6.25.x does NOT mutate the hook's signUp in place after create().
-        // clerk.client.signUp (lazy access through the singleton) IS updated
-        // synchronously before the Promise resolves — use that for prepare.
-        const freshSignUp = clerk.client?.signUp as any;
-        console.log("[su] freshSignUp id:", freshSignUp?.id, "status:", freshSignUp?.status);
+        const created = await signUp.create({ emailAddress: email });
+        // Try every source in order of freshness:
+        // 1. Return value of create() — built from the 200 response body
+        // 2. window.Clerk.client.signUp — the raw browser singleton (not React-wrapped)
+        // 3. clerk.client.signUp — the IsomorphicClerk wrapper
+        const wClerk = (window as any).Clerk;
+        const freshSignUp: any =
+          (created as any)?.id ? created :
+          wClerk?.client?.signUp?.id ? wClerk.client.signUp :
+          clerk.client?.signUp;
+        console.log("[su] id:", freshSignUp?.id, "status:", freshSignUp?.status);
         if (!freshSignUp?.id) {
           setErrMsg("Could not create your account. Please try again.");
           setStage("error");
