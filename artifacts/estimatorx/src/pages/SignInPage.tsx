@@ -11,7 +11,8 @@ type ClerkError = { errors?: Array<{ code?: string; message: string }> };
 export default function SignInPage() {
   const { signIn, isLoaded: siLoaded } = useSignIn();
   const { signUp, isLoaded: suLoaded } = useSignUp();
-  const { setActive } = useClerk();
+  const clerk = useClerk();
+  const { setActive } = clerk;
   const [, setLocation] = useLocation();
 
   const [email, setEmail]   = useState("");
@@ -35,7 +36,19 @@ export default function SignInPage() {
     //    anonymous client and breaking all subsequent FAPI calls with 401) ──────
     try {
       const newSignUp = await signUp.create({ emailAddress: email });
+      console.log("Created sign-up:", newSignUp.id);
+      console.log("Status:", newSignUp.status);
+      const clientAfterCreate = await clerk.client;
+      console.log("Client:", clientAfterCreate?.id);
+      console.log("Client signUp:", clientAfterCreate?.signUp);
+
       freshSignUpRef.current = newSignUp;
+
+      const clientBeforePrepare = await clerk.client;
+      console.log("Before prepare");
+      console.log(clientBeforePrepare?.id);
+      console.log(clientBeforePrepare?.signUp);
+
       await newSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
       modeRef.current = "signUp";
       setStage("code");
