@@ -2,7 +2,6 @@ import { useState, useRef } from "react";
 import { useSignIn, useSignUp } from "@clerk/react";
 import { useLocation } from "wouter";
 
-
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 type Stage = "email" | "sending" | "code" | "verifying" | "done" | "error";
@@ -17,18 +16,13 @@ export default function SignInPage() {
   const [code, setCode]     = useState("");
   const [stage, setStage]   = useState<Stage>("email");
   const [errMsg, setErrMsg] = useState("");
-  const modeRef  = useRef<"signIn" | "signUp">("signIn");
-  const suIdRef  = useRef<string>("");   // sign-up ID stored for backend verification
+  const modeRef = useRef<"signIn" | "signUp">("signIn");
 
   const isReady = siLoaded && suLoaded;
 
   async function submitEmail(e: React.FormEvent) {
     e.preventDefault();
-    if (!signIn || !signUp) {
-      setErrMsg("Authentication service is still loading — please wait a moment and try again.");
-      setStage("error");
-      return;
-    }
+    if (!signIn || !signUp) return;
     setStage("sending");
     setErrMsg("");
 
@@ -36,9 +30,7 @@ export default function SignInPage() {
     try {
       const si = await signIn.create({ identifier: email });
       if (si.status === "needs_first_factor") {
-        const factor = si.supportedFirstFactors?.find(
-          (f) => f.strategy === "email_code"
-        );
+        const factor = si.supportedFirstFactors?.find((f) => f.strategy === "email_code");
         if (!factor) {
           setErrMsg("Email sign-in is not available for this account. Please contact support.");
           setStage("error");
@@ -53,57 +45,27 @@ export default function SignInPage() {
         return;
       }
     } catch (err: unknown) {
-      const clerkErr = err as ClerkError;
-      const errCode = clerkErr.errors?.[0]?.code;
-      if (errCode !== "form_identifier_not_found") {
-        setErrMsg(clerkErr.errors?.[0]?.message ?? "Something went wrong. Please try again.");
+      const e = err as ClerkError;
+      if (e.errors?.[0]?.code !== "form_identifier_not_found") {
+        setErrMsg(e.errors?.[0]?.message ?? "Something went wrong. Please try again.");
         setStage("error");
         return;
       }
-      // form_identifier_not_found → fall through to sign-up
+      // form_identifier_not_found → new user, fall through to sign-up
     }
 
     // ── New-user path ─────────────────────────────────────────────────────────
-    // signUp.create() triggers Turnstile in production. Clerk's browser SDK
-    // doesn't update its client auth token after the Turnstile-gated create(),
-    // so prepareEmailAddressVerification() always returns 401. We work around
-    // this by routing prepare/attempt through our backend API, which uses the
-    // Clerk secret key and doesn't need a client-side auth token.
     try {
-      await signUp.create({ emailAddress: email });
-
-      // After create(), Clerk's in-memory state has the new sign-up ID even
-      // though the hook's signUp may be a FutureResource without methods.
-      const signUpId = (window as any).Clerk?.client?.signUp?.id as string | undefined;
-      if (!signUpId) {
-        setErrMsg("Could not create your account. Please refresh and try again.");
-        setStage("error");
-        return;
-      }
-      suIdRef.current = signUpId;
-
-      // Ask our backend to send the verification email via Clerk's admin API.
-      const prepRes = await fetch("/api/auth/signup-verify-prepare", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signUpId }),
-      });
-      if (!prepRes.ok) {
-        const prepData = await prepRes.json().catch(() => ({}));
-        const msg = (prepData as ClerkError).errors?.[0]?.message
-          ?? "Could not send verification email. Please try again.";
-        setErrMsg(msg);
-        setStage("error");
-        return;
-      }
-
+      // create() runs Turnstile in production and returns the fresh SignUpResource
+      const newSignUp = await signUp.create({ emailAddress: email });
+      await newSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
       modeRef.current = "signUp";
       setStage("code");
     } catch (suErr: unknown) {
       const e = suErr as ClerkError;
-      const suErrCode = e.errors?.[0]?.code;
-      if (suErrCode === "form_identifier_exists" || suErrCode === "email_address_exists") {
-        setErrMsg("An account with this email already exists. Please try again in a moment.");
+      const code = e.errors?.[0]?.code;
+      if (code === "form_identifier_exists" || code === "email_address_exists") {
+        setErrMsg("An account with this email already exists. Please sign in instead.");
       } else {
         setErrMsg(e.errors?.[0]?.message ?? "Could not create your account. Please try again.");
       }
@@ -119,32 +81,15 @@ export default function SignInPage() {
 
     try {
       if (modeRef.current === "signUp") {
-        // Verify code via backend → get a sign-in token → activate session.
-        const res = await fetch("/api/auth/signup-verify-attempt", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ signUpId: suIdRef.current, code }),
-        });
-        const data = await res.json() as { token?: string; errors?: Array<{ code?: string; message: string }> };
-
-        if (!res.ok) {
-          setErrMsg(data.errors?.[0]?.message ?? "Incorrect code. Please try again.");
+        const result = await signUp.attemptEmailAddressVerification({ code });
+        if (result.status === "complete") {
+          await setActive({ session: result.createdSessionId });
+          setStage("done");
+          setLocation("/estimator");
+        } else {
+          setErrMsg("Verification incomplete. Please try again.");
           setStage("code");
-          return;
         }
-
-        if (!data.token) {
-          setErrMsg("Session could not be established. Please try again.");
-          setStage("error");
-          return;
-        }
-
-        // Exchange the backend-issued sign-in token for a browser session.
-        // The "ticket" strategy bypasses Turnstile since the token is server-issued.
-        const siResult = await signIn.create({ strategy: "ticket", ticket: data.token });
-        await setActive({ session: siResult.createdSessionId });
-        setStage("done");
-        setLocation("/estimator");
       } else {
         const result = await signIn.attemptFirstFactor({ strategy: "email_code", code });
         if (result.status === "complete") {
@@ -157,8 +102,8 @@ export default function SignInPage() {
         }
       }
     } catch (err: unknown) {
-      const clerkErr = err as ClerkError;
-      setErrMsg(clerkErr.errors?.[0]?.message ?? "Incorrect code. Please try again.");
+      const e = err as ClerkError;
+      setErrMsg(e.errors?.[0]?.message ?? "Incorrect code. Please try again.");
       setStage("code");
     }
   }
@@ -169,15 +114,9 @@ export default function SignInPage() {
     setCode("");
     try {
       if (modeRef.current === "signUp") {
-        await fetch("/api/auth/signup-verify-prepare", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ signUpId: suIdRef.current }),
-        });
+        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       } else {
-        const factor = signIn.supportedFirstFactors?.find(
-          (f) => f.strategy === "email_code"
-        );
+        const factor = signIn.supportedFirstFactors?.find((f) => f.strategy === "email_code");
         if (factor && factor.strategy === "email_code") {
           await signIn.prepareFirstFactor({
             strategy: "email_code",
@@ -197,6 +136,7 @@ export default function SignInPage() {
     setErrMsg("");
   }
 
+  // ── Done ────────────────────────────────────────────────────────────────────
   if (stage === "done") {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-[#1A1A1A]">
@@ -210,6 +150,7 @@ export default function SignInPage() {
     );
   }
 
+  // ── Code input ──────────────────────────────────────────────────────────────
   if (stage === "code" || stage === "verifying") {
     const busy = stage === "verifying";
     return (
@@ -275,6 +216,7 @@ export default function SignInPage() {
     );
   }
 
+  // ── Email input ─────────────────────────────────────────────────────────────
   const busy = stage === "sending";
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-[#1A1A1A] px-4">
@@ -306,12 +248,12 @@ export default function SignInPage() {
 
           {stage === "error" && <p className="text-red-400 text-sm">{errMsg}</p>}
 
-          {/* Clerk mounts the Cloudflare Turnstile bot-protection widget here */}
+          {/* Clerk mounts the Cloudflare Turnstile widget here */}
           <div id="clerk-captcha" />
 
           <button
             type="submit"
-            disabled={busy}
+            disabled={busy || !isReady}
             className="w-full bg-[#E85D26] text-white py-3.5 font-bold uppercase tracking-widest hover:bg-[#D44A15] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {busy ? "Sending…" : "Send Code"}
