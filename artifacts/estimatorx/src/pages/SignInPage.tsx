@@ -29,6 +29,29 @@ export default function SignInPage() {
     setStage("sending");
     setErrMsg("");
 
+    // ── New-user path (try sign-up first so the client has no active sign-in
+    //    attempt when Turnstile runs — a prior signIn.create() leaves sign_up:null
+    //    on the client, causing Turnstile to create the sign-up under a separate
+    //    anonymous client and breaking all subsequent FAPI calls with 401) ──────
+    try {
+      const newSignUp = await signUp.create({ emailAddress: email });
+      freshSignUpRef.current = newSignUp;
+      await newSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      modeRef.current = "signUp";
+      setStage("code");
+      return;
+    } catch (suErr: unknown) {
+      const e = suErr as ClerkError;
+      const errCode = e.errors?.[0]?.code;
+      console.log("Clerk sign-up error:", errCode);
+      if (errCode !== "form_identifier_exists" && errCode !== "email_address_exists") {
+        setErrMsg(e.errors?.[0]?.message ?? "Could not create your account. Please try again.");
+        setStage("error");
+        return;
+      }
+      // Email already exists → fall through to sign-in
+    }
+
     // ── Existing-user path ────────────────────────────────────────────────────
     try {
       const si = await signIn.create({ identifier: email });
@@ -45,35 +68,11 @@ export default function SignInPage() {
         });
         modeRef.current = "signIn";
         setStage("code");
-        return;
       }
     } catch (err: unknown) {
       const e = err as ClerkError;
-      if (e.errors?.[0]?.code !== "form_identifier_not_found") {
-        setErrMsg(e.errors?.[0]?.message ?? "Something went wrong. Please try again.");
-        setStage("error");
-        return;
-      }
-      // form_identifier_not_found → new user, fall through to sign-up
-    }
-
-    // ── New-user path ─────────────────────────────────────────────────────────
-    try {
-      // create() runs Turnstile in production; store the returned resource so
-      // subsequent verify calls use its auth token, not the stale hook instance.
-      const newSignUp = await signUp.create({ emailAddress: email });
-      freshSignUpRef.current = newSignUp;
-      await newSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
-      modeRef.current = "signUp";
-      setStage("code");
-    } catch (suErr: unknown) {
-      const e = suErr as ClerkError;
-      const code = e.errors?.[0]?.code;
-      if (code === "form_identifier_exists" || code === "email_address_exists") {
-        setErrMsg("An account with this email already exists. Please sign in instead.");
-      } else {
-        setErrMsg(e.errors?.[0]?.message ?? "Could not create your account. Please try again.");
-      }
+      console.log("Clerk sign-in error:", e.errors?.[0]?.code);
+      setErrMsg(e.errors?.[0]?.message ?? "Something went wrong. Please try again.");
       setStage("error");
     }
   }
