@@ -2,6 +2,7 @@ import { useState, useRef } from "react";
 import { useSignIn, useSignUp } from "@clerk/react";
 import { useLocation } from "wouter";
 
+
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 type Stage = "email" | "sending" | "code" | "verifying" | "done" | "error";
