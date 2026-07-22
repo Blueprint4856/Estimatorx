@@ -24,7 +24,8 @@ router.post("/auth/signup-verify-prepare", async (req, res) => {
     });
     const data = await r.json();
     res.status(r.ok ? 200 : r.status).json(data);
-  } catch {
+  } catch (err) {
+    console.error("[auth] signup-verify-prepare failed:", err);
     res.status(502).json({ error: "Failed to reach Clerk API" });
   }
 });
@@ -55,7 +56,8 @@ router.post("/auth/signup-verify-attempt", async (req, res) => {
     if (!tokenRes.ok) { res.status(tokenRes.status).json(tokenData); return; }
 
     res.json({ token: tokenData.token });
-  } catch {
+  } catch (err) {
+    console.error("[auth] signup-verify-attempt failed:", err);
     res.status(502).json({ error: "Failed to reach Clerk API" });
   }
 });
@@ -74,7 +76,8 @@ router.post("/auth/signin-verify-prepare", async (req, res) => {
     });
     const data = await r.json();
     res.status(r.ok ? 200 : r.status).json(data);
-  } catch {
+  } catch (err) {
+    console.error("[auth] signin-verify-prepare failed:", err);
     res.status(502).json({ error: "Failed to reach Clerk API" });
   }
 });
@@ -115,7 +118,8 @@ router.post("/auth/signin-verify-attempt", async (req, res) => {
     if (!tokenRes.ok) { res.status(tokenRes.status).json(tokenData); return; }
 
     res.json({ token: tokenData.token });
-  } catch {
+  } catch (err) {
+    console.error("[auth] signin-verify-attempt failed:", err);
     res.status(502).json({ error: "Failed to reach Clerk API" });
   }
 });
