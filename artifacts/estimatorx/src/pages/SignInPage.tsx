@@ -19,8 +19,10 @@ export default function SignInPage() {
   const [code, setCode]     = useState("");
   const [stage, setStage]   = useState<Stage>("email");
   const [errMsg, setErrMsg] = useState("");
-  const modeRef       = useRef<"signIn" | "signUp">("signIn");
-  const freshSignUpRef = useRef<NonNullable<typeof signUp> | null>(null);
+  const modeRef          = useRef<"signIn" | "signUp">("signIn");
+  const signUpIdRef      = useRef<string | null>(null);
+  const signInIdRef      = useRef<string | null>(null);
+  const emailAddrIdRef   = useRef<string | null>(null);
 
   const isReady = siLoaded && suLoaded;
 
@@ -30,33 +32,29 @@ export default function SignInPage() {
     setStage("sending");
     setErrMsg("");
 
-    // ── New-user path (try sign-up first so the client has no active sign-in
-    //    attempt when Turnstile runs — a prior signIn.create() leaves sign_up:null
-    //    on the client, causing Turnstile to create the sign-up under a separate
-    //    anonymous client and breaking all subsequent FAPI calls with 401) ──────
+    // ── New-user path ─────────────────────────────────────────────────────────
     try {
       const newSignUp = await signUp.create({ emailAddress: email });
-      console.log("Created sign-up:", newSignUp.id);
-      console.log("Status:", newSignUp.status);
-      const clientAfterCreate = await clerk.client;
-      console.log("Client:", clientAfterCreate?.id);
-      console.log("Client signUp:", clientAfterCreate?.signUp);
+      signUpIdRef.current = newSignUp.id ?? null;
 
-      freshSignUpRef.current = newSignUp;
+      const r = await fetch("/api/auth/signup-verify-prepare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signUpId: newSignUp.id }),
+      });
+      if (!r.ok) {
+        const data = await r.json();
+        setErrMsg(data.error ?? "Could not send verification code.");
+        setStage("error");
+        return;
+      }
 
-      const clientBeforePrepare = await clerk.client;
-      console.log("Before prepare");
-      console.log(clientBeforePrepare?.id);
-      console.log(clientBeforePrepare?.signUp);
-
-      await newSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
       modeRef.current = "signUp";
       setStage("code");
       return;
     } catch (suErr: unknown) {
       const e = suErr as ClerkError;
       const errCode = e.errors?.[0]?.code;
-      console.log("Clerk sign-up error:", errCode);
       if (errCode !== "form_identifier_exists" && errCode !== "email_address_exists") {
         setErrMsg(e.errors?.[0]?.message ?? "Could not create your account. Please try again.");
         setStage("error");
@@ -75,16 +73,27 @@ export default function SignInPage() {
           setStage("error");
           return;
         }
-        await signIn.prepareFirstFactor({
-          strategy: "email_code",
-          emailAddressId: factor.emailAddressId,
+
+        signInIdRef.current = si.id ?? null;
+        emailAddrIdRef.current = factor.emailAddressId ?? null;
+
+        const r = await fetch("/api/auth/signin-verify-prepare", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ signInId: si.id, emailAddressId: factor.emailAddressId }),
         });
+        if (!r.ok) {
+          const data = await r.json();
+          setErrMsg(data.error ?? "Could not send verification code.");
+          setStage("error");
+          return;
+        }
+
         modeRef.current = "signIn";
         setStage("code");
       }
     } catch (err: unknown) {
       const e = err as ClerkError;
-      console.log("Clerk sign-in error:", e.errors?.[0]?.code);
       setErrMsg(e.errors?.[0]?.message ?? "Something went wrong. Please try again.");
       setStage("error");
     }
@@ -97,31 +106,50 @@ export default function SignInPage() {
     setErrMsg("");
 
     try {
+      let token: string;
+
       if (modeRef.current === "signUp") {
-        const su = freshSignUpRef.current ?? signUp;
-        const result = await su.attemptEmailAddressVerification({ code });
-        if (result.status === "complete") {
-          await setActive({ session: result.createdSessionId });
-          setStage("done");
-          setLocation("/estimator");
-        } else {
-          setErrMsg("Verification incomplete. Please try again.");
+        const r = await fetch("/api/auth/signup-verify-attempt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ signUpId: signUpIdRef.current, code }),
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          setErrMsg(data.errors?.[0]?.message ?? data.error ?? "Incorrect code. Please try again.");
           setStage("code");
+          return;
         }
+        token = data.token;
       } else {
-        const result = await signIn.attemptFirstFactor({ strategy: "email_code", code });
-        if (result.status === "complete") {
-          await setActive({ session: result.createdSessionId });
-          setStage("done");
-          setLocation("/estimator");
-        } else {
-          setErrMsg("Verification incomplete. Please try again.");
+        const r = await fetch("/api/auth/signin-verify-attempt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ signInId: signInIdRef.current, code }),
+        });
+        const data = await r.json();
+        if (!r.ok) {
+          setErrMsg(data.errors?.[0]?.message ?? data.error ?? "Incorrect code. Please try again.");
           setStage("code");
+          return;
         }
+        token = data.token;
+      }
+
+      // Exchange the sign-in token for an active session
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result = await signIn.create({ strategy: "ticket", ticket: token } as any);
+      if (result.status === "complete") {
+        await setActive({ session: result.createdSessionId });
+        setStage("done");
+        setLocation("/estimator");
+      } else {
+        setErrMsg("Verification incomplete. Please try again.");
+        setStage("code");
       }
     } catch (err: unknown) {
       const e = err as ClerkError;
-      setErrMsg(e.errors?.[0]?.message ?? "Incorrect code. Please try again.");
+      setErrMsg(e.errors?.[0]?.message ?? "Something went wrong. Please try again.");
       setStage("code");
     }
   }
@@ -131,17 +159,18 @@ export default function SignInPage() {
     setErrMsg("");
     setCode("");
     try {
-      if (modeRef.current === "signUp") {
-        const su = freshSignUpRef.current ?? signUp;
-        await su.prepareEmailAddressVerification({ strategy: "email_code" });
-      } else {
-        const factor = signIn.supportedFirstFactors?.find((f) => f.strategy === "email_code");
-        if (factor && factor.strategy === "email_code") {
-          await signIn.prepareFirstFactor({
-            strategy: "email_code",
-            emailAddressId: factor.emailAddressId,
-          });
-        }
+      if (modeRef.current === "signUp" && signUpIdRef.current) {
+        await fetch("/api/auth/signup-verify-prepare", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ signUpId: signUpIdRef.current }),
+        });
+      } else if (signInIdRef.current && emailAddrIdRef.current) {
+        await fetch("/api/auth/signin-verify-prepare", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ signInId: signInIdRef.current, emailAddressId: emailAddrIdRef.current }),
+        });
       }
     } catch {
       // silently ignore resend errors
@@ -153,10 +182,12 @@ export default function SignInPage() {
     setCode("");
     setStage("email");
     setErrMsg("");
-    freshSignUpRef.current = null;
+    signUpIdRef.current = null;
+    signInIdRef.current = null;
+    emailAddrIdRef.current = null;
   }
 
-  // ── Done ────────────────────────────────────────────────────────────────────
+  // ── Done ─────────────────────────────────────────────────────────────────────
   if (stage === "done") {
     return (
       <div className="flex min-h-[100dvh] items-center justify-center bg-[#1A1A1A]">
@@ -170,7 +201,7 @@ export default function SignInPage() {
     );
   }
 
-  // ── Code input ──────────────────────────────────────────────────────────────
+  // ── Code input ───────────────────────────────────────────────────────────────
   if (stage === "code" || stage === "verifying") {
     const busy = stage === "verifying";
     return (
@@ -236,7 +267,7 @@ export default function SignInPage() {
     );
   }
 
-  // ── Email input ─────────────────────────────────────────────────────────────
+  // ── Email input ──────────────────────────────────────────────────────────────
   const busy = stage === "sending";
   return (
     <div className="flex min-h-[100dvh] items-center justify-center bg-[#1A1A1A] px-4">

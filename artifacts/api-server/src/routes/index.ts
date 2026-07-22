@@ -5,6 +5,7 @@ import stripeRouter from "./stripe";
 import estimatesRouter from "./estimates";
 import plansRouter from "./plans";
 import sharedRouter from "./shared";
+import authRouter from "./auth";
 
 const router: IRouter = Router();
 
@@ -14,5 +15,6 @@ router.use(stripeRouter);
 router.use(estimatesRouter);
 router.use(plansRouter);
 router.use(sharedRouter);
+router.use(authRouter);
 
 export default router;
