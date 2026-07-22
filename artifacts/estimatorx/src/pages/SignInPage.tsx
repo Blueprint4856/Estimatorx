@@ -16,7 +16,8 @@ export default function SignInPage() {
   const [code, setCode]     = useState("");
   const [stage, setStage]   = useState<Stage>("email");
   const [errMsg, setErrMsg] = useState("");
-  const modeRef = useRef<"signIn" | "signUp">("signIn");
+  const modeRef  = useRef<"signIn" | "signUp">("signIn");
+  const suIdRef  = useRef<string>("");   // sign-up ID stored for backend verification
 
   const isReady = siLoaded && suLoaded;
 
@@ -62,33 +63,44 @@ export default function SignInPage() {
     }
 
     // ── New-user path ─────────────────────────────────────────────────────────
+    // signUp.create() triggers Turnstile in production. Clerk's browser SDK
+    // doesn't update its client auth token after the Turnstile-gated create(),
+    // so prepareEmailAddressVerification() always returns 401. We work around
+    // this by routing prepare/attempt through our backend API, which uses the
+    // Clerk secret key and doesn't need a client-side auth token.
     try {
       await signUp.create({ emailAddress: email });
 
-      // Turnstile creates the sign-up under a new anonymous client but Clerk's
-      // SDK doesn't update its cached auth token until the client reloads.
-      // Force a client reload so prepare_verification uses the correct token.
-      try {
-        await (window as any).Clerk?.client?.reload?.();
-      } catch {
-        // reload() may not exist on all versions — fall through
+      // After create(), Clerk's in-memory state has the new sign-up ID even
+      // though the hook's signUp may be a FutureResource without methods.
+      const signUpId = (window as any).Clerk?.client?.signUp?.id as string | undefined;
+      if (!signUpId) {
+        setErrMsg("Could not create your account. Please refresh and try again.");
+        setStage("error");
+        return;
+      }
+      suIdRef.current = signUpId;
+
+      // Ask our backend to send the verification email via Clerk's admin API.
+      const prepRes = await fetch("/api/auth/signup-verify-prepare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ signUpId }),
+      });
+      if (!prepRes.ok) {
+        const prepData = await prepRes.json().catch(() => ({}));
+        const msg = (prepData as ClerkError).errors?.[0]?.message
+          ?? "Could not send verification email. Please try again.";
+        setErrMsg(msg);
+        setStage("error");
+        return;
       }
 
-      const wsu = (window as any).Clerk?.client?.signUp;
-      console.log("[su] after reload — wClerk.id:", wsu?.id, "prepare:", typeof wsu?.prepareEmailAddressVerification);
-
-      const suToUse: typeof signUp =
-        typeof (signUp as any).prepareEmailAddressVerification === "function"
-          ? signUp
-          : (wsu ?? signUp);
-
-      await suToUse.prepareEmailAddressVerification({ strategy: "email_code" });
       modeRef.current = "signUp";
       setStage("code");
     } catch (suErr: unknown) {
       const e = suErr as ClerkError;
       const suErrCode = e.errors?.[0]?.code;
-      console.log("[su] catch — code:", suErrCode, "jsMsg:", (e as any)?.message, "clerkMsg:", e.errors?.[0]?.message);
       if (suErrCode === "form_identifier_exists" || suErrCode === "email_address_exists") {
         setErrMsg("An account with this email already exists. Please try again in a moment.");
       } else {
@@ -106,15 +118,32 @@ export default function SignInPage() {
 
     try {
       if (modeRef.current === "signUp") {
-        const result = await signUp.attemptEmailAddressVerification({ code });
-        if (result.status === "complete") {
-          await setActive({ session: result.createdSessionId });
-          setStage("done");
-          setLocation("/estimator");
-        } else {
-          setErrMsg("Verification incomplete. Please try again.");
+        // Verify code via backend → get a sign-in token → activate session.
+        const res = await fetch("/api/auth/signup-verify-attempt", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ signUpId: suIdRef.current, code }),
+        });
+        const data = await res.json() as { token?: string; errors?: Array<{ code?: string; message: string }> };
+
+        if (!res.ok) {
+          setErrMsg(data.errors?.[0]?.message ?? "Incorrect code. Please try again.");
           setStage("code");
+          return;
         }
+
+        if (!data.token) {
+          setErrMsg("Session could not be established. Please try again.");
+          setStage("error");
+          return;
+        }
+
+        // Exchange the backend-issued sign-in token for a browser session.
+        // The "ticket" strategy bypasses Turnstile since the token is server-issued.
+        const siResult = await signIn.create({ strategy: "ticket", ticket: data.token });
+        await setActive({ session: siResult.createdSessionId });
+        setStage("done");
+        setLocation("/estimator");
       } else {
         const result = await signIn.attemptFirstFactor({ strategy: "email_code", code });
         if (result.status === "complete") {
@@ -139,7 +168,11 @@ export default function SignInPage() {
     setCode("");
     try {
       if (modeRef.current === "signUp") {
-        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+        await fetch("/api/auth/signup-verify-prepare", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ signUpId: suIdRef.current }),
+        });
       } else {
         const factor = signIn.supportedFirstFactors?.find(
           (f) => f.strategy === "email_code"
