@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { useSignIn, useSignUp } from "@clerk/react/legacy";
+import { useClerk } from "@clerk/react";
 import { useLocation } from "wouter";
 
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -8,15 +9,17 @@ type Stage = "email" | "sending" | "code" | "verifying" | "done" | "error";
 type ClerkError = { errors?: Array<{ code?: string; message: string }> };
 
 export default function SignInPage() {
-  const { signIn, isLoaded: siLoaded, setActive } = useSignIn();
+  const { signIn, isLoaded: siLoaded } = useSignIn();
   const { signUp, isLoaded: suLoaded } = useSignUp();
+  const { setActive } = useClerk();
   const [, setLocation] = useLocation();
 
   const [email, setEmail]   = useState("");
   const [code, setCode]     = useState("");
   const [stage, setStage]   = useState<Stage>("email");
   const [errMsg, setErrMsg] = useState("");
-  const modeRef = useRef<"signIn" | "signUp">("signIn");
+  const modeRef       = useRef<"signIn" | "signUp">("signIn");
+  const freshSignUpRef = useRef<NonNullable<typeof signUp> | null>(null);
 
   const isReady = siLoaded && suLoaded;
 
@@ -56,8 +59,10 @@ export default function SignInPage() {
 
     // ── New-user path ─────────────────────────────────────────────────────────
     try {
-      // create() runs Turnstile in production and returns the fresh SignUpResource
+      // create() runs Turnstile in production; store the returned resource so
+      // subsequent verify calls use its auth token, not the stale hook instance.
       const newSignUp = await signUp.create({ emailAddress: email });
+      freshSignUpRef.current = newSignUp;
       await newSignUp.prepareEmailAddressVerification({ strategy: "email_code" });
       modeRef.current = "signUp";
       setStage("code");
@@ -75,13 +80,14 @@ export default function SignInPage() {
 
   async function submitCode(e: React.FormEvent) {
     e.preventDefault();
-    if (!signIn || !signUp || !setActive) return;
+    if (!signIn || !signUp) return;
     setStage("verifying");
     setErrMsg("");
 
     try {
       if (modeRef.current === "signUp") {
-        const result = await signUp.attemptEmailAddressVerification({ code });
+        const su = freshSignUpRef.current ?? signUp;
+        const result = await su.attemptEmailAddressVerification({ code });
         if (result.status === "complete") {
           await setActive({ session: result.createdSessionId });
           setStage("done");
@@ -114,7 +120,8 @@ export default function SignInPage() {
     setCode("");
     try {
       if (modeRef.current === "signUp") {
-        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+        const su = freshSignUpRef.current ?? signUp;
+        await su.prepareEmailAddressVerification({ strategy: "email_code" });
       } else {
         const factor = signIn.supportedFirstFactors?.find((f) => f.strategy === "email_code");
         if (factor && factor.strategy === "email_code") {
@@ -134,6 +141,7 @@ export default function SignInPage() {
     setCode("");
     setStage("email");
     setErrMsg("");
+    freshSignUpRef.current = null;
   }
 
   // ── Done ────────────────────────────────────────────────────────────────────
