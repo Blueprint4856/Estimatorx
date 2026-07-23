@@ -37,6 +37,5 @@ export default defineConfig({
     "import.meta.env.PROD": JSON.stringify(true),
     "import.meta.env.SSR": JSON.stringify(true),
     "import.meta.env.VITE_CLERK_PUBLISHABLE_KEY": JSON.stringify("pk_live_mock"),
-    "import.meta.env.VITE_CLERK_PROXY_URL": JSON.stringify(""),
   },
 });
