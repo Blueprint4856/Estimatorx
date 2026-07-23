@@ -19,10 +19,8 @@ export default function SignInPage() {
   const [code, setCode]     = useState("");
   const [stage, setStage]   = useState<Stage>("email");
   const [errMsg, setErrMsg] = useState("");
-  const modeRef          = useRef<"signIn" | "signUp">("signIn");
-  const signUpIdRef      = useRef<string | null>(null);
-  const signInIdRef      = useRef<string | null>(null);
-  const emailAddrIdRef   = useRef<string | null>(null);
+  const modeRef        = useRef<"signIn" | "signUp">("signIn");
+  const emailAddrIdRef = useRef<string | null>(null);
 
   const isReady = siLoaded && suLoaded;
 
@@ -34,21 +32,8 @@ export default function SignInPage() {
 
     // ── New-user path ─────────────────────────────────────────────────────────
     try {
-      const newSignUp = await signUp.create({ emailAddress: email });
-      signUpIdRef.current = newSignUp.id ?? null;
-
-      const r = await fetch("/api/auth/signup-verify-prepare", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ signUpId: newSignUp.id }),
-      });
-      if (!r.ok) {
-        const data = await r.json();
-        setErrMsg(data.error ?? "Could not send verification code.");
-        setStage("error");
-        return;
-      }
-
+      await signUp.create({ emailAddress: email });
+      await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
       modeRef.current = "signUp";
       setStage("code");
       return;
@@ -73,22 +58,10 @@ export default function SignInPage() {
           setStage("error");
           return;
         }
-
-        signInIdRef.current = si.id ?? null;
-        emailAddrIdRef.current = factor.emailAddressId ?? null;
-
-        const r = await fetch("/api/auth/signin-verify-prepare", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ signInId: si.id, emailAddressId: factor.emailAddressId }),
-        });
-        if (!r.ok) {
-          const data = await r.json();
-          setErrMsg(data.error ?? "Could not send verification code.");
-          setStage("error");
-          return;
-        }
-
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const emailAddressId = (factor as any).emailAddressId as string;
+        emailAddrIdRef.current = emailAddressId;
+        await si.prepareFirstFactor({ strategy: "email_code", emailAddressId });
         modeRef.current = "signIn";
         setStage("code");
       }
@@ -106,46 +79,26 @@ export default function SignInPage() {
     setErrMsg("");
 
     try {
-      let token: string;
-
       if (modeRef.current === "signUp") {
-        const r = await fetch("/api/auth/signup-verify-attempt", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ signUpId: signUpIdRef.current, code }),
-        });
-        const data = await r.json();
-        if (!r.ok) {
-          setErrMsg(data.errors?.[0]?.message ?? data.error ?? "Incorrect code. Please try again.");
+        const result = await signUp.attemptEmailAddressVerification({ code });
+        if (result.status === "complete") {
+          await setActive({ session: result.createdSessionId });
+          setStage("done");
+          setLocation("/estimator");
+        } else {
+          setErrMsg("Verification incomplete. Please try again.");
           setStage("code");
-          return;
         }
-        token = data.token;
       } else {
-        const r = await fetch("/api/auth/signin-verify-attempt", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ signInId: signInIdRef.current, code }),
-        });
-        const data = await r.json();
-        if (!r.ok) {
-          setErrMsg(data.errors?.[0]?.message ?? data.error ?? "Incorrect code. Please try again.");
+        const result = await signIn.attemptFirstFactor({ strategy: "email_code", code });
+        if (result.status === "complete") {
+          await setActive({ session: result.createdSessionId });
+          setStage("done");
+          setLocation("/estimator");
+        } else {
+          setErrMsg("Verification incomplete. Please try again.");
           setStage("code");
-          return;
         }
-        token = data.token;
-      }
-
-      // Exchange the sign-in token for an active session
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await signIn.create({ strategy: "ticket", ticket: token } as any);
-      if (result.status === "complete") {
-        await setActive({ session: result.createdSessionId });
-        setStage("done");
-        setLocation("/estimator");
-      } else {
-        setErrMsg("Verification incomplete. Please try again.");
-        setStage("code");
       }
     } catch (err: unknown) {
       const e = err as ClerkError;
@@ -159,18 +112,10 @@ export default function SignInPage() {
     setErrMsg("");
     setCode("");
     try {
-      if (modeRef.current === "signUp" && signUpIdRef.current) {
-        await fetch("/api/auth/signup-verify-prepare", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ signUpId: signUpIdRef.current }),
-        });
-      } else if (signInIdRef.current && emailAddrIdRef.current) {
-        await fetch("/api/auth/signin-verify-prepare", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ signInId: signInIdRef.current, emailAddressId: emailAddrIdRef.current }),
-        });
+      if (modeRef.current === "signUp") {
+        await signUp.prepareEmailAddressVerification({ strategy: "email_code" });
+      } else if (emailAddrIdRef.current) {
+        await signIn.prepareFirstFactor({ strategy: "email_code", emailAddressId: emailAddrIdRef.current });
       }
     } catch {
       // silently ignore resend errors
@@ -182,8 +127,6 @@ export default function SignInPage() {
     setCode("");
     setStage("email");
     setErrMsg("");
-    signUpIdRef.current = null;
-    signInIdRef.current = null;
     emailAddrIdRef.current = null;
   }
 
