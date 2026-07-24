@@ -219,7 +219,13 @@ function ProjectSetupCard() {
   const [project, setProject] = useProject();
   const [open, setOpen] = useLocalStorage<boolean>("ex.project.open", true);
   const setp = (k: keyof ProjectInputs, v: string) => setProject(prev => ({ ...prev, [k]: v }));
-  const autoPerim = project.sqft ? String(Math.ceil(Math.sqrt(parseFloat(project.sqft)) * 4)) : "";
+  const dimW = parseFloat(project.buildingWidth);
+  const dimL = parseFloat(project.buildingLength);
+  const dimPerim = dimW && dimL ? 2 * (dimW + dimL) : null;
+  const autoPerim = dimPerim
+    ? String(dimPerim)
+    : project.sqft ? String(Math.ceil(Math.sqrt(parseFloat(project.sqft)) * 4))
+    : "";
   const effectiveFp = project.footprintSqft || project.sqft;
   return (
     <div className="no-print mb-4 border border-[#E85D26]/40 bg-[#FFF8F5]">
@@ -242,7 +248,7 @@ function ProjectSetupCard() {
             <Field label="Footprint (sqft)" note={project.sqft && !project.footprintSqft ? `Defaults to living area (${project.sqft} sqft)` : "If different from living area"}>
               <NumberInput value={project.footprintSqft} onChange={v => setp("footprintSqft", v)} placeholder={project.sqft || "e.g. 2000"} />
             </Field>
-            <Field label="Exterior Perimeter (LF)" note={autoPerim && !project.linearFeet ? `Auto: ~${autoPerim} LF` : "Total ext. wall linear feet"}>
+            <Field label="Exterior Perimeter (LF)" note={autoPerim && !project.linearFeet ? `Auto: ${dimPerim ? "" : "~"}${autoPerim} LF` : "Total ext. wall linear feet"}>
               <NumberInput value={project.linearFeet} onChange={v => setp("linearFeet", v)} placeholder={autoPerim || "e.g. 180"} />
             </Field>
             <Field label="Stories">
@@ -2250,7 +2256,12 @@ function WallTab() {
   const { rawInputs, setInputs, undo, canUndo } = useTabUndo<WallInputs>(SK.wall, DEFAULT_WALL);
   const [project] = useProject();
   const tabInputs: WallInputs = { ...DEFAULT_WALL, ...rawInputs, studSize: migrateStudSize(rawInputs?.studSize) };
-  const autoPerim = project.sqft ? String(Math.ceil(Math.sqrt(parseFloat(project.sqft)) * 4)) : "";
+  const wallDimW = parseFloat(project.buildingWidth);
+  const wallDimL = parseFloat(project.buildingLength);
+  const autoPerim = wallDimW && wallDimL
+    ? String(2 * (wallDimW + wallDimL))
+    : project.sqft ? String(Math.ceil(Math.sqrt(parseFloat(project.sqft)) * 4))
+    : "";
   const inputs: WallInputs = {
     ...tabInputs,
     linearFeet: tabInputs.linearFeet || project.linearFeet || autoPerim,
