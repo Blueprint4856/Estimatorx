@@ -221,12 +221,13 @@ function ProjectSetupCard() {
   const setp = (k: keyof ProjectInputs, v: string) => setProject(prev => ({ ...prev, [k]: v }));
   const dimW = parseFloat(project.buildingWidth);
   const dimL = parseFloat(project.buildingLength);
+  const dimFootprint = dimW && dimL ? dimW * dimL : null;
   const dimPerim = dimW && dimL ? 2 * (dimW + dimL) : null;
   const autoPerim = dimPerim
     ? String(dimPerim)
     : project.sqft ? String(Math.ceil(Math.sqrt(parseFloat(project.sqft)) * 4))
     : "";
-  const effectiveFp = project.footprintSqft || project.sqft;
+  const effectiveFp = project.footprintSqft || (dimFootprint ? String(dimFootprint) : project.sqft);
   return (
     <div className="no-print mb-4 border border-[#E85D26]/40 bg-[#FFF8F5]">
       <button
@@ -245,8 +246,8 @@ function ProjectSetupCard() {
             <Field label="Gross Living Area (sqft)">
               <NumberInput value={project.sqft} onChange={v => setp("sqft", v)} placeholder="e.g. 2000" />
             </Field>
-            <Field label="Footprint (sqft)" note={project.sqft && !project.footprintSqft ? `Defaults to living area (${project.sqft} sqft)` : "If different from living area"}>
-              <NumberInput value={project.footprintSqft} onChange={v => setp("footprintSqft", v)} placeholder={project.sqft || "e.g. 2000"} />
+            <Field label="Footprint (sqft)" note={!project.footprintSqft && dimFootprint ? `Auto: ${dimFootprint} sqft (W×L)` : project.sqft && !project.footprintSqft ? `Defaults to living area (${project.sqft} sqft)` : "If different from living area"}>
+              <NumberInput value={project.footprintSqft} onChange={v => setp("footprintSqft", v)} placeholder={dimFootprint ? String(dimFootprint) : project.sqft || "e.g. 2000"} />
             </Field>
             <Field label="Exterior Perimeter (LF)" note={autoPerim && !project.linearFeet ? `Auto: ${dimPerim ? "" : "~"}${autoPerim} LF` : "Total ext. wall linear feet"}>
               <NumberInput value={project.linearFeet} onChange={v => setp("linearFeet", v)} placeholder={autoPerim || "e.g. 180"} />
